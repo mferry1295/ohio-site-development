@@ -340,16 +340,11 @@ function renderRevStackChart(model) {
 function renderDeclineChart() {
   const yrs = [];
   const gas = [];
-  const { WELL } = window;
-  for (let y = 1; y <= 20; y++) {
+  const r = 1 - (state.declinePct || 0) / 100;
+  // Input is in boe/d; chart shows Mcf/d (industry convention).
+  for (let y = 1; y <= state.years; y++) {
     yrs.push('Y' + y);
-    let m;
-    if (y === 1) m = 0.60;
-    else {
-      const declineTable = [1.00, 0.50, 0.342, 0.260, 0.211, 0.176, 0.149, 0.130, 0.116, 0.105, 0.094, 0.085, 0.078, 0.072, 0.066, 0.060, 0.055, 0.050, 0.046, 0.039];
-      m = declineTable[y - 1] || 0.039;
-    }
-    gas.push(3799 * m);
+    gas.push(state.gasPerDay * 6 * Math.pow(Math.max(0, r), y - 1));
   }
   makeOrUpdate('declineChart', {
     type: 'line',

@@ -18,6 +18,18 @@ const DEFAULTS = {
   wti: 100, hh: 2.68, nglPct: 32,
   // Wells & drilling (user-facing)
   initWells: 7, replWells: 2, dnc: 11.4,
+  // Per-well production (Year-1 average daily rates), all in bbl/d.
+  // Gas input is in barrels-of-oil-equivalent (1 boe = 6 Mcf, energy basis).
+  // Defaults are EOG-comparable Tuscarawas Utica volatile-oil-window wells:
+  //   IP30 baseline 922 bbl/d oil, 3,799 Mcf/d gas (633 boe/d), 190 bbl/d NGLs;
+  //   Year-1 average = ~60% of IP30 because IP30 only lasts 30 days.
+  oilPerDay: 553,        // bbl per well per day, Year-1 avg
+  gasPerDay: 380,        // bbl-equivalent per well per day (= 2,280 Mcf ÷ 6)
+  nglPerDay: 114,        // bbl per well per day, Year-1 avg
+  // Annual decline applied each subsequent year (geometric).
+  // 25% per year roughly matches the multi-segment hyperbolic curve
+  // calibrated to the primer's data points (yr 2 = 50% of IP30, etc.).
+  declinePct: 25,
   // Single field-level operating cost as % of revenue.
   // 43% reproduces the primer's $30.28 / $70.39 cost stack
   // (royalty 20% of rev + LOE $4 + GP&T $8 + severance $4.20 per boe).
@@ -36,50 +48,12 @@ const DEFAULTS = {
   ownerEquityPct: 30,    // landowner's share of equity (rest = external)
 };
 
-// Per-well year-1 average production (calendar year, after IP30 declines).
-// Year 1 of a well averages ~60% of IP30 (primer: $34M IP30-annualized → $22M yr-1 avg).
-const WELL = {
-  oilIP: 922,    // bbl/d at IP30
-  gasIP: 3799,   // Mcf/d at IP30
-  nglIP: 190,    // bbl/d at IP30
-  // Multipliers vs. IP30 by year-of-well (1-indexed)
-  // Yr1 avg ~0.60×, then matches the primer decline profile
-  decline: [
-    1.00,    // yr1 = first 30 days at peak (used only for "decline chart" headline)
-    0.50,    // yr2 ratio of stabilized vs IP30 (1900/3799)
-    0.342,   // yr3 (1300/3799)
-    0.260,
-    0.211,   // yr5 (800/3799)
-    0.176,
-    0.149,
-    0.130,
-    0.116,
-    0.105,   // yr10 (400/3799)
-    0.094,
-    0.085,
-    0.078,
-    0.072,
-    0.066,   // yr15 (250/3799)
-    0.060,
-    0.055,
-    0.050,
-    0.046,
-    0.039,   // yr20 (150/3799)
-    0.036, 0.033, 0.030, 0.027, 0.025, 0.023, 0.021, 0.019, 0.017, 0.015,
-  ],
-  // Year-1 average daily-rate as fraction of IP30 (because IP30 only lasts 30 days)
-  yr1Avg: 0.60,
-};
-
-function wellYearMult(yearOfLife) {
+// Per-well decline: Year-1 = input rate; subsequent years apply a constant
+// geometric decline. multiplier(year) = (1 - declinePct/100)^(year-1).
+function wellYearMult(yearOfLife, declinePct) {
   // yearOfLife: 1-indexed (year 1 = first year producing)
-  if (yearOfLife === 1) return WELL.yr1Avg;            // 0.60 of IP30
-  const idx = yearOfLife - 1;
-  if (idx < WELL.decline.length) return WELL.decline[idx];
-  // tail: 5%/yr decline beyond explicit table
-  const last = WELL.decline[WELL.decline.length - 1];
-  const extra = idx - (WELL.decline.length - 1);
-  return last * Math.pow(0.95, extra);
+  const r = 1 - (declinePct || 0) / 100;
+  return Math.pow(Math.max(0, r), Math.max(0, yearOfLife - 1));
 }
 
 // Build the drilling schedule: how many wells produce in each project year,
@@ -96,15 +70,17 @@ function buildWellCohorts(initWells, replWells, years) {
 }
 
 // Daily-rate aggregator for a project year y (1-indexed)
-function productionForYear(cohorts, y) {
+// Gas input is in bbl-equivalent (boe); convert to Mcf via × 6 for downstream
+// revenue calculations.
+function productionForYear(cohorts, y, p) {
   let oil = 0, gas = 0, ngl = 0, wells = 0;
   for (const c of cohorts) {
     if (c.startYear > y) continue;
     const yearOfLife = y - c.startYear + 1;
-    const m = wellYearMult(yearOfLife);
-    oil += c.count * WELL.oilIP * m;
-    gas += c.count * WELL.gasIP * m;
-    ngl += c.count * WELL.nglIP * m;
+    const m = wellYearMult(yearOfLife, p.declinePct);
+    oil += c.count * p.oilPerDay * m;
+    gas += c.count * p.gasPerDay * 6 * m;   // boe → Mcf (×6)
+    ngl += c.count * p.nglPerDay * m;
     wells += c.count;
   }
   return { oilDaily: oil, gasDaily: gas, nglDaily: ngl, wells };
@@ -168,7 +144,7 @@ function runModel(p, scenario = 'A') {
   // Build year-by-year roll-up
   const rows = [];
   for (let y = 1; y <= Y; y++) {
-    const prod = productionForYear(cohorts, y);
+    const prod = productionForYear(cohorts, y, p);
 
     // Daily volumes
     const oilDaily = prod.oilDaily, gasDaily = prod.gasDaily, nglDaily = prod.nglDaily;
@@ -340,10 +316,10 @@ function runModel(p, scenario = 'A') {
 
 /* Single-well year-1 cash margin in $/boe — used for waterfall */
 function singleWellMarginPerBoe(p) {
-  // year-1 averaged production (60% of IP30)
-  const oilDaily = WELL.oilIP * WELL.yr1Avg;
-  const gasDaily = WELL.gasIP * WELL.yr1Avg;
-  const nglDaily = WELL.nglIP * WELL.yr1Avg;
+  // year-1 averaged production from user inputs (gas input is in bbl-equiv, ×6 → Mcf)
+  const oilDaily = p.oilPerDay;
+  const gasDaily = p.gasPerDay * 6;          // boe → Mcf
+  const nglDaily = p.nglPerDay;
   const oilAnnual = oilDaily * 365, gasAnnual = gasDaily * 365, nglAnnual = nglDaily * 365;
   const boeAnnual = oilAnnual + nglAnnual + gasAnnual / 6;
 

@@ -111,6 +111,26 @@
           <input type="range" min="6" max="18" step="0.1" data-input="dnc" />
           <input type="number" data-input="dnc" />
         </div>
+        <div class="input-grp">
+          <label>Oil per well per day <button class="info" type="button" data-tip="Average daily crude oil/condensate production from one new well during its first year of life. Default 553 bbl/d reflects an EOG-comparable Utica volatile-oil-window well (IP30 of 922 bbl/d × ~60% Year-1 average — IP30 only lasts 30 days then declines).">i</button> <span class="unit">bbl/d</span></label>
+          <input type="range" min="100" max="1500" step="10" data-input="oilPerDay" />
+          <input type="number" data-input="oilPerDay" />
+        </div>
+        <div class="input-grp">
+          <label>Gas per well per day <button class="info" type="button" data-tip="Average daily natural gas production from one new well during its first year, expressed in barrels of oil equivalent (boe) so all three streams use the same unit. 1 boe = 6 Mcf on energy basis. Default 380 boe/d = 2,280 Mcf/d reflects an EOG-comparable Utica volatile-oil-window well.">i</button> <span class="unit">bbl/d</span></label>
+          <input type="range" min="80" max="1000" step="10" data-input="gasPerDay" />
+          <input type="number" data-input="gasPerDay" />
+        </div>
+        <div class="input-grp">
+          <label>NGLs per well per day <button class="info" type="button" data-tip="Average daily Natural Gas Liquids production from one new well during its first year. Default 114 bbl/d reflects an EOG-comparable Utica volatile-oil-window well. NGLs are extracted at a midstream cryogenic plant downstream of the wellhead.">i</button> <span class="unit">bbl/d</span></label>
+          <input type="range" min="20" max="400" step="2" data-input="nglPerDay" />
+          <input type="number" data-input="nglPerDay" />
+        </div>
+        <div class="input-grp">
+          <label>Annual decline rate <button class="info" type="button" data-tip="Year-over-year decline applied to all three streams from Year 2 onward. Each year's daily rate = previous year × (1 - decline %). Shale wells decline aggressively early (50%+ in Year 1 alone, already baked into the Year-1 average input above). 25% per year matches a multi-segment hyperbolic curve calibrated to EOG comparable wells.">i</button> <span class="unit">% per year</span></label>
+          <input type="range" min="5" max="50" step="1" data-input="declinePct" />
+          <input type="number" data-input="declinePct" />
+        </div>
         <div class="input-grp with-derived">
           <label>Field operating cost <button class="info" type="button" data-tip="All-in cash cost of running the wells, expressed as a % of upstream revenue. Bundles four components: royalty paid to mineral-rights owners (~20%), Lease Operating Expense / LOE ($4/boe), Gathering, Processing &amp; Transport ($8/boe), and Ohio severance + ad valorem taxes ($4.20/boe). 43% reproduces EOG-comparable Utica economics.">i</button> <span class="unit">% of revenue</span></label>
           <input type="range" min="20" max="60" step="0.5" data-input="opCostPct" />
