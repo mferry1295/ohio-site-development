@@ -753,8 +753,8 @@ function showCountyDetail(c) {
   const oilShare = c.gasMcfe > 0 ? (c.oilBbl * 5.659 / c.gasMcfe * 100) : 0;
   // H2 2024 = July through December = 184 days
   const H2_DAYS = 184;
-  const oilPerDay = c.oilBbl / H2_DAYS;
-  const gasPerDay = c.gasMcf / H2_DAYS;
+  const oilPerWellPerDay = c.prodWells > 0 ? c.oilBbl / c.prodWells / H2_DAYS : 0;
+  const gasPerWellPerDay = c.prodWells > 0 ? c.gasMcf / c.prodWells / H2_DAYS : 0;
   det.innerHTML = `
     <div class="map-detail-header">
       <div class="map-detail-tag">${c.name.toUpperCase()} COUNTY · OHIO</div>
@@ -766,8 +766,8 @@ function showCountyDetail(c) {
       <div class="map-detail-stat"><span class="map-detail-stat-label">Gas-equivalent</span><span class="map-detail-stat-value">${fmtBcfe(c.gasMcfe)}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Natural gas</span><span class="map-detail-stat-value">${fmtBcfe(c.gasMcf)}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Oil (total)</span><span class="map-detail-stat-value">${fmt.num(c.oilBbl)} bbl</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per day</span><span class="map-detail-stat-value">${fmt.num(oilPerDay)} bbl/d</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas per day</span><span class="map-detail-stat-value">${(gasPerDay / 1000).toFixed(1)} MMcf/d</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(oilPerWellPerDay) + ' bbl/d' : '—'}</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(gasPerWellPerDay) + ' Mcf/d' : '—'}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Oil share of boe</span><span class="map-detail-stat-value">${oilShare.toFixed(1)}%</span></div>
 
       <div class="map-detail-section-title">Wells (Dec 2024)</div>
@@ -780,7 +780,6 @@ function showCountyDetail(c) {
       <div class="map-detail-section-title">Per Producing Well · H2 2024 Avg</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Gas-equiv production</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmtBcfe(c.gasMcfe / c.prodWells) : '—'}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Oil production</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(c.oilBbl / c.prodWells) + ' bbl' : '—'}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(c.oilBbl / c.prodWells / H2_DAYS) + ' bbl/d' : '—'}</span></div>
 
       <div class="map-detail-section-title">Investment · H2 2024</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Drilling + roads</span><span class="map-detail-stat-value">$${c.investmentM.toFixed(1)}M</span></div>
