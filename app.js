@@ -672,7 +672,7 @@ function populateCountyDropdown() {
   const { COUNTIES } = window.OhioCounties;
   const sorted = [...COUNTIES].sort((a, b) => a.name.localeCompare(b.name));
   sel.innerHTML = '<option value="">— Select a county —</option>' +
-    sorted.map(c => `<option value="${c.name}">${c.name} County · ${c.producing} wells · ${(c.gasMcfe / 1e6).toFixed(1)} Bcfe</option>`).join('');
+    sorted.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
   sel.addEventListener('change', e => {
     const name = e.target.value;
     if (!name) return;
