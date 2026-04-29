@@ -75,10 +75,10 @@
           </div>
         </div>
         <div class="input-grp with-derived">
-          <label>Henry Hub gas <button class="info" type="button" data-tip="Henry Hub (Erath, Louisiana) is the U.S. benchmark price for natural gas, priced in $/MMBtu. Ohio gas trades $0.30–0.40/Mcf below Henry Hub due to regional basis discounts.">i</button> <span class="unit">$/MMBtu</span></label>
-          <input type="range" min="1" max="10" step="0.05" data-input="hh" />
+          <label>Natural Gas <button class="info" type="button" data-tip="Henry Hub-equivalent price expressed in $/barrel-of-oil-equivalent so all three streams use the same unit. 1 boe gas = 6 Mcf on energy basis; 1 Mcf ≈ 1.024 MMBtu. Default $16.47/bbl-oe = $2.68/MMBtu (Henry Hub Apr 2026). Ohio gas trades $0.30–0.40/Mcf (~$2.30/bbl-oe) below the hub due to regional basis discounts.">i</button> <span class="unit">$/bbl</span></label>
+          <input type="range" min="5" max="60" step="0.25" data-input="hh" />
           <input type="number" data-input="hh" />
-          <div class="derived" title="Realized Ohio gas price after Btu conversion and basis differential">
+          <div class="derived" title="Realized Ohio gas price (in $/bbl-oe) after basis differential">
             <span class="derived-label">Realized at wellhead</span>
             <span class="derived-value" id="gasRealized">—</span>
           </div>

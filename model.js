@@ -14,8 +14,10 @@ const OIL_BASIS = 8;       // $/bbl below WTI (Utica condensate quality differen
 const GAS_BASIS = 0.38;    // $/Mcf below HH (Ohio basis + gathering tariff)
 
 const DEFAULTS = {
-  // Pricing (user-facing)
-  wti: 100, hh: 2.68, nglPct: 32,
+  // Pricing (user-facing) — all in $/bbl for consistency.
+  // Natural gas is priced in $/bbl-oe (1 boe = 6 Mcf, 1 Mcf ≈ 1.024 MMBtu).
+  // Default 16.47 $/bbl-oe = 2.68 $/MMBtu × 6.144 MMBtu/bbl-oe (Henry Hub Apr 2026).
+  wti: 100, hh: 16.47, nglPct: 32,
   // Wells & drilling (user-facing)
   initWells: 7, replWells: 2, dnc: 11.4,
   // Per-well production (Year-1 average daily rates), all in bbl/d.
@@ -127,9 +129,11 @@ function runModel(p, scenario = 'A') {
   const Y = p.years;
   const cohorts = buildWellCohorts(p.initWells, p.replWells, Y);
 
-  // Realized prices — basis discounts baked in as constants
+  // Realized prices — basis discounts baked in as constants.
+  // Gas input is in $/bbl-oe; convert to $/Mcf via /6 (energy basis), then
+  // subtract Ohio basis discount.
   const oilPrice = Math.max(0, p.wti - OIL_BASIS);                  // $/bbl
-  const gasPriceMcf = Math.max(0, p.hh * 1.024 - GAS_BASIS);        // $/Mcf, HH is per MMBtu
+  const gasPriceMcf = Math.max(0, p.hh / 6 - GAS_BASIS);            // $/Mcf
   const nglPrice = Math.max(0, p.wti * (p.nglPct / 100));           // $/bbl
 
   // Power-plant gas demand (constant): plantMW * avail * 24 * heatRate
@@ -324,7 +328,7 @@ function singleWellMarginPerBoe(p) {
   const boeAnnual = oilAnnual + nglAnnual + gasAnnual / 6;
 
   const oilPrice = Math.max(0, p.wti - OIL_BASIS);
-  const gasPriceMcf = Math.max(0, p.hh * 1.024 - GAS_BASIS);
+  const gasPriceMcf = Math.max(0, p.hh / 6 - GAS_BASIS);
   const nglPrice = Math.max(0, p.wti * (p.nglPct / 100));
 
   const totalRev = oilAnnual * oilPrice + nglAnnual * nglPrice + gasAnnual * gasPriceMcf;
@@ -342,11 +346,14 @@ function singleWellMarginPerBoe(p) {
   };
 }
 
-// Helper: realized prices given inputs, for UI display
+// Helper: realized prices given inputs, for UI display.
+// Gas is returned in $/bbl-oe to match the input unit.
 function realizedPrices(p) {
+  const gasMcf = Math.max(0, p.hh / 6 - GAS_BASIS);
   return {
     oil: Math.max(0, p.wti - OIL_BASIS),
-    gas: Math.max(0, p.hh * 1.024 - GAS_BASIS),
+    gas: gasMcf * 6,                                  // $/bbl-oe
+    gasMcf: gasMcf,                                   // $/Mcf (for any consumer that wants it)
     ngl: Math.max(0, p.wti * (p.nglPct / 100)),
     oilBasis: OIL_BASIS,
     gasBasis: GAS_BASIS,

@@ -647,7 +647,7 @@ function renderRealizedChips() {
   const oilEl = document.getElementById('oilRealized');
   if (oilEl) oilEl.textContent = '$' + r.oil.toFixed(2) + '/bbl';
   const gasEl = document.getElementById('gasRealized');
-  if (gasEl) gasEl.textContent = '$' + r.gas.toFixed(2) + '/Mcf';
+  if (gasEl) gasEl.textContent = '$' + r.gas.toFixed(2) + '/bbl';
   const nglEl = document.getElementById('nglRealized');
   if (nglEl) nglEl.textContent = '$' + r.ngl.toFixed(2) + '/bbl';
   // Financing derived chips
