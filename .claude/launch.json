@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ohio-site",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["/Users/michaelferry/Documents/GitHub/Ohio Site/.claude/serve.js"],
+      "port": 5173
+    }
+  ]
+}

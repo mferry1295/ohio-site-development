@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ohio Site Development — Integrated Energy & Compute Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-text">
+      <div class="brand-name">OHIO SITE DEVELOPMENT</div>
+      <div class="brand-sub">Tuscarawas County · Volatile Oil Window · Utica/Point Pleasant</div>
+    </div>
+  </div>
+  <nav class="topnav">
+    <a href="#dashboard" class="navlink active" data-target="dashboard">Dashboard</a>
+    <a href="#model" class="navlink" data-target="model">Financial Model</a>
+    <a href="#compare" class="navlink" data-target="compare">Scenarios</a>
+    <a href="#fieldmap" class="navlink" data-target="fieldmap">Field Map</a>
+    <a href="#research" class="navlink" data-target="research">Industry Research</a>
+  </nav>
+</header>
+
+<section class="scenario-bar">
+  <div class="scenario-label">DEVELOPMENT SCENARIO</div>
+  <div class="scenario-toggle" role="tablist">
+    <button class="scenario-btn active" data-scenario="A">
+      <div class="sc-title">A · Wells Only</div>
+      <div class="sc-desc">Drill, produce, sell oil/gas/NGLs at market</div>
+    </button>
+    <button class="scenario-btn" data-scenario="B">
+      <div class="sc-title">B · Wells + Power Plant</div>
+      <div class="sc-desc">Burn gas on-site, sell electricity to grid/PPA</div>
+    </button>
+    <button class="scenario-btn" data-scenario="C">
+      <div class="sc-title">C · Full Integration</div>
+      <div class="sc-desc">Wells + 150 MW CCGT + 100 MW data center, hyperscaler lease</div>
+    </button>
+  </div>
+</section>
+
+<main>
+
+<!-- =========== DASHBOARD =========== -->
+<section id="dashboard" class="page active">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <h2>Inputs</h2>
+        <button id="resetBtn" class="ghost-btn" title="Reset to defaults">Reset</button>
+      </div>
+
+      <details open>
+        <summary>Commodity Pricing (Apr 2026)</summary>
+        <div class="input-grp with-derived">
+          <label>WTI crude <span class="unit">$/bbl</span></label>
+          <input type="range" min="40" max="160" step="1" data-input="wti" />
+          <input type="number" data-input="wti" />
+          <div class="derived" data-derived="oilRealized" title="Realized Utica condensate price after quality differential">
+            <span class="derived-label">Realized at wellhead</span>
+            <span class="derived-value" id="oilRealized">—</span>
+          </div>
+        </div>
+        <div class="input-grp with-derived">
+          <label>Henry Hub gas <span class="unit">$/MMBtu</span></label>
+          <input type="range" min="1" max="10" step="0.05" data-input="hh" />
+          <input type="number" data-input="hh" />
+          <div class="derived" title="Realized Ohio gas price after Btu conversion and basis differential">
+            <span class="derived-label">Realized at wellhead</span>
+            <span class="derived-value" id="gasRealized">—</span>
+          </div>
+        </div>
+        <div class="input-grp with-derived">
+          <label>NGL price <span class="unit">% of WTI</span></label>
+          <input type="range" min="15" max="55" step="1" data-input="nglPct" />
+          <input type="number" data-input="nglPct" />
+          <div class="derived" title="NGL basket price computed from WTI">
+            <span class="derived-label">Realized barrel</span>
+            <span class="derived-value" id="nglRealized">—</span>
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Wells &amp; Drilling</summary>
+        <div class="input-grp">
+          <label>Initial well count <span class="unit">wells</span></label>
+          <input type="range" min="1" max="20" step="1" data-input="initWells" />
+          <input type="number" data-input="initWells" />
+        </div>
+        <div class="input-grp">
+          <label>Replacement drilling <span class="unit">wells/yr</span></label>
+          <input type="range" min="0" max="6" step="1" data-input="replWells" />
+          <input type="number" data-input="replWells" />
+        </div>
+        <div class="input-grp">
+          <label>D&amp;C cost per well <span class="unit">$M</span></label>
+          <input type="range" min="6" max="18" step="0.1" data-input="dnc" />
+          <input type="number" data-input="dnc" />
+        </div>
+        <div class="input-grp with-derived">
+          <label>Field operating cost <span class="unit">% of revenue</span></label>
+          <input type="range" min="20" max="60" step="0.5" data-input="opCostPct" />
+          <input type="number" data-input="opCostPct" />
+          <div class="derived" title="Combines royalty (~20%), production / lease ops, midstream gathering & processing, and Ohio severance taxes. Default 43% is calibrated to EOG-comparable Utica wells.">
+            <span class="derived-label">Includes royalty, ops, midstream, sev. tax</span>
+          </div>
+        </div>
+      </details>
+
+      <details class="scenarioBC">
+        <summary>Power Plant (CCGT)</summary>
+        <div class="input-grp">
+          <label>Plant capacity <span class="unit">MW</span></label>
+          <input type="range" min="50" max="400" step="10" data-input="plantMW" />
+          <input type="number" data-input="plantMW" />
+        </div>
+        <div class="input-grp">
+          <label>Heat rate <span class="unit">Btu/kWh</span></label>
+          <input type="range" min="6200" max="9500" step="50" data-input="heatRate" />
+          <input type="number" data-input="heatRate" />
+        </div>
+        <div class="input-grp">
+          <label>Plant capex <span class="unit">$M</span></label>
+          <input type="range" min="80" max="400" step="5" data-input="plantCapex" />
+          <input type="number" data-input="plantCapex" />
+        </div>
+        <div class="input-grp">
+          <label>Non-fuel O&amp;M <span class="unit">$/MWh</span></label>
+          <input type="range" min="5" max="30" step="0.5" data-input="plantOM" />
+          <input type="number" data-input="plantOM" />
+        </div>
+        <div class="input-grp">
+          <label>Plant availability <span class="unit">%</span></label>
+          <input type="range" min="80" max="98" step="0.5" data-input="avail" />
+          <input type="number" data-input="avail" />
+        </div>
+        <div class="input-grp">
+          <label>Wholesale power (B only) <span class="unit">$/MWh</span></label>
+          <input type="range" min="30" max="120" step="1" data-input="powerPrice" />
+          <input type="number" data-input="powerPrice" />
+        </div>
+      </details>
+
+      <details class="scenarioC">
+        <summary>Data Center &amp; Hyperscaler Lease</summary>
+        <div class="input-grp">
+          <label>IT load <span class="unit">MW</span></label>
+          <input type="range" min="20" max="300" step="10" data-input="itLoad" />
+          <input type="number" data-input="itLoad" />
+        </div>
+        <div class="input-grp">
+          <label>PUE</label>
+          <input type="range" min="1.05" max="1.6" step="0.01" data-input="pue" />
+          <input type="number" data-input="pue" />
+        </div>
+        <div class="input-grp">
+          <label>Data center capex <span class="unit">$M</span></label>
+          <input type="range" min="400" max="2000" step="20" data-input="dcCapex" />
+          <input type="number" data-input="dcCapex" />
+        </div>
+        <div class="input-grp">
+          <label>Data center fixed OpEx <span class="unit">$M/yr</span></label>
+          <input type="range" min="10" max="80" step="1" data-input="dcOpex" />
+          <input type="number" data-input="dcOpex" />
+        </div>
+        <div class="input-grp">
+          <label>Hyperscaler lease rate <span class="unit">$/MWh</span></label>
+          <input type="range" min="40" max="140" step="1" data-input="leaseRate" />
+          <input type="number" data-input="leaseRate" />
+        </div>
+        <div class="input-grp">
+          <label>Lease escalator <span class="unit">%/yr</span></label>
+          <input type="range" min="0" max="5" step="0.1" data-input="esc" />
+          <input type="number" data-input="esc" />
+        </div>
+      </details>
+
+      <details>
+        <summary>Project &amp; Finance</summary>
+        <div class="input-grp">
+          <label>Project term <span class="unit">years</span></label>
+          <input type="range" min="10" max="30" step="1" data-input="years" />
+          <input type="number" data-input="years" />
+        </div>
+        <div class="input-grp">
+          <label>Discount rate (WACC) <span class="unit">%</span></label>
+          <input type="range" min="4" max="20" step="0.5" data-input="wacc" />
+          <input type="number" data-input="wacc" />
+        </div>
+        <div class="input-grp">
+          <label>Effective tax rate <span class="unit">%</span></label>
+          <input type="range" min="0" max="35" step="0.5" data-input="tax" />
+          <input type="number" data-input="tax" />
+        </div>
+        <div class="input-grp">
+          <label>DD&amp;A (E&amp;P) <span class="unit">$/boe</span></label>
+          <input type="range" min="6" max="20" step="0.5" data-input="dda" />
+          <input type="number" data-input="dda" />
+        </div>
+        <div class="input-grp">
+          <label>G&amp;A <span class="unit">$/boe</span></label>
+          <input type="range" min="0.5" max="5" step="0.1" data-input="ga" />
+          <input type="number" data-input="ga" />
+        </div>
+      </details>
+    </aside>
+
+    <div class="content">
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">20-Year Revenue</div><div class="kpi-value" id="kpi-rev">—</div><div class="kpi-sub" id="kpi-rev-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">20-Year EBITDA</div><div class="kpi-value" id="kpi-ebitda">—</div><div class="kpi-sub" id="kpi-ebitda-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">Total CapEx</div><div class="kpi-value" id="kpi-capex">—</div><div class="kpi-sub" id="kpi-capex-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">NPV @ WACC</div><div class="kpi-value" id="kpi-npv">—</div><div class="kpi-sub" id="kpi-npv-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">Unlevered IRR</div><div class="kpi-value" id="kpi-irr">—</div><div class="kpi-sub" id="kpi-irr-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">Payback</div><div class="kpi-value" id="kpi-payback">—</div><div class="kpi-sub" id="kpi-payback-sub"></div></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <div class="card-head"><h3>Annual Free Cash Flow</h3><div class="card-sub" id="fcf-sub"></div></div>
+          <div class="chart-wrap"><canvas id="fcfChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Revenue by Stream</h3><div class="card-sub">Oil · NGLs · Gas/Power/Compute (stacked)</div></div>
+          <div class="chart-wrap"><canvas id="revStackChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Production Decline (per well, gas)</h3><div class="card-sub">Mcf/d — IP30 to year-20 trickle</div></div>
+          <div class="chart-wrap"><canvas id="declineChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Total Daily Gas Output vs. Plant Demand</h3><div class="card-sub">All producing wells, scaled</div></div>
+          <div class="chart-wrap"><canvas id="gasSupplyChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card wide">
+        <div class="card-head"><h3>Year-1 Cash Margin Waterfall ($/boe)</h3><div class="card-sub">Field-level cash profile per produced barrel</div></div>
+        <div class="chart-wrap"><canvas id="waterfallChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== FINANCIAL MODEL =========== -->
+<section id="model" class="page">
+  <div class="content full">
+    <h2 class="page-title">20-Year Financial Model</h2>
+    <p class="page-lead">Annualized P&amp;L roll-up for the active scenario. All figures in $M unless labeled. Production declines applied per-well using a multi-segment hyperbolic curve calibrated to EOG-comparable Utica wells.</p>
+    <div class="table-scroll">
+      <table id="modelTable" class="data-table"></table>
+    </div>
+  </div>
+</section>
+
+<!-- =========== SCENARIO COMPARISON =========== -->
+<section id="compare" class="page">
+  <div class="content full">
+    <h2 class="page-title">Scenario Comparison</h2>
+    <p class="page-lead">Same inputs run through all three development paths. The integrated build trades a much larger capital stack for a 4× uplift on the price realized per Mcf of methane.</p>
+
+    <div class="kpi-row" id="compareKpis"></div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-head"><h3>Cumulative Free Cash Flow</h3><div class="card-sub">Undiscounted, $M</div></div>
+        <div class="chart-wrap"><canvas id="cumChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>NPV vs. WACC Sensitivity</h3><div class="card-sub">$M</div></div>
+        <div class="chart-wrap"><canvas id="npvSensChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card wide">
+      <div class="card-head"><h3>WTI &amp; Lease-Rate Sensitivity (NPV, $M)</h3><div class="card-sub">Current scenario only — heat-map style</div></div>
+      <div class="table-scroll"><table id="sensTable" class="data-table"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== FIELD MAP =========== -->
+<section id="fieldmap" class="page">
+  <div class="content full">
+    <h2 class="page-title">Ohio Utica Field Map · H2 2024</h2>
+    <p class="page-lead">Eighteen counties currently produce in the Utica/Point Pleasant. Click a county marker for production, well count, and investment detail. Source: Ohio DNR &amp; CSU Levin College Energy Policy Center, <em>Shale Investment Dashboard Q3/Q4 2024</em>.</p>
+
+    <div class="map-kpis" id="mapKpis"></div>
+
+    <div class="map-controls">
+      <div class="map-metric-toggle" role="tablist">
+        <button class="map-metric-btn active" data-metric="gasMcfe">Production (Bcfe)</button>
+        <button class="map-metric-btn" data-metric="oilBbl">Oil (bbl)</button>
+        <button class="map-metric-btn" data-metric="totalWells">Total Wells</button>
+        <button class="map-metric-btn" data-metric="newWells">New Wells (H2 '24)</button>
+        <button class="map-metric-btn" data-metric="investmentM">Investment ($M)</button>
+      </div>
+      <div class="map-legend">
+        <span class="map-legend-label">Bubble size:</span>
+        <span class="map-legend-dot" style="width:6px;height:6px"></span>
+        <span class="map-legend-text">low</span>
+        <span class="map-legend-dot" style="width:14px;height:14px"></span>
+        <span class="map-legend-text">mid</span>
+        <span class="map-legend-dot" style="width:24px;height:24px"></span>
+        <span class="map-legend-text">high</span>
+      </div>
+    </div>
+
+    <div class="map-layout">
+      <div id="ohioMap" class="map-canvas"></div>
+      <aside class="map-detail" id="mapDetail">
+        <div class="map-detail-header">
+          <div class="map-detail-tag">SELECT A COUNTY</div>
+          <h3>Click a marker</h3>
+          <div class="map-detail-sub">Each circle's size scales with the metric selected above.</div>
+        </div>
+        <div class="map-detail-body">
+          <div class="map-empty">
+            <p>Eight counties — Belmont, Carroll, Columbiana, Guernsey, Harrison, Jefferson, Monroe, and Noble — account for more than 98% of producing Utica wells in Ohio.</p>
+            <p>Tuscarawas County is the volatile-oil window emerging play that the financial model is calibrated to.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="card wide" style="margin-top:16px">
+      <div class="card-head"><h3>Top 10 counties — H2 2024 production &amp; activity</h3><div class="card-sub">Click any row to focus the map</div></div>
+      <div class="table-scroll"><table id="countyTable" class="data-table"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== INDUSTRY RESEARCH =========== -->
+<section id="research" class="page">
+  <div class="content full">
+    <h2 class="page-title">Industry Research</h2>
+    <p class="page-lead">A working primer on the unit economics behind every assumption in this model — drawn from the Tuscarawas/Carroll/Harrison Utica volatile-oil window and EOG-comparable wells.</p>
+
+    <div class="research-grid">
+      <a class="research-card" href="#r1">
+        <div class="r-num">01</div>
+        <div class="r-title">The Three Streams</div>
+        <div class="r-desc">Why every Utica well produces oil, gas, and NGLs simultaneously — and why their supply chains diverge.</div>
+      </a>
+      <a class="research-card" href="#r2">
+        <div class="r-num">02</div>
+        <div class="r-title">From Drill Bit to Pump</div>
+        <div class="r-desc">The 8 steps of drilling a Tuscarawas well. ~$11.4M, 90–120 days, 3-mile lateral.</div>
+      </a>
+      <a class="research-card" href="#r3">
+        <div class="r-num">03</div>
+        <div class="r-title">Single-Well Economics</div>
+        <div class="r-desc">~$95K/day at peak, 35–50% IRR, 1.5–2.5 yr payback. The unit of analysis behind every line in the model.</div>
+      </a>
+      <a class="research-card" href="#r4">
+        <div class="r-num">04</div>
+        <div class="r-title">Behind-the-Meter Thesis</div>
+        <div class="r-desc">Why hyperscalers pay 4× for on-site gas-fired electricity, and what the drilling treadmill costs.</div>
+      </a>
+      <a class="research-card" href="#r5">
+        <div class="r-num">05</div>
+        <div class="r-title">Pricing &amp; Realized Price</div>
+        <div class="r-desc">WTI, Henry Hub, NGL basket — and the basis discounts that haircut every barrel coming out of Ohio.</div>
+      </a>
+      <a class="research-card" href="#r6">
+        <div class="r-num">06</div>
+        <div class="r-title">Glossary</div>
+        <div class="r-desc">API gravity, BOE, EUR, IP30, GOR, basis, fractionation spread — the meeting-room vocabulary.</div>
+      </a>
+    </div>
+
+    <article id="r1" class="research-article">
+      <div class="r-tag">01 · The Three Streams</div>
+      <h3>One wellbore, three supply chains</h3>
+      <p>A modern Utica well produces crude oil <strong>and</strong> natural gas <strong>and</strong> NGLs simultaneously through the same wellbore. Above ground a separator splits them by density, and from that point each stream lives in its own world.</p>
+      <ul>
+        <li><strong>Crude oil</strong> — liquid C5+ molecules. Cannot be used directly; goes by truck or pipeline to a refinery (Toledo, Detroit, Gulf Coast). Priced off WTI at Cushing; Utica condensate is light (60+ API) and trades $5–10/bbl below WTI.</li>
+        <li><strong>Natural gas</strong> — pure methane. Compressed into a transmission pipeline (NEXUS, Rover, REX) and on to power plants, home furnaces, factories, or LNG export. Priced off Henry Hub; Ohio basis −$0.30 to −$0.40/Mcf.</li>
+        <li><strong>NGLs</strong> — ethane, propane, butane, isobutane, natural gasoline. Vapor at wellhead, liquid after a cryogenic chill to −120 °F. Trades as a basket at ~30–35% of WTI; ethane is the cheapest component, natural gasoline the most valuable.</li>
+      </ul>
+      <p class="callout">Mental model: BOE is an <em>energy</em> conversion (6 Mcf gas = 1 boe), but at today's prices 1 boe of gas is worth ~18% of 1 boe of oil. A "1,000 boe/d at 50% gas" well has revenue 90% tilted to oil.</p>
+    </article>
+
+    <article id="r2" class="research-article">
+      <div class="r-tag">02 · From Drill Bit to Pump</div>
+      <h3>The 8 steps of a Tuscarawas well</h3>
+      <ol>
+        <li><strong>Lease</strong> — sign with mineral-rights owners. ~$5K/acre signing bonus + 18–22% royalty.</li>
+        <li><strong>Permit &amp; unitize</strong> — Ohio DNR + combine leases into a unit big enough for 3-mile laterals.</li>
+        <li><strong>Pad &amp; roads</strong> — bulldoze 5-acre site, gravel, containment. ~$1M/pad.</li>
+        <li><strong>Drill vertical</strong> — straight down ~8,000 ft to top of Point Pleasant.</li>
+        <li><strong>Drill lateral</strong> — curve 90° and drill horizontally ~15,500 ft inside the 100-ft target rock.</li>
+        <li><strong>Casing &amp; cement</strong> — steel pipe + cement to isolate from groundwater.</li>
+        <li><strong>Frac</strong> — 15–20M gallons water + 30–40M lbs sand + 0.5% chemicals at 9,000 psi across 50 stages.</li>
+        <li><strong>Flowback &amp; first oil</strong> — 1–3 weeks for water to flow back, then hydrocarbons.</li>
+      </ol>
+      <p>Spud-to-first-production: 90–120 days. Total D&amp;C cost: <strong>~$11.4M</strong>. A typical pad bundles 3–6 wells drilled with one rig, then all fracked together.</p>
+    </article>
+
+    <article id="r3" class="research-article">
+      <div class="r-tag">03 · Single-Well Economics</div>
+      <h3>The unit of analysis</h3>
+      <p>Built bottom-up from EOG comparable wells in Carroll County (same geology as eastern Tuscarawas):</p>
+      <table class="data-table">
+        <thead><tr><th>Stream</th><th class="num">Daily volume</th><th class="num">Realized $</th><th class="num">Daily revenue</th></tr></thead>
+        <tbody>
+          <tr><td>Oil / condensate</td><td class="num">922 bbl/d</td><td class="num">$87/bbl</td><td class="num">$80,214</td></tr>
+          <tr><td>NGLs</td><td class="num">190 bbl/d</td><td class="num">$32/bbl</td><td class="num">$6,080</td></tr>
+          <tr><td>Natural gas</td><td class="num">3,799 Mcf/d</td><td class="num">$2.30/Mcf</td><td class="num">$8,738</td></tr>
+          <tr><td><strong>Peak quarter</strong></td><td class="num"><strong>1,832 boe/d</strong></td><td class="num"></td><td class="num"><strong>$95,032/day</strong></td></tr>
+        </tbody>
+      </table>
+      <p>Wells decline ~50% in year 1. Year-1 average revenue: ~$22M. Lifetime gross revenue: ~$80–120M against an ~$11.4M D&amp;C cost. Field cash margin ~57%, net margin ~28%, IRR 35–50%, payback 1.5–2.5 years.</p>
+    </article>
+
+    <article id="r4" class="research-article">
+      <div class="r-tag">04 · Behind-the-Meter Thesis</div>
+      <h3>Why hyperscalers pay 4× for on-site gas</h3>
+      <p>PJM interconnection takes 4–7 years. Microsoft, Google, AWS, and Meta need 24/7 power <em>now</em>. So they're building gas-fired plants directly on data center campuses, fueled by gas wells just down the road.</p>
+      <p>A 100 MW IT load (PUE 1.2) draws 120 MW continuous, sized to a 150 MW CCGT (~80% availability). At a 7,000 Btu/kWh heat rate, that burns <strong>~25 MMcf/day</strong> — the output of 7 wells at peak, or ~13 wells at stabilized year-2 rates. Sold as pipeline gas at $2.30/Mcf those volumes return ~$57K/day. Run through turbines and leased to a hyperscaler at $80/MWh they return ~$288K/day — a <strong>4× premium</strong> on the same molecules.</p>
+      <p>The catch: ~$1B+ of incremental capex (CCGT $150–200M, data center $800M–1.2B), 36–48 month build, and a continuous drilling treadmill (45–50 wells over 20 years, ~$510–570M of D&amp;C alone) just to keep the turbines fed. The hyperscaler lease is a gas-supply obligation as much as a real-estate deal.</p>
+    </article>
+
+    <article id="r5" class="research-article">
+      <div class="r-tag">05 · Pricing &amp; Realized Price</div>
+      <h3>Why realized price is always lower than benchmark</h3>
+      <ul>
+        <li><strong>Quality differential</strong> — Utica oil is light (60+ API) and sells $5–10/bbl below WTI; Ohio gas $0.20–0.40 below Henry Hub.</li>
+        <li><strong>Transportation</strong> — pipeline tariffs and gathering fees: $1–3/bbl on oil, $0.20–0.50/Mcf on gas.</li>
+        <li><strong>Processing</strong> — NGL recovery costs $5–9/bbl through cryogenic plant + fractionator.</li>
+        <li><strong>Basis</strong> — regional supply/demand. Permian gas occasionally trades negative when pipelines fill. Ohio basis is more stable but discounted.</li>
+      </ul>
+      <p>What's driving Apr 2026: WTI elevated (~$100, US-Iran tensions, OPEC+ discipline), Henry Hub depressed (~$2.68, mild weather, full storage), NGLs at ~32% of WTI, Ohio basis tightening as central-Ohio data-center build-out adds in-basin demand.</p>
+    </article>
+
+    <article id="r6" class="research-article">
+      <div class="r-tag">06 · Glossary</div>
+      <h3>Vocabulary you'll hear in every meeting</h3>
+      <table class="data-table">
+        <tbody>
+          <tr><td><strong>API gravity</strong></td><td>Density of crude. &gt;40° = light. Utica is ~60° (very light).</td></tr>
+          <tr><td><strong>Basis differential</strong></td><td>Local price minus benchmark hub. Ohio gas ~ HH minus $0.30.</td></tr>
+          <tr><td><strong>BOE</strong></td><td>Barrel of oil equivalent. 6 Mcf gas = 1 BOE on energy basis.</td></tr>
+          <tr><td><strong>D&amp;C</strong></td><td>Drilling &amp; completion. ~$11.4M for an EOG Utica well.</td></tr>
+          <tr><td><strong>Decline curve</strong></td><td>How well production drops over time. Shale wells decline ~50% in yr 1.</td></tr>
+          <tr><td><strong>EUR</strong></td><td>Estimated Ultimate Recovery — total volume over life. Utica: 1.5–2.0 MMboe.</td></tr>
+          <tr><td><strong>GOR</strong></td><td>Gas-to-oil ratio. Tells you whether a well is oil-rich or gas-rich.</td></tr>
+          <tr><td><strong>IP30 / IP90</strong></td><td>Initial Production rate averaged over first 30 / 90 days.</td></tr>
+          <tr><td><strong>Lateral</strong></td><td>Horizontal section of well. Modern Utica laterals: 15,000+ ft.</td></tr>
+          <tr><td><strong>Mcf / MMcf / Bcf</strong></td><td>Thousand / million / billion cubic feet of natural gas.</td></tr>
+          <tr><td><strong>MMBtu</strong></td><td>Million British Thermal Units. 1 Mcf ≈ 1.024 MMBtu.</td></tr>
+          <tr><td><strong>NGL</strong></td><td>Natural Gas Liquids — ethane, propane, butane, isobutane, natural gasoline.</td></tr>
+          <tr><td><strong>PUE</strong></td><td>Power Usage Effectiveness. Best-in-class new-build = 1.2.</td></tr>
+          <tr><td><strong>Royalty</strong></td><td>Mineral-rights owner's share. Typically 18–22% in Ohio.</td></tr>
+          <tr><td><strong>Volatile oil window</strong></td><td>Sweet spot of Utica producing oil + NGLs + gas in commercial volume.</td></tr>
+          <tr><td><strong>WTI / Brent</strong></td><td>Oil benchmarks. WTI = US (Cushing OK); Brent = North Sea.</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div>Ohio Site Development · Tuscarawas County Modeling Tool</div>
+  <div class="muted">All figures illustrative · Built on EOG-comparable Utica well economics · Apr 2026 price deck</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="counties.js"></script>
+<script src="model.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+/* =============================================================
+ * Ohio Site Development — Financial model engine
+ * Calibrated to EOG-comparable Tuscarawas Utica volatile-oil wells.
+ *
+ * Per-well IP30 baselines (year 0 peak):
+ *   Oil: 922 bbl/d   Gas: 3,799 Mcf/d   NGLs: 190 bbl/d
+ * Stabilized (year 2): gas ~1,900 Mcf/d (from primer)
+ * Long-tail decline points (Mcf/d): yr3 1300, yr5 800, yr10 400, yr15 250, yr20 150
+ * ============================================================= */
+
+// Built-in constants — Apr 2026 Utica/Ohio basis differentials.
+// Hidden from the UI for simplicity; embedded in realized-price calc.
+const OIL_BASIS = 8;       // $/bbl below WTI (Utica condensate quality differential + transport)
+const GAS_BASIS = 0.38;    // $/Mcf below HH (Ohio basis + gathering tariff)
+
+const DEFAULTS = {
+  // Pricing (user-facing)
+  wti: 100, hh: 2.68, nglPct: 32,
+  // Wells & drilling (user-facing)
+  initWells: 7, replWells: 2, dnc: 11.4,
+  // Single field-level operating cost as % of revenue.
+  // 43% reproduces the primer's $30.28 / $70.39 cost stack
+  // (royalty 20% of rev + LOE $4 + GP&T $8 + severance $4.20 per boe).
+  opCostPct: 43,
+  // Plant
+  plantMW: 150, heatRate: 7000, plantCapex: 175, plantOM: 15, avail: 95, powerPrice: 65,
+  // DC
+  itLoad: 100, pue: 1.2, dcCapex: 1000, dcOpex: 30, leaseRate: 80, esc: 2.0,
+  // Finance
+  years: 20, wacc: 10, tax: 22, dda: 12, ga: 1.5,
+};
+
+// Per-well year-1 average production (calendar year, after IP30 declines).
+// Year 1 of a well averages ~60% of IP30 (primer: $34M IP30-annualized → $22M yr-1 avg).
+const WELL = {
+  oilIP: 922,    // bbl/d at IP30
+  gasIP: 3799,   // Mcf/d at IP30
+  nglIP: 190,    // bbl/d at IP30
+  // Multipliers vs. IP30 by year-of-well (1-indexed)
+  // Yr1 avg ~0.60×, then matches the primer decline profile
+  decline: [
+    1.00,    // yr1 = first 30 days at peak (used only for "decline chart" headline)
+    0.50,    // yr2 ratio of stabilized vs IP30 (1900/3799)
+    0.342,   // yr3 (1300/3799)
+    0.260,
+    0.211,   // yr5 (800/3799)
+    0.176,
+    0.149,
+    0.130,
+    0.116,
+    0.105,   // yr10 (400/3799)
+    0.094,
+    0.085,
+    0.078,
+    0.072,
+    0.066,   // yr15 (250/3799)
+    0.060,
+    0.055,
+    0.050,
+    0.046,
+    0.039,   // yr20 (150/3799)
+    0.036, 0.033, 0.030, 0.027, 0.025, 0.023, 0.021, 0.019, 0.017, 0.015,
+  ],
+  // Year-1 average daily-rate as fraction of IP30 (because IP30 only lasts 30 days)
+  yr1Avg: 0.60,
+};
+
+function wellYearMult(yearOfLife) {
+  // yearOfLife: 1-indexed (year 1 = first year producing)
+  if (yearOfLife === 1) return WELL.yr1Avg;            // 0.60 of IP30
+  const idx = yearOfLife - 1;
+  if (idx < WELL.decline.length) return WELL.decline[idx];
+  // tail: 5%/yr decline beyond explicit table
+  const last = WELL.decline[WELL.decline.length - 1];
+  const extra = idx - (WELL.decline.length - 1);
+  return last * Math.pow(0.95, extra);
+}
+
+// Build the drilling schedule: how many wells produce in each project year,
+// each with a year-of-life so we can look up decline.
+// Drilling cadence: all initial wells are drilled in year 0. Replacement wells
+// are drilled at start of years 1..N according to replWells/yr.
+function buildWellCohorts(initWells, replWells, years) {
+  const cohorts = []; // each cohort: { startYear, count }
+  cohorts.push({ startYear: 1, count: initWells });
+  for (let y = 2; y <= years; y++) {
+    if (replWells > 0) cohorts.push({ startYear: y, count: replWells });
+  }
+  return cohorts;
+}
+
+// Daily-rate aggregator for a project year y (1-indexed)
+function productionForYear(cohorts, y) {
+  let oil = 0, gas = 0, ngl = 0, wells = 0;
+  for (const c of cohorts) {
+    if (c.startYear > y) continue;
+    const yearOfLife = y - c.startYear + 1;
+    const m = wellYearMult(yearOfLife);
+    oil += c.count * WELL.oilIP * m;
+    gas += c.count * WELL.gasIP * m;
+    ngl += c.count * WELL.nglIP * m;
+    wells += c.count;
+  }
+  return { oilDaily: oil, gasDaily: gas, nglDaily: ngl, wells };
+}
+
+function npv(rate, cashflows) {
+  // cashflows[0] is year 0
+  let v = 0;
+  for (let t = 0; t < cashflows.length; t++) v += cashflows[t] / Math.pow(1 + rate, t);
+  return v;
+}
+
+function irr(cashflows) {
+  // Bisect on [-0.99, 5]
+  let lo = -0.99, hi = 5.0;
+  const f = r => npv(r, cashflows);
+  if (f(lo) * f(hi) > 0) return null;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (f(mid) > 0) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function paybackYear(cashflows) {
+  // returns fractional year of project where cumulative >= 0, or null
+  let cum = 0;
+  for (let t = 0; t < cashflows.length; t++) {
+    const next = cum + cashflows[t];
+    if (next >= 0 && cum < 0) {
+      const frac = -cum / cashflows[t];
+      return t - 1 + frac;
+    }
+    cum = next;
+  }
+  return null;
+}
+
+/* =============================================================
+ *  Core scenario runner
+ *  scenario: 'A' wells only, 'B' wells+plant, 'C' wells+plant+DC
+ * ============================================================= */
+function runModel(p, scenario = 'A') {
+  const Y = p.years;
+  const cohorts = buildWellCohorts(p.initWells, p.replWells, Y);
+
+  // Realized prices — basis discounts baked in as constants
+  const oilPrice = Math.max(0, p.wti - OIL_BASIS);                  // $/bbl
+  const gasPriceMcf = Math.max(0, p.hh * 1.024 - GAS_BASIS);        // $/Mcf, HH is per MMBtu
+  const nglPrice = Math.max(0, p.wti * (p.nglPct / 100));           // $/bbl
+
+  // Power-plant gas demand (constant): plantMW * avail * 24 * heatRate
+  // = MW × 1000 kW × 24 h × Btu/kWh = Btu/day  → ÷ 1.024e6 = Mcf/day (since 1 Mcf ≈ 1.024 MMBtu)
+  const plantMW = (scenario === 'A') ? 0 : p.plantMW;
+  const plantDailyMWh = plantMW * 24 * (p.avail / 100);             // MWh/day at availability
+  const plantDailyGasMcf = plantDailyMWh * 1000 * p.heatRate / 1_024_000; // Mcf/day
+
+  // Hyperscaler revenue path (only Scenario C uses lease; Scenario B uses wholesale grid PPA)
+  const dcDailyMWh = (scenario === 'C') ? p.itLoad * p.pue * 24 : 0; // 100 MW IT × 1.2 PUE × 24h = 2880 MWh/d demand
+
+  // Build year-by-year roll-up
+  const rows = [];
+  for (let y = 1; y <= Y; y++) {
+    const prod = productionForYear(cohorts, y);
+
+    // Daily volumes
+    const oilDaily = prod.oilDaily, gasDaily = prod.gasDaily, nglDaily = prod.nglDaily;
+    const oilAnnual = oilDaily * 365;
+    const gasAnnual = gasDaily * 365;
+    const nglAnnual = nglDaily * 365;
+    const boeAnnual = oilAnnual + nglAnnual + gasAnnual / 6;
+
+    // Gas allocation: serve plant first, sell rest at wellhead
+    let gasToPlantMcf = 0, gasToMarketMcf = gasAnnual;
+    if (plantMW > 0) {
+      const gasNeeded = plantDailyGasMcf * 365;
+      gasToPlantMcf = Math.min(gasAnnual, gasNeeded);
+      gasToMarketMcf = gasAnnual - gasToPlantMcf;
+    }
+    const gasShortMcf = Math.max(0, plantDailyGasMcf * 365 - gasToPlantMcf);
+
+    // Power plant output is limited by gas supplied AND nameplate availability
+    const plantMaxMWhFromGas = gasToPlantMcf * 1_024_000 / (p.heatRate * 1000); // MWh/yr deliverable from supplied gas
+    const plantMaxMWhFromCap = plantDailyMWh * 365;
+    const powerMWh = Math.min(plantMaxMWhFromGas, plantMaxMWhFromCap);
+
+    // Revenues
+    const oilRev = oilAnnual * oilPrice;
+    const nglRev = nglAnnual * nglPrice;
+    const gasMarketRev = gasToMarketMcf * gasPriceMcf;
+
+    let powerRev = 0;
+    if (scenario === 'B') {
+      powerRev = powerMWh * p.powerPrice;
+    } else if (scenario === 'C') {
+      // Hyperscaler pays for IT-load MWh leased; capped by what plant actually produced.
+      const dcAnnualMWh = Math.min(powerMWh, dcDailyMWh * 365);
+      const escMult = Math.pow(1 + p.esc / 100, y - 1);
+      powerRev = dcAnnualMWh * p.leaseRate * escMult;
+    }
+
+    const totalRev = oilRev + nglRev + gasMarketRev + powerRev;
+
+    // Field operating cost — single % of revenue (royalty + LOE + GP&T + severance).
+    // Apply only to the upstream portion of revenue (oil + NGLs + gas at market).
+    // Power/lease revenue carries plant + DC opex separately.
+    const upstreamRev = oilRev + nglRev + gasMarketRev;
+    const fieldOpCost = upstreamRev * (p.opCostPct / 100);
+
+    // Plant non-fuel O&M
+    const plantOM = (scenario === 'A') ? 0 : powerMWh * p.plantOM;
+    // DC fixed opex (only in scenario C)
+    const dcOpex = (scenario === 'C') ? p.dcOpex * 1_000_000 : 0;
+
+    const totalCashCost = fieldOpCost + plantOM + dcOpex;
+    const ebitda = totalRev - totalCashCost;
+
+    // CapEx schedule
+    let capex = 0;
+    // Drilling capex this year
+    if (y === 1) capex += p.initWells * p.dnc * 1_000_000;
+    if (y >= 2 && p.replWells > 0) capex += p.replWells * p.dnc * 1_000_000;
+    // Power plant (built year 1) — for scenarios B/C
+    if ((scenario === 'B' || scenario === 'C') && y === 1) capex += p.plantCapex * 1_000_000;
+    // Data center (built year 1) — scenario C
+    if (scenario === 'C' && y === 1) capex += p.dcCapex * 1_000_000;
+
+    // DD&A and G&A (book-only — used for tax shield and reported income)
+    const dda = boeAnnual * p.dda;
+    const ga = boeAnnual * p.ga;
+    const ebit = ebitda - dda - ga;
+    const taxes = Math.max(0, ebit) * (p.tax / 100);
+    const netIncome = ebit - taxes;
+    // Unlevered free cash flow (after-tax EBITDA minus capex)
+    const fcf = ebitda - taxes - capex;
+
+    rows.push({
+      year: y,
+      wells: prod.wells,
+      oilDaily, gasDaily, nglDaily, boeAnnual,
+      gasToPlantMcf, gasToMarketMcf, gasShortMcf,
+      powerMWh,
+      oilRev, nglRev, gasMarketRev, powerRev, totalRev,
+      fieldOpCost, plantOM, dcOpex, totalCashCost,
+      ebitda, dda, ga, ebit, taxes, netIncome,
+      capex, fcf,
+    });
+  }
+
+  // Headline metrics
+  const totalRev = rows.reduce((s, r) => s + r.totalRev, 0);
+  const totalEbitda = rows.reduce((s, r) => s + r.ebitda, 0);
+  const totalCapex = rows.reduce((s, r) => s + r.capex, 0);
+  const fcfSeries = [0, ...rows.map(r => r.fcf)];
+  const projNpv = npv(p.wacc / 100, fcfSeries);
+  const projIrr = irr(fcfSeries);
+  const projPayback = paybackYear(fcfSeries);
+
+  return {
+    rows, totals: { totalRev, totalEbitda, totalCapex },
+    npv: projNpv, irr: projIrr, payback: projPayback,
+    realized: { oilPrice, gasPriceMcf, nglPrice },
+    plantDailyGasMcf, dcDailyMWh,
+  };
+}
+
+/* Single-well year-1 cash margin in $/boe — used for waterfall */
+function singleWellMarginPerBoe(p) {
+  // year-1 averaged production (60% of IP30)
+  const oilDaily = WELL.oilIP * WELL.yr1Avg;
+  const gasDaily = WELL.gasIP * WELL.yr1Avg;
+  const nglDaily = WELL.nglIP * WELL.yr1Avg;
+  const oilAnnual = oilDaily * 365, gasAnnual = gasDaily * 365, nglAnnual = nglDaily * 365;
+  const boeAnnual = oilAnnual + nglAnnual + gasAnnual / 6;
+
+  const oilPrice = Math.max(0, p.wti - OIL_BASIS);
+  const gasPriceMcf = Math.max(0, p.hh * 1.024 - GAS_BASIS);
+  const nglPrice = Math.max(0, p.wti * (p.nglPct / 100));
+
+  const totalRev = oilAnnual * oilPrice + nglAnnual * nglPrice + gasAnnual * gasPriceMcf;
+  const revPerBoe = totalRev / boeAnnual;
+  const opCostPerBoe = revPerBoe * (p.opCostPct / 100);
+  const grossPerBoe = revPerBoe - opCostPerBoe;
+  const ebitPerBoe = grossPerBoe - p.dda - p.ga;
+  const taxPerBoe = Math.max(0, ebitPerBoe) * (p.tax / 100);
+  const netPerBoe = ebitPerBoe - taxPerBoe;
+
+  return {
+    revPerBoe, opCostPerBoe,
+    dda: p.dda, ga: p.ga,
+    grossPerBoe, ebitPerBoe, taxPerBoe, netPerBoe,
+  };
+}
+
+// Helper: realized prices given inputs, for UI display
+function realizedPrices(p) {
+  return {
+    oil: Math.max(0, p.wti - OIL_BASIS),
+    gas: Math.max(0, p.hh * 1.024 - GAS_BASIS),
+    ngl: Math.max(0, p.wti * (p.nglPct / 100)),
+    oilBasis: OIL_BASIS,
+    gasBasis: GAS_BASIS,
+  };
+}
+
+window.OhioModel = { DEFAULTS, runModel, singleWellMarginPerBoe, realizedPrices, npv, irr, paybackYear, OIL_BASIS, GAS_BASIS };
