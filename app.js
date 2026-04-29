@@ -103,7 +103,41 @@ function bindNav() {
       render();
       // map needs explicit init / resize when its tab becomes visible
       if (target === 'fieldmap') renderFieldMap();
+      // Close mobile menu after selection
+      closeMobileMenu();
     });
+  });
+}
+
+function closeMobileMenu() {
+  const nav = document.getElementById('topnav');
+  const btn = document.getElementById('mobileMenuToggle');
+  if (nav) nav.classList.remove('open');
+  if (btn) {
+    btn.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function bindMobileMenu() {
+  const btn = document.getElementById('mobileMenuToggle');
+  const nav = document.getElementById('topnav');
+  if (!btn || !nav) return;
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = nav.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  });
+  // Close when clicking outside the nav
+  document.addEventListener('click', e => {
+    if (!nav.classList.contains('open')) return;
+    if (e.target.closest('.topnav') || e.target.closest('.mobile-menu-toggle')) return;
+    closeMobileMenu();
+  });
+  // Close on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMobileMenu();
   });
 }
 
@@ -1018,6 +1052,7 @@ function boot() {
     bindInputs();
     bindScenarioToggle();
     bindNav();
+    bindMobileMenu();
     bindReset();
     initTooltips();
     // initial visibility for Scenario A (hide BC/C panels)
