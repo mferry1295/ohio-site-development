@@ -976,30 +976,81 @@ footer .muted { color: rgba(255,255,255,0.55); }
   .research-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 800px) {
-  .layout { grid-template-columns: 1fr; }
+  /* Side-by-side inputs (~1/3) and outputs (~2/3) so results are
+     immediately visible without scrolling past inputs */
+  .layout { grid-template-columns: 130px minmax(0, 1fr); }
   .sidebar {
-    position: static;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+    border-right: 1px solid var(--line);
+    border-bottom: none;
+    padding: 8px 6px 60px;
   }
+  .content { min-width: 0; }
+  .table-scroll { max-width: 100%; }
+  .sidebar-head { margin-bottom: 4px; }
+  .sidebar-head h2 { font-size: 10px; letter-spacing: 0.10em; }
+  .ghost-btn { font-size: 9px; padding: 2px 6px; letter-spacing: 0.04em; }
+  details { margin-bottom: 4px; }
+  details > summary {
+    padding: 6px 8px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+  details > summary::after { right: 8px; font-size: 13px; }
+  /* Compact inputs: hide sliders, units, info icons, derived chips on mobile */
+  .input-grp {
+    grid-template-columns: 1fr;
+    padding: 6px 8px;
+    gap: 2px;
+  }
+  .input-grp label {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .input-grp .unit { display: none; }
+  .input-grp input[type="range"] { display: none; }
+  .input-grp input[type="number"] {
+    grid-column: 1;
+    width: 100%;
+    padding: 4px 5px;
+    font-size: 11px;
+  }
+  .input-grp .info { display: none; }
+  .input-grp.with-derived .derived { display: none; }
+  /* Compact KPIs */
+  .content { padding: 12px 12px; }
+  .kpi-section-label { font-size: 9px; letter-spacing: 0.10em; margin-bottom: 4px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px; }
+  .kpi { padding: 8px 10px; }
+  .kpi-label { font-size: 8px; letter-spacing: 0.08em; }
+  .kpi-value { font-size: 16px; }
+  .kpi-sub { font-size: 8px; }
+  /* Charts compact */
+  .chart-grid { grid-template-columns: 1fr; gap: 10px; }
+  .card { padding: 10px; }
+  .card-head h3 { font-size: 11px; }
+  .card-sub { font-size: 9px; }
+  .chart-wrap { height: 200px; }
+  .card.wide .chart-wrap { height: 220px; }
   /* Scenario bar: stack label on top, cards stay in a 3-column row below */
   .scenario-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
-    padding: 12px 14px;
+    gap: 6px;
+    padding: 8px 10px;
   }
-  .scenario-label { font-size: 10px; }
+  .scenario-label { font-size: 9px; }
   .scenario-toggle {
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    gap: 4px;
     width: 100%;
   }
-  .scenario-btn { padding: 8px 8px; }
-  .scenario-btn .sc-title { font-size: 11px; line-height: 1.2; margin-bottom: 4px; }
-  .scenario-btn .sc-desc { font-size: 9px; line-height: 1.3; }
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .scenario-btn { padding: 6px 6px; }
+  .scenario-btn .sc-title { font-size: 10px; line-height: 1.2; margin-bottom: 2px; }
+  .scenario-btn .sc-desc { font-size: 8px; line-height: 1.3; }
   .research-grid { grid-template-columns: 1fr; }
   /* Mobile nav: 3-dots toggle visible, nav becomes a dropdown panel */
   .mobile-menu-toggle { display: inline-flex; }
@@ -1027,5 +1078,8 @@ footer .muted { color: rgba(255,255,255,0.55); }
     border-bottom: 1px solid #f0f0f0;
   }
   .topnav .navlink:last-child { border-bottom: none; }
-  .topbar { position: relative; }
+  .topbar { position: relative; padding: 10px 14px; }
+  .brand-name { font-size: 12px; }
+  .brand-sub { font-size: 9px; }
+  .brand-mark { width: 32px; height: 32px; }
 }
