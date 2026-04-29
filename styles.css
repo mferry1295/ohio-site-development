@@ -319,6 +319,77 @@ details[open] > summary::after { content: "−"; }
 
 .scenarioBC.hidden, .scenarioC.hidden { display: none; }
 
+/* ===== Info icon + tooltip ===== */
+.info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--clay);
+  color: var(--pure);
+  font-size: 9px;
+  font-weight: 800;
+  font-family: 'Times New Roman', serif;
+  font-style: italic;
+  cursor: help;
+  margin-left: 4px;
+  vertical-align: middle;
+  position: relative;
+  border: none;
+  padding: 0;
+  line-height: 13px;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+.info:hover, .info:focus {
+  background: var(--derrick);
+  outline: none;
+}
+/* Tooltip popover — rendered as a fixed-position element by JS so it
+   escapes any overflow:hidden ancestors (sidebar, etc.). */
+.tooltip-popover {
+  position: fixed;
+  background: var(--ink);
+  color: var(--pure);
+  padding: 9px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  max-width: 280px;
+  z-index: 9999;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+  pointer-events: none;
+  text-align: left;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.tooltip-popover.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.tooltip-popover::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+  border-bottom: none;
+}
+.tooltip-popover.below::after {
+  bottom: auto;
+  top: -5px;
+  border-top: none;
+  border-bottom: 5px solid var(--ink);
+}
+
 /* ===== Content area ===== */
 .content {
   padding: 24px 28px;

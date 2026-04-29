@@ -61,16 +61,16 @@
       <details open>
         <summary>Commodity Pricing (Apr 2026)</summary>
         <div class="input-grp with-derived">
-          <label>WTI crude <span class="unit">$/bbl</span></label>
+          <label>WTI crude <button class="info" type="button" data-tip="West Texas Intermediate — the U.S. benchmark crude oil price (priced at Cushing, OK). Utica condensate sells at a small discount to WTI due to quality differentials and transport costs.">i</button> <span class="unit">$/bbl</span></label>
           <input type="range" min="40" max="160" step="1" data-input="wti" />
           <input type="number" data-input="wti" />
-          <div class="derived" data-derived="oilRealized" title="Realized Utica condensate price after quality differential">
+          <div class="derived" title="Realized Utica condensate price after quality differential">
             <span class="derived-label">Realized at wellhead</span>
             <span class="derived-value" id="oilRealized">—</span>
           </div>
         </div>
         <div class="input-grp with-derived">
-          <label>Henry Hub gas <span class="unit">$/MMBtu</span></label>
+          <label>Henry Hub gas <button class="info" type="button" data-tip="Henry Hub (Erath, Louisiana) is the U.S. benchmark price for natural gas, priced in $/MMBtu. Ohio gas trades $0.30–0.40/Mcf below Henry Hub due to regional basis discounts.">i</button> <span class="unit">$/MMBtu</span></label>
           <input type="range" min="1" max="10" step="0.05" data-input="hh" />
           <input type="number" data-input="hh" />
           <div class="derived" title="Realized Ohio gas price after Btu conversion and basis differential">
@@ -79,7 +79,7 @@
           </div>
         </div>
         <div class="input-grp with-derived">
-          <label>NGL price <span class="unit">% of WTI</span></label>
+          <label>NGL price <button class="info" type="button" data-tip="Natural Gas Liquids — a basket of ethane, propane, butane, isobutane, and natural gasoline. Typically priced as a fraction of WTI; Utica NGLs trade at ~30–35% of WTI on a $/bbl basis.">i</button> <span class="unit">% of WTI</span></label>
           <input type="range" min="15" max="55" step="1" data-input="nglPct" />
           <input type="number" data-input="nglPct" />
           <div class="derived" title="NGL basket price computed from WTI">
@@ -92,22 +92,22 @@
       <details open>
         <summary>Wells &amp; Drilling</summary>
         <div class="input-grp">
-          <label>Initial well count <span class="unit">wells</span></label>
+          <label>Initial well count <button class="info" type="button" data-tip="Number of wells drilled in Year 1. EOG-style pads bundle 3–6 wells; this defaults to 7 (~2 pads).">i</button> <span class="unit">wells</span></label>
           <input type="range" min="1" max="20" step="1" data-input="initWells" />
           <input type="number" data-input="initWells" />
         </div>
         <div class="input-grp">
-          <label>Replacement drilling <span class="unit">wells/yr</span></label>
+          <label>Replacement drilling <button class="info" type="button" data-tip="New wells drilled each year after Year 1 to offset production decline. Shale wells decline ~50% in Year 1 alone, so continuous drilling is required to keep gas supply flat — especially if a power plant or data center is consuming it.">i</button> <span class="unit">wells/yr</span></label>
           <input type="range" min="0" max="6" step="1" data-input="replWells" />
           <input type="number" data-input="replWells" />
         </div>
         <div class="input-grp">
-          <label>D&amp;C cost per well <span class="unit">$M</span></label>
+          <label>D&amp;C cost per well <button class="info" type="button" data-tip="Drilling &amp; Completion — the all-in capital cost to drill, case, cement, and frac one well. Utica wells average ~$11.4M for a 3-mile lateral at $770/lateral foot.">i</button> <span class="unit">$M</span></label>
           <input type="range" min="6" max="18" step="0.1" data-input="dnc" />
           <input type="number" data-input="dnc" />
         </div>
         <div class="input-grp with-derived">
-          <label>Field operating cost <span class="unit">% of revenue</span></label>
+          <label>Field operating cost <button class="info" type="button" data-tip="All-in cash cost of running the wells, expressed as a % of upstream revenue. Bundles four components: royalty paid to mineral-rights owners (~20%), Lease Operating Expense / LOE ($4/boe), Gathering, Processing &amp; Transport ($8/boe), and Ohio severance + ad valorem taxes ($4.20/boe). 43% reproduces EOG-comparable Utica economics.">i</button> <span class="unit">% of revenue</span></label>
           <input type="range" min="20" max="60" step="0.5" data-input="opCostPct" />
           <input type="number" data-input="opCostPct" />
           <div class="derived" title="Combines royalty (~20%), production / lease ops, midstream gathering & processing, and Ohio severance taxes. Default 43% is calibrated to EOG-comparable Utica wells.">
@@ -119,32 +119,32 @@
       <details class="scenarioBC">
         <summary>Power Plant (CCGT)</summary>
         <div class="input-grp">
-          <label>Plant capacity <span class="unit">MW</span></label>
+          <label>Plant capacity <button class="info" type="button" data-tip="Nameplate (max) electrical output of the gas-fired plant in megawatts. Sized at 150 MW to deliver 120 MW continuously to a 100 MW IT-load data center (PUE 1.2) at ~80% availability.">i</button> <span class="unit">MW</span></label>
           <input type="range" min="50" max="400" step="10" data-input="plantMW" />
           <input type="number" data-input="plantMW" />
         </div>
         <div class="input-grp">
-          <label>Heat rate <span class="unit">Btu/kWh</span></label>
+          <label>Heat rate <button class="info" type="button" data-tip="Fuel efficiency of the turbine — Btu of natural gas required to produce 1 kWh of electricity. Modern combined-cycle gas turbines (CCGT) run ~7,000 Btu/kWh, equivalent to ~50% thermal efficiency. Lower = more efficient.">i</button> <span class="unit">Btu/kWh</span></label>
           <input type="range" min="6200" max="9500" step="50" data-input="heatRate" />
           <input type="number" data-input="heatRate" />
         </div>
         <div class="input-grp">
-          <label>Plant capex <span class="unit">$M</span></label>
+          <label>Plant capex <button class="info" type="button" data-tip="One-time capital cost to build the gas-fired generation facility. Recent Ohio combined-cycle plants run ~$1M–1.3M/MW installed; a 150 MW plant lands at ~$150–200M.">i</button> <span class="unit">$M</span></label>
           <input type="range" min="80" max="400" step="5" data-input="plantCapex" />
           <input type="number" data-input="plantCapex" />
         </div>
         <div class="input-grp">
-          <label>Non-fuel O&amp;M <span class="unit">$/MWh</span></label>
+          <label>Non-fuel O&amp;M <button class="info" type="button" data-tip="Operations &amp; Maintenance excluding fuel — covers maintenance, labor, water, parts, and overhead. Expressed per megawatt-hour generated. Industry rule of thumb: ~$15/MWh for modern CCGT plants.">i</button> <span class="unit">$/MWh</span></label>
           <input type="range" min="5" max="30" step="0.5" data-input="plantOM" />
           <input type="number" data-input="plantOM" />
         </div>
         <div class="input-grp">
-          <label>Plant availability <span class="unit">%</span></label>
+          <label>Plant availability <button class="info" type="button" data-tip="Fraction of time the plant is actually generating power — accounts for scheduled maintenance, forced outages, and seasonal de-rates. Best-in-class CCGT plants achieve 92–95%.">i</button> <span class="unit">%</span></label>
           <input type="range" min="80" max="98" step="0.5" data-input="avail" />
           <input type="number" data-input="avail" />
         </div>
         <div class="input-grp">
-          <label>Wholesale power (B only) <span class="unit">$/MWh</span></label>
+          <label>Wholesale power (B only) <button class="info" type="button" data-tip="Price received for selling electricity into the PJM grid (Scenario B only — applies when there's no on-site data center buying the power directly). Ohio AEP zone real-time prices have averaged ~$50–70/MWh recently. Scenario C uses the hyperscaler lease rate instead.">i</button> <span class="unit">$/MWh</span></label>
           <input type="range" min="30" max="120" step="1" data-input="powerPrice" />
           <input type="number" data-input="powerPrice" />
         </div>
@@ -153,32 +153,32 @@
       <details class="scenarioC">
         <summary>Data Center &amp; Hyperscaler Lease</summary>
         <div class="input-grp">
-          <label>IT load <span class="unit">MW</span></label>
+          <label>IT load <button class="info" type="button" data-tip="Power drawn by the actual IT equipment (servers, storage, networking) — the &quot;productive&quot; load. A standard hyperscaler campus module is 100 MW IT. Total facility power (including cooling, UPS, lighting) = IT load × PUE.">i</button> <span class="unit">MW</span></label>
           <input type="range" min="20" max="300" step="10" data-input="itLoad" />
           <input type="number" data-input="itLoad" />
         </div>
         <div class="input-grp">
-          <label>PUE</label>
+          <label>PUE <button class="info" type="button" data-tip="Power Usage Effectiveness — ratio of total facility power to IT load. PUE of 1.2 means for every 1 MW of computing power, 0.2 MW goes to cooling, UPS, and lighting overhead. Best-in-class new-build = 1.2; older facilities often exceed 1.5.">i</button></label>
           <input type="range" min="1.05" max="1.6" step="0.01" data-input="pue" />
           <input type="number" data-input="pue" />
         </div>
         <div class="input-grp">
-          <label>Data center capex <span class="unit">$M</span></label>
+          <label>Data center capex <button class="info" type="button" data-tip="One-time build cost for a 100 MW IT-load data center: ~400,000 sq ft of whitespace, redundant power, fiber backhaul, cooling. Industry rule of thumb: $8–12M per IT-MW. A 100 MW campus runs ~$800M–1.2B.">i</button> <span class="unit">$M</span></label>
           <input type="range" min="400" max="2000" step="20" data-input="dcCapex" />
           <input type="number" data-input="dcCapex" />
         </div>
         <div class="input-grp">
-          <label>Data center fixed OpEx <span class="unit">$M/yr</span></label>
+          <label>Data center fixed OpEx <button class="info" type="button" data-tip="Annual fixed operating costs for the data center facility: staffing, security, water, fiber, property taxes, insurance. Excludes power (which is generated on-site). Typically $20–40M/yr for a 100 MW campus.">i</button> <span class="unit">$M/yr</span></label>
           <input type="range" min="10" max="80" step="1" data-input="dcOpex" />
           <input type="number" data-input="dcOpex" />
         </div>
         <div class="input-grp">
-          <label>Hyperscaler lease rate <span class="unit">$/MWh</span></label>
+          <label>Hyperscaler lease rate <button class="info" type="button" data-tip="Price the hyperscaler tenant (Microsoft, Google, AWS, Meta) pays per megawatt-hour of delivered power under a behind-the-meter colocation lease. Recent Ohio deals: $70–100/MWh on 10–15-year terms. This is what makes the integrated build economics work.">i</button> <span class="unit">$/MWh</span></label>
           <input type="range" min="40" max="140" step="1" data-input="leaseRate" />
           <input type="number" data-input="leaseRate" />
         </div>
         <div class="input-grp">
-          <label>Lease escalator <span class="unit">%/yr</span></label>
+          <label>Lease escalator <button class="info" type="button" data-tip="Annual percentage increase in the hyperscaler lease rate over the term — typically tied to CPI or a flat 2–3% to protect against inflation.">i</button> <span class="unit">%/yr</span></label>
           <input type="range" min="0" max="5" step="0.1" data-input="esc" />
           <input type="number" data-input="esc" />
         </div>
@@ -187,27 +187,27 @@
       <details>
         <summary>Project &amp; Finance</summary>
         <div class="input-grp">
-          <label>Project term <span class="unit">years</span></label>
+          <label>Project term <button class="info" type="button" data-tip="Length of the analysis horizon in years. Hyperscaler colocation leases typically run 10–15 years with renewal options; the model defaults to 20 years to capture the full investment cycle plus several years of stabilized operation.">i</button> <span class="unit">years</span></label>
           <input type="range" min="10" max="30" step="1" data-input="years" />
           <input type="number" data-input="years" />
         </div>
         <div class="input-grp">
-          <label>Discount rate (WACC) <span class="unit">%</span></label>
+          <label>Discount rate (WACC) <button class="info" type="button" data-tip="Weighted Average Cost of Capital — the blended cost of equity and debt used to discount future cash flows back to present value. Sets the &quot;hurdle rate&quot; the IRR must beat. Energy &amp; infrastructure projects typically use 8–12%.">i</button> <span class="unit">%</span></label>
           <input type="range" min="4" max="20" step="0.5" data-input="wacc" />
           <input type="number" data-input="wacc" />
         </div>
         <div class="input-grp">
-          <label>Effective tax rate <span class="unit">%</span></label>
+          <label>Effective tax rate <button class="info" type="button" data-tip="Blended federal + state income tax rate applied to taxable earnings. Effective rate (~22%) is lower than the statutory federal rate (21%) plus state because of depletion allowances, intangible drilling cost deductions, and other E&amp;P-specific tax provisions.">i</button> <span class="unit">%</span></label>
           <input type="range" min="0" max="35" step="0.5" data-input="tax" />
           <input type="number" data-input="tax" />
         </div>
         <div class="input-grp">
-          <label>DD&amp;A (E&amp;P) <span class="unit">$/boe</span></label>
+          <label>DD&amp;A (E&amp;P) <button class="info" type="button" data-tip="Depreciation, Depletion &amp; Amortization for the Exploration &amp; Production segment. A non-cash accounting charge that spreads the $11.4M per-well drilling cost (and other capitalized costs) across the barrels produced over the well's life. Applied per boe (barrel of oil equivalent). Reduces taxable income but doesn't affect cash flow.">i</button> <span class="unit">$/boe</span></label>
           <input type="range" min="6" max="20" step="0.5" data-input="dda" />
           <input type="number" data-input="dda" />
         </div>
         <div class="input-grp">
-          <label>G&amp;A <span class="unit">$/boe</span></label>
+          <label>G&amp;A <button class="info" type="button" data-tip="General &amp; Administrative — corporate overhead allocated to each barrel produced: executive salaries, accounting, legal, HQ costs, IT systems. EOG-comparable Utica operators run ~$1.50/boe.">i</button> <span class="unit">$/boe</span></label>
           <input type="range" min="0.5" max="5" step="0.1" data-input="ga" />
           <input type="number" data-input="ga" />
         </div>

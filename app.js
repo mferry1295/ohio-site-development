@@ -906,6 +906,67 @@ function render() {
   renderCompare();
 }
 
+// ===========================================================
+// Info-icon tooltip popover
+// ===========================================================
+let _tooltipEl = null;
+function initTooltips() {
+  if (_tooltipEl) return;
+  _tooltipEl = document.createElement('div');
+  _tooltipEl.className = 'tooltip-popover';
+  document.body.appendChild(_tooltipEl);
+
+  const show = (icon) => {
+    const tip = icon.dataset.tip;
+    if (!tip) return;
+    _tooltipEl.textContent = tip;
+    _tooltipEl.classList.remove('visible', 'below');
+    _tooltipEl.style.left = '0px';
+    _tooltipEl.style.top = '0px';
+    // Force layout to measure
+    const tipRect = _tooltipEl.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    const margin = 8;
+    let placeBelow = false;
+    let top = iconRect.top - tipRect.height - margin;
+    if (top < 8) {  // not enough room above — flip below
+      top = iconRect.bottom + margin;
+      placeBelow = true;
+    }
+    let left = iconRect.left + iconRect.width / 2 - tipRect.width / 2;
+    // Clamp horizontally to viewport
+    const minLeft = 8;
+    const maxLeft = window.innerWidth - tipRect.width - 8;
+    if (left < minLeft) left = minLeft;
+    if (left > maxLeft) left = maxLeft;
+    _tooltipEl.style.left = left + 'px';
+    _tooltipEl.style.top = top + 'px';
+    _tooltipEl.classList.toggle('below', placeBelow);
+    requestAnimationFrame(() => _tooltipEl.classList.add('visible'));
+  };
+  const hide = () => {
+    _tooltipEl.classList.remove('visible');
+  };
+
+  // Event delegation
+  document.addEventListener('mouseover', e => {
+    const icon = e.target.closest && e.target.closest('.info[data-tip]');
+    if (icon) show(icon);
+  });
+  document.addEventListener('mouseout', e => {
+    const icon = e.target.closest && e.target.closest('.info[data-tip]');
+    if (icon) hide();
+  });
+  document.addEventListener('focusin', e => {
+    if (e.target.matches && e.target.matches('.info[data-tip]')) show(e.target);
+  });
+  document.addEventListener('focusout', e => {
+    if (e.target.matches && e.target.matches('.info[data-tip]')) hide();
+  });
+  // Hide on scroll within sidebar (tooltip would otherwise stay anchored to old position)
+  document.addEventListener('scroll', hide, true);
+}
+
 // ===== Boot =====
 function boot() {
   try {
@@ -914,6 +975,7 @@ function boot() {
     bindScenarioToggle();
     bindNav();
     bindReset();
+    initTooltips();
     // initial visibility for Scenario A (hide BC/C panels)
     document.querySelectorAll('.scenarioBC').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.scenarioC').forEach(el => el.classList.add('hidden'));
