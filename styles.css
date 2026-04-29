@@ -756,6 +756,14 @@ details[open] > summary::after { content: "−"; }
   border-radius: 50%;
   vertical-align: middle;
 }
+.map-legend-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border: 1px solid var(--derrick);
+  border-radius: 2px;
+  vertical-align: middle;
+}
 .map-legend-text { color: var(--muted); margin-right: 6px; }
 
 .map-layout {

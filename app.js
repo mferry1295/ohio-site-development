@@ -684,21 +684,28 @@ function fmtBcfe(mcfe) {
   return fmt.num(mcfe) + ' Mcfe';
 }
 
-function radiusForMetric(value, maxValue) {
-  // Square-root scaling so markers' AREA is proportional to value
-  if (maxValue <= 0 || value <= 0) return 4;
-  const r = 6 + 28 * Math.sqrt(value / maxValue);
-  return Math.max(4, r);
-}
-
+// Color ramp for choropleth: light blush → mid clay → dark derrick.
+// Counties with no data (zero metric) get a very faint grey-pink so they're
+// still visible as polygons but clearly distinct from the producing region.
 function colorForMetric(value, maxValue) {
-  if (maxValue <= 0 || value <= 0) return '#e0e0e0';
-  const t = Math.sqrt(value / maxValue); // ramp by sqrt to spread mid-tier
-  // Clay → Derrick gradient
-  // Clay: 212,106,106 (D46A6A)  Derrick: 139,26,26 (8B1A1A)
-  const r = Math.round(212 + (139 - 212) * t);
-  const g = Math.round(106 + (26 - 106) * t);
-  const b = Math.round(106 + (26 - 106) * t);
+  if (maxValue <= 0 || value <= 0) return '#f5ecec';
+  const t = Math.sqrt(value / maxValue); // sqrt ramp spreads mid-tier nicely
+  // Three-stop gradient: blush #F6E1E1 → clay #D46A6A → derrick #8B1A1A
+  const blush = [246, 225, 225];
+  const clay = [212, 106, 106];
+  const derrick = [139, 26, 26];
+  let r, g, b;
+  if (t < 0.5) {
+    const k = t / 0.5;
+    r = Math.round(blush[0] + (clay[0] - blush[0]) * k);
+    g = Math.round(blush[1] + (clay[1] - blush[1]) * k);
+    b = Math.round(blush[2] + (clay[2] - blush[2]) * k);
+  } else {
+    const k = (t - 0.5) / 0.5;
+    r = Math.round(clay[0] + (derrick[0] - clay[0]) * k);
+    g = Math.round(clay[1] + (derrick[1] - clay[1]) * k);
+    b = Math.round(clay[2] + (derrick[2] - clay[2]) * k);
+  }
   return `rgb(${r},${g},${b})`;
 }
 
@@ -723,8 +730,34 @@ function initMap() {
     maxZoom: 19,
   }).addTo(MAP_STATE.map);
 
-  MAP_STATE.markerLayer = L.layerGroup().addTo(MAP_STATE.map);
-  refreshMapMarkers();
+  // Load Ohio county polygons (choropleth)
+  fetch('ohio_counties.geojson')
+    .then(r => r.json())
+    .then(geo => {
+      MAP_STATE.geoLayer = L.geoJSON(geo, {
+        style: feat => stylePolygon(feat),
+        onEachFeature: (feat, layer) => {
+          const name = feat.properties.name;
+          const c = C.COUNTIES.find(x => x.name === name);
+          layer.on('mouseover', e => {
+            e.target.setStyle({ weight: 2.5, color: '#3D3D3D', fillOpacity: 0.85 });
+            const v = c ? (c[MAP_STATE.metric] || 0) : 0;
+            const txt = c
+              ? `<strong>${name}</strong><br>${MAP_METRICS[MAP_STATE.metric].short}: ${MAP_METRICS[MAP_STATE.metric].fmt(v)}`
+              : `<strong>${name}</strong><br><em>no Utica production</em>`;
+            e.target.bindTooltip(txt, { direction: 'top', sticky: true }).openTooltip();
+          });
+          layer.on('mouseout', e => {
+            MAP_STATE.geoLayer.resetStyle(e.target);
+          });
+          layer.on('click', () => {
+            if (c) showCountyDetail(c);
+          });
+        },
+      }).addTo(MAP_STATE.map);
+      MAP_STATE.map.fitBounds(MAP_STATE.geoLayer.getBounds(), { padding: [10, 10] });
+    });
+
   populateCountyDropdown();
 
   // Bind metric toggle
@@ -734,8 +767,31 @@ function initMap() {
       btn.classList.add('active');
       MAP_STATE.metric = btn.dataset.metric;
       MAP_STATE.metricLabel = MAP_METRICS[btn.dataset.metric].label;
-      refreshMapMarkers();
+      restylePolygons();
     });
+  });
+}
+
+function stylePolygon(feat) {
+  const name = feat.properties.name;
+  const C = window.OhioCounties.COUNTIES.find(x => x.name === name);
+  const metric = MAP_STATE.metric;
+  const allValues = window.OhioCounties.COUNTIES.map(c => c[metric] || 0);
+  const maxV = Math.max(...allValues);
+  const v = C ? (C[metric] || 0) : 0;
+  return {
+    fillColor: colorForMetric(v, maxV),
+    weight: 1,
+    color: '#8B1A1A',
+    opacity: 0.6,
+    fillOpacity: v > 0 ? 0.78 : 0.35,
+  };
+}
+
+function restylePolygons() {
+  if (!MAP_STATE.geoLayer) return;
+  MAP_STATE.geoLayer.eachLayer(layer => {
+    layer.setStyle(stylePolygon(layer.feature));
   });
 }
 
@@ -775,8 +831,8 @@ function showEmptyDetail() {
   det.innerHTML = `
     <div class="map-detail-header">
       <div class="map-detail-tag">SELECT A COUNTY</div>
-      <h3>Click a marker</h3>
-      <div class="map-detail-sub">Each circle's size scales with the metric selected above.</div>
+      <h3>Click a county</h3>
+      <div class="map-detail-sub">Counties are shaded darker as the selected metric increases.</div>
     </div>
     <div class="map-detail-body">
       <div class="map-empty">
@@ -787,33 +843,6 @@ function showEmptyDetail() {
   `;
 }
 
-function refreshMapMarkers() {
-  const { COUNTIES } = window.OhioCounties;
-  const metric = MAP_STATE.metric;
-  const values = COUNTIES.map(c => c[metric] || 0);
-  const maxV = Math.max(...values);
-  MAP_STATE.markerLayer.clearLayers();
-
-  COUNTIES.forEach(c => {
-    const v = c[metric] || 0;
-    const radius = radiusForMetric(v, maxV);
-    const color = colorForMetric(v, maxV);
-    const marker = L.circleMarker([c.lat, c.lng], {
-      radius,
-      fillColor: color,
-      color: '#8B1A1A',
-      weight: 1.5,
-      opacity: 0.9,
-      fillOpacity: 0.65,
-    });
-    marker.bindTooltip(`<strong>${c.name}</strong><br>${MAP_METRICS[metric].short}: ${MAP_METRICS[metric].fmt(v)}`, {
-      direction: 'top',
-      offset: [0, -radius],
-    });
-    marker.on('click', () => showCountyDetail(c));
-    marker.addTo(MAP_STATE.markerLayer);
-  });
-}
 
 function showCountyDetail(c) {
   MAP_STATE.selectedCounty = c.name;
