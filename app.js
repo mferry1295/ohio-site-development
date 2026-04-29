@@ -789,8 +789,42 @@ function showCountyDetail(c) {
       <div class="map-detail-section-title">Cumulative</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Total Utica production</span><span class="map-detail-stat-value">${cumBcfe.toLocaleString()} Bcfe</span></div>
 
+      ${renderOperatorBreakdown(c.name)}
+
       <div class="map-detail-note">${c.note}</div>
     </div>
+  `;
+}
+
+function renderOperatorBreakdown(countyName) {
+  const ops = window.COUNTY_OPERATORS_2025?.[countyName];
+  if (!ops || ops.length === 0) return '';
+  // Total wells across all operators in this county
+  const totalWells = ops.reduce((s, o) => s + o.wells, 0);
+  const totalGas = ops.reduce((s, o) => s + o.gas, 0);
+  const totalOil = ops.reduce((s, o) => s + o.oil, 0);
+  const rows = ops.map(o => {
+    const sharePct = totalGas + totalOil * 5.659 > 0
+      ? ((o.gas + o.oil * 5.659) / (totalGas + totalOil * 5.659) * 100).toFixed(1)
+      : '0.0';
+    const oilStr = o.oil > 0 ? fmt.num(o.oil) + ' bbl' : '—';
+    const gasStr = o.gas > 0 ? (o.gas / 1e6).toFixed(2) + ' Bcf' : '—';
+    return `
+      <div class="map-op-row">
+        <div class="map-op-name">${o.op}</div>
+        <div class="map-op-stats">
+          <span><strong>${o.wells}</strong> wells</span>
+          <span>${oilStr} oil</span>
+          <span>${gasStr} gas</span>
+        </div>
+        <div class="map-op-bar"><div class="map-op-bar-fill" style="width:${sharePct}%"></div><span class="map-op-bar-pct">${sharePct}%</span></div>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="map-detail-section-title">Operators · 2025 Production</div>
+    <div class="map-op-summary">${ops.length} operator${ops.length === 1 ? '' : 's'} · ${fmt.num(totalWells)} wells · ${(totalGas / 1e6).toFixed(1)} Bcf gas · ${fmt.num(totalOil)} bbl oil</div>
+    <div class="map-op-list">${rows}</div>
   `;
 }
 
