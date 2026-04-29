@@ -779,6 +779,26 @@ function stylePolygon(feat) {
   const allValues = window.OhioCounties.COUNTIES.map(c => c[metric] || 0);
   const maxV = Math.max(...allValues);
   const v = C ? (C[metric] || 0) : 0;
+  // When one county is selected, grey out the others
+  const sel = MAP_STATE.selectedCounty;
+  if (sel && name !== sel) {
+    return {
+      fillColor: '#d8d8d8',
+      weight: 0.8,
+      color: '#999',
+      opacity: 0.5,
+      fillOpacity: 0.45,
+    };
+  }
+  if (sel && name === sel) {
+    return {
+      fillColor: colorForMetric(v, maxV),
+      weight: 3,
+      color: '#3D3D3D',
+      opacity: 1,
+      fillOpacity: 0.9,
+    };
+  }
   return {
     fillColor: colorForMetric(v, maxV),
     weight: 1,
@@ -819,6 +839,7 @@ function populateCountyDropdown() {
       sel.value = '';
       MAP_STATE.selectedCounty = null;
       MAP_STATE.map.flyTo([40.20, -81.30], 8, { duration: 0.7 });
+      restylePolygons();
       showEmptyDetail();
     });
     reset.dataset.bound = '1';
@@ -849,6 +870,8 @@ function showCountyDetail(c) {
   // Sync the dropdown
   const sel = document.getElementById('countySelect');
   if (sel && sel.value !== c.name) sel.value = c.name;
+  // Grey out other counties on the map
+  restylePolygons();
   const det = document.getElementById('mapDetail');
   if (!det) return;
   const cumBcfe = c.cumulativeBcfe;
