@@ -26,8 +26,14 @@ const DEFAULTS = {
   plantMW: 150, heatRate: 7000, plantCapex: 175, plantOM: 15, avail: 95, powerPrice: 65,
   // DC
   itLoad: 100, pue: 1.2, dcCapex: 1000, dcOpex: 30, leaseRate: 80, esc: 2.0,
-  // Finance
-  years: 20, wacc: 10, tax: 22, dda: 12, ga: 1.5,
+  // Project
+  years: 20, dda: 12, ga: 1.5,
+  // Financing
+  wacc: 10, tax: 22,
+  debtPct: 50,           // share of Y1 capex raised as debt
+  debtRate: 7.5,         // interest rate on debt (%)
+  loanTerm: 20,          // amortization term (years)
+  ownerEquityPct: 30,    // landowner's share of equity (rest = external)
 };
 
 // Per-well year-1 average production (calendar year, after IP30 declines).
@@ -248,7 +254,7 @@ function runModel(p, scenario = 'A') {
     });
   }
 
-  // Headline metrics
+  // Headline metrics (unlevered project)
   const totalRev = rows.reduce((s, r) => s + r.totalRev, 0);
   const totalEbitda = rows.reduce((s, r) => s + r.ebitda, 0);
   const totalCapex = rows.reduce((s, r) => s + r.capex, 0);
@@ -257,11 +263,78 @@ function runModel(p, scenario = 'A') {
   const projIrr = irr(fcfSeries);
   const projPayback = paybackYear(fcfSeries);
 
+  // ===== Capital structure: financing applied to Year-1 (initial) capex only.
+  // Replacement-drilling capex in years 2+ is paid from operating cash flows.
+  const initialCapex = rows[0]?.capex || 0;
+  const debtPct = (p.debtPct || 0) / 100;
+  const equityPct = 1 - debtPct;
+  const ownerEquityPct = (p.ownerEquityPct || 100) / 100;
+  const externalEquityPct = 1 - ownerEquityPct;
+
+  const debtAmount = initialCapex * debtPct;
+  const equityAmount = initialCapex * equityPct;
+  const ownerEquity = equityAmount * ownerEquityPct;
+  const externalEquity = equityAmount * externalEquityPct;
+
+  // Annual level-payment debt service over loanTerm years
+  const r = p.debtRate / 100;
+  const n = Math.max(1, Math.round(p.loanTerm));
+  const annualDebtService = debtAmount > 0 && r > 0
+    ? debtAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1)
+    : (debtAmount > 0 ? debtAmount / n : 0);
+
+  // Track interest portion each year for tax shield (declining balance)
+  let principalRemaining = debtAmount;
+  const taxRate = p.tax / 100;
+
+  // Build levered (after-debt) cash flow stream
+  // Year 0: equity contribution outflow
+  // Year y: unlevered FCF + (interest tax shield) - debt service (during loanTerm only)
+  const leveredCF = [0]; // year 0 placeholder; no cash flow yet for project
+  for (let y = 1; y <= Y; y++) {
+    const unleveredFcf = rows[y - 1].fcf;
+    let debtService = 0, interestPaid = 0, principalPaid = 0;
+    if (y <= n && debtAmount > 0) {
+      interestPaid = principalRemaining * r;
+      principalPaid = annualDebtService - interestPaid;
+      principalRemaining = Math.max(0, principalRemaining - principalPaid);
+      debtService = annualDebtService;
+    }
+    const interestTaxShield = interestPaid * taxRate;
+    // Note: unlevered FCF already includes Y1 capex outflow. To compute cash flow
+    // to all-equity holders in a levered scenario, we add back the debt-funded
+    // capex (because debt covers it) and subtract debt service.
+    const cashToAllEquity = unleveredFcf
+      + (y === 1 ? debtAmount : 0)   // Y1: debt cash inflow
+      - debtService
+      + interestTaxShield;
+    leveredCF.push(cashToAllEquity);
+  }
+
+  // Owner cash flow = ownerEquityPct of all-equity cash flows minus owner's Y0 contribution
+  const ownerCF = [-ownerEquity, ...leveredCF.slice(1).map(v => v * ownerEquityPct)];
+  const externalCF = [-externalEquity, ...leveredCF.slice(1).map(v => v * externalEquityPct)];
+
+  const ownerIrr = irr(ownerCF);
+  const ownerNpv = npv(p.wacc / 100, ownerCF);
+  const ownerPayback = paybackYear(ownerCF);
+  const ownerCashIn = ownerCF.slice(1).filter(v => v > 0).reduce((s, v) => s + v, 0);
+  const ownerMoic = ownerEquity > 0 ? ownerCashIn / ownerEquity : null;
+
+  const externalIrr = irr(externalCF);
+
   return {
     rows, totals: { totalRev, totalEbitda, totalCapex },
     npv: projNpv, irr: projIrr, payback: projPayback,
     realized: { oilPrice, gasPriceMcf, nglPrice },
     plantDailyGasMcf, dcDailyMWh,
+    financing: {
+      initialCapex, debtAmount, equityAmount, ownerEquity, externalEquity,
+      annualDebtService, loanTerm: n,
+      ownerIrr, ownerNpv, ownerPayback, ownerMoic,
+      externalIrr,
+      ownerCF, leveredCF,
+    },
   };
 }
 

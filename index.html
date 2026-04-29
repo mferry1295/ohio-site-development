@@ -184,22 +184,12 @@
         </div>
       </details>
 
-      <details>
-        <summary>Project &amp; Finance</summary>
+      <details open>
+        <summary>Project</summary>
         <div class="input-grp">
           <label>Project term <button class="info" type="button" data-tip="Length of the analysis horizon in years. Hyperscaler colocation leases typically run 10–15 years with renewal options; the model defaults to 20 years to capture the full investment cycle plus several years of stabilized operation.">i</button> <span class="unit">years</span></label>
           <input type="range" min="10" max="30" step="1" data-input="years" />
           <input type="number" data-input="years" />
-        </div>
-        <div class="input-grp">
-          <label>Discount rate (WACC) <button class="info" type="button" data-tip="Weighted Average Cost of Capital — the blended cost of equity and debt used to discount future cash flows back to present value. Sets the &quot;hurdle rate&quot; the IRR must beat. Energy &amp; infrastructure projects typically use 8–12%.">i</button> <span class="unit">%</span></label>
-          <input type="range" min="4" max="20" step="0.5" data-input="wacc" />
-          <input type="number" data-input="wacc" />
-        </div>
-        <div class="input-grp">
-          <label>Effective tax rate <button class="info" type="button" data-tip="Blended federal + state income tax rate applied to taxable earnings. Effective rate (~22%) is lower than the statutory federal rate (21%) plus state because of depletion allowances, intangible drilling cost deductions, and other E&amp;P-specific tax provisions.">i</button> <span class="unit">%</span></label>
-          <input type="range" min="0" max="35" step="0.5" data-input="tax" />
-          <input type="number" data-input="tax" />
         </div>
         <div class="input-grp">
           <label>DD&amp;A (E&amp;P) <button class="info" type="button" data-tip="Depreciation, Depletion &amp; Amortization for the Exploration &amp; Production segment. A non-cash accounting charge that spreads the $11.4M per-well drilling cost (and other capitalized costs) across the barrels produced over the well's life. Applied per boe (barrel of oil equivalent). Reduces taxable income but doesn't affect cash flow.">i</button> <span class="unit">$/boe</span></label>
@@ -212,16 +202,69 @@
           <input type="number" data-input="ga" />
         </div>
       </details>
+
+      <details open>
+        <summary>Financing</summary>
+        <div class="input-grp">
+          <label>Discount rate (WACC) <button class="info" type="button" data-tip="Weighted Average Cost of Capital — used to discount unlevered project cash flows back to present value. Sets the hurdle rate the project IRR must beat. Energy &amp; infrastructure projects typically use 8–12%.">i</button> <span class="unit">%</span></label>
+          <input type="range" min="4" max="20" step="0.5" data-input="wacc" />
+          <input type="number" data-input="wacc" />
+        </div>
+        <div class="input-grp">
+          <label>Effective tax rate <button class="info" type="button" data-tip="Blended federal + state income tax rate applied to taxable earnings. Effective rate (~22%) is lower than the statutory federal rate (21%) plus state because of depletion allowances, intangible drilling cost deductions, and other E&amp;P-specific tax provisions.">i</button> <span class="unit">%</span></label>
+          <input type="range" min="0" max="35" step="0.5" data-input="tax" />
+          <input type="number" data-input="tax" />
+        </div>
+        <div class="input-grp with-derived">
+          <label>% Debt <button class="info" type="button" data-tip="Share of upfront capital raised as project debt (senior secured, infrastructure loan). Higher debt = lower equity check size but higher fixed obligations. Energy/infra projects typically run 50–70% debt; data-center build-outs are often less leveraged (40–60%).">i</button> <span class="unit">% of Y1 capex</span></label>
+          <input type="range" min="0" max="90" step="1" data-input="debtPct" />
+          <input type="number" data-input="debtPct" />
+          <div class="derived" title="Equity share — automatically derived as 100% minus debt %.">
+            <span class="derived-label">Equity share</span>
+            <span class="derived-value" id="equityPctDerived">—</span>
+          </div>
+        </div>
+        <div class="input-grp">
+          <label>Interest rate on debt <button class="info" type="button" data-tip="All-in cost of debt — interest rate + amortization fees. Senior project debt for energy/infra is typically 6–9% in the current rate environment. Higher debt rate = lower owner returns due to fixed payments.">i</button> <span class="unit">%</span></label>
+          <input type="range" min="3" max="12" step="0.25" data-input="debtRate" />
+          <input type="number" data-input="debtRate" />
+        </div>
+        <div class="input-grp">
+          <label>Loan term <button class="info" type="button" data-tip="Number of years over which the project debt is amortized (paid down). Typical infrastructure debt: 15–25 years. Shorter term = higher annual payments but quicker payoff. Modeled as a level annuity.">i</button> <span class="unit">years</span></label>
+          <input type="range" min="5" max="25" step="1" data-input="loanTerm" />
+          <input type="number" data-input="loanTerm" />
+        </div>
+        <div class="input-grp with-derived">
+          <label>% Owner Equity <button class="info" type="button" data-tip="Your share (as the landowner) of the equity portion. The remainder comes from external equity partners (PE, infrastructure fund, JV co-investor). Lower owner % = smaller check you write but you give up more of the upside.">i</button> <span class="unit">% of equity</span></label>
+          <input type="range" min="0" max="100" step="1" data-input="ownerEquityPct" />
+          <input type="number" data-input="ownerEquityPct" />
+          <div class="derived" title="External equity partners' share — automatically derived as 100% minus owner equity %.">
+            <span class="derived-label">External equity</span>
+            <span class="derived-value" id="externalEquityPctDerived">—</span>
+          </div>
+        </div>
+      </details>
     </aside>
 
     <div class="content">
+      <div class="kpi-section-label">Project (unlevered)</div>
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-label">20-Year Revenue</div><div class="kpi-value" id="kpi-rev">—</div><div class="kpi-sub" id="kpi-rev-sub"></div></div>
         <div class="kpi"><div class="kpi-label">20-Year EBITDA</div><div class="kpi-value" id="kpi-ebitda">—</div><div class="kpi-sub" id="kpi-ebitda-sub"></div></div>
         <div class="kpi"><div class="kpi-label">Total CapEx</div><div class="kpi-value" id="kpi-capex">—</div><div class="kpi-sub" id="kpi-capex-sub"></div></div>
         <div class="kpi"><div class="kpi-label">NPV @ WACC</div><div class="kpi-value" id="kpi-npv">—</div><div class="kpi-sub" id="kpi-npv-sub"></div></div>
-        <div class="kpi"><div class="kpi-label">Unlevered IRR</div><div class="kpi-value" id="kpi-irr">—</div><div class="kpi-sub" id="kpi-irr-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">Project IRR</div><div class="kpi-value" id="kpi-irr">—</div><div class="kpi-sub" id="kpi-irr-sub"></div></div>
         <div class="kpi"><div class="kpi-label">Payback</div><div class="kpi-value" id="kpi-payback">—</div><div class="kpi-sub" id="kpi-payback-sub"></div></div>
+      </div>
+
+      <div class="kpi-section-label">Owner Economics (levered)</div>
+      <div class="kpi-row owner-kpis">
+        <div class="kpi owner"><div class="kpi-label">Owner Check-Write</div><div class="kpi-value" id="kpi-ownerEquity">—</div><div class="kpi-sub" id="kpi-ownerEquity-sub"></div></div>
+        <div class="kpi owner"><div class="kpi-label">Owner Equity IRR</div><div class="kpi-value" id="kpi-ownerIrr">—</div><div class="kpi-sub" id="kpi-ownerIrr-sub"></div></div>
+        <div class="kpi owner"><div class="kpi-label">Owner Cash Multiple</div><div class="kpi-value" id="kpi-ownerMoic">—</div><div class="kpi-sub" id="kpi-ownerMoic-sub"></div></div>
+        <div class="kpi owner"><div class="kpi-label">Owner Payback</div><div class="kpi-value" id="kpi-ownerPayback">—</div><div class="kpi-sub" id="kpi-ownerPayback-sub"></div></div>
+        <div class="kpi owner"><div class="kpi-label">Debt Raised</div><div class="kpi-value" id="kpi-debt">—</div><div class="kpi-sub" id="kpi-debt-sub"></div></div>
+        <div class="kpi owner"><div class="kpi-label">External Equity</div><div class="kpi-value" id="kpi-extEquity">—</div><div class="kpi-sub" id="kpi-extEquity-sub"></div></div>
       </div>
 
       <div class="chart-grid">

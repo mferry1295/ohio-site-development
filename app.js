@@ -153,6 +153,45 @@ function renderKPIs(model) {
 
   document.getElementById('kpi-payback').textContent = fmt.yrs(model.payback);
   document.getElementById('kpi-payback-sub').textContent = `Undiscounted`;
+
+  // ===== Owner Economics =====
+  const f = model.financing;
+  document.getElementById('kpi-ownerEquity').textContent = fmt.money0(f.ownerEquity);
+  document.getElementById('kpi-ownerEquity-sub').textContent =
+    `${state.ownerEquityPct}% of equity · Y1`;
+
+  const ownerIrrEl = document.getElementById('kpi-ownerIrr');
+  ownerIrrEl.textContent = f.ownerIrr == null ? '—' : fmt.pct(f.ownerIrr);
+  ownerIrrEl.classList.toggle('pos', f.ownerIrr != null && f.ownerIrr > state.wacc / 100);
+  ownerIrrEl.classList.toggle('neg', f.ownerIrr != null && f.ownerIrr < 0);
+  let irrSpread = 'levered after debt';
+  if (f.ownerIrr != null && model.irr != null) {
+    const diff = (f.ownerIrr - model.irr) * 100;
+    const sign = diff >= 0 ? '+' : '';
+    irrSpread = `${sign}${diff.toFixed(1)} pts vs project IRR`;
+  }
+  document.getElementById('kpi-ownerIrr-sub').textContent = irrSpread;
+
+  const moicEl = document.getElementById('kpi-ownerMoic');
+  moicEl.textContent = f.ownerMoic == null ? '—' : f.ownerMoic.toFixed(2) + 'x';
+  moicEl.classList.toggle('pos', f.ownerMoic != null && f.ownerMoic > 1);
+  moicEl.classList.toggle('neg', f.ownerMoic != null && f.ownerMoic < 1);
+  document.getElementById('kpi-ownerMoic-sub').textContent = 'Total cash / invested';
+
+  document.getElementById('kpi-ownerPayback').textContent = fmt.yrs(f.ownerPayback);
+  document.getElementById('kpi-ownerPayback-sub').textContent = 'Year owner is whole';
+
+  document.getElementById('kpi-debt').textContent = fmt.money0(f.debtAmount);
+  document.getElementById('kpi-debt-sub').textContent =
+    `${state.debtPct}% @ ${state.debtRate}% · ${f.loanTerm}-yr · ${fmt.money0(f.annualDebtService)}/yr`;
+
+  document.getElementById('kpi-extEquity').textContent = fmt.money0(f.externalEquity);
+  const extPct = 100 - state.ownerEquityPct;
+  let extSub;
+  if (f.externalEquity <= 0 || extPct === 0) extSub = 'No external partners';
+  else if (f.externalIrr == null) extSub = `${extPct}% of equity`;
+  else extSub = `${extPct}% · IRR ${fmt.pct(f.externalIrr)}`;
+  document.getElementById('kpi-extEquity-sub').textContent = extSub;
 }
 
 function niceCeil(v) {
@@ -582,6 +621,11 @@ function renderRealizedChips() {
   if (gasEl) gasEl.textContent = '$' + r.gas.toFixed(2) + '/Mcf';
   const nglEl = document.getElementById('nglRealized');
   if (nglEl) nglEl.textContent = '$' + r.ngl.toFixed(2) + '/bbl';
+  // Financing derived chips
+  const eqEl = document.getElementById('equityPctDerived');
+  if (eqEl) eqEl.textContent = (100 - state.debtPct).toFixed(0) + '%';
+  const extEl = document.getElementById('externalEquityPctDerived');
+  if (extEl) extEl.textContent = (100 - state.ownerEquityPct).toFixed(0) + '%';
 }
 
 // ===========================================================

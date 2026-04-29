@@ -402,11 +402,23 @@ details[open] > summary::after { content: "−"; }
 }
 
 /* ===== KPIs ===== */
+.kpi-section-label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  color: var(--clay);
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+}
+.kpi.owner {
+  border-top-color: var(--signal);
+  background: linear-gradient(to bottom, #fffbfb, #ffffff);
 }
 .kpi {
   background: var(--pure);
