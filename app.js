@@ -652,6 +652,7 @@ function initMap() {
 
   MAP_STATE.markerLayer = L.layerGroup().addTo(MAP_STATE.map);
   refreshMapMarkers();
+  populateCountyDropdown();
 
   // Bind metric toggle
   document.querySelectorAll('.map-metric-btn').forEach(btn => {
@@ -663,6 +664,54 @@ function initMap() {
       refreshMapMarkers();
     });
   });
+}
+
+function populateCountyDropdown() {
+  const sel = document.getElementById('countySelect');
+  if (!sel || sel.dataset.bound === '1') return;
+  const { COUNTIES } = window.OhioCounties;
+  const sorted = [...COUNTIES].sort((a, b) => a.name.localeCompare(b.name));
+  sel.innerHTML = '<option value="">— Select a county —</option>' +
+    sorted.map(c => `<option value="${c.name}">${c.name} County · ${c.producing} wells · ${(c.gasMcfe / 1e6).toFixed(1)} Bcfe</option>`).join('');
+  sel.addEventListener('change', e => {
+    const name = e.target.value;
+    if (!name) return;
+    const c = COUNTIES.find(x => x.name === name);
+    if (c && MAP_STATE.map) {
+      MAP_STATE.map.flyTo([c.lat, c.lng], 10, { duration: 0.7 });
+      showCountyDetail(c);
+    }
+  });
+  sel.dataset.bound = '1';
+  // Reset button
+  const reset = document.getElementById('countyClearBtn');
+  if (reset && reset.dataset.bound !== '1') {
+    reset.addEventListener('click', () => {
+      sel.value = '';
+      MAP_STATE.selectedCounty = null;
+      MAP_STATE.map.flyTo([40.20, -81.30], 8, { duration: 0.7 });
+      showEmptyDetail();
+    });
+    reset.dataset.bound = '1';
+  }
+}
+
+function showEmptyDetail() {
+  const det = document.getElementById('mapDetail');
+  if (!det) return;
+  det.innerHTML = `
+    <div class="map-detail-header">
+      <div class="map-detail-tag">SELECT A COUNTY</div>
+      <h3>Click a marker</h3>
+      <div class="map-detail-sub">Each circle's size scales with the metric selected above.</div>
+    </div>
+    <div class="map-detail-body">
+      <div class="map-empty">
+        <p>Eight counties — Belmont, Carroll, Columbiana, Guernsey, Harrison, Jefferson, Monroe, and Noble — account for more than 98% of producing Utica wells in Ohio.</p>
+        <p>Tuscarawas County is the volatile-oil window emerging play that the financial model is calibrated to.</p>
+      </div>
+    </div>
+  `;
 }
 
 function refreshMapMarkers() {
@@ -695,10 +744,17 @@ function refreshMapMarkers() {
 
 function showCountyDetail(c) {
   MAP_STATE.selectedCounty = c.name;
+  // Sync the dropdown
+  const sel = document.getElementById('countySelect');
+  if (sel && sel.value !== c.name) sel.value = c.name;
   const det = document.getElementById('mapDetail');
   if (!det) return;
   const cumBcfe = c.cumulativeBcfe;
   const oilShare = c.gasMcfe > 0 ? (c.oilBbl * 5.659 / c.gasMcfe * 100) : 0;
+  // H2 2024 = July through December = 184 days
+  const H2_DAYS = 184;
+  const oilPerDay = c.oilBbl / H2_DAYS;
+  const gasPerDay = c.gasMcf / H2_DAYS;
   det.innerHTML = `
     <div class="map-detail-header">
       <div class="map-detail-tag">${c.name.toUpperCase()} COUNTY · OHIO</div>
@@ -709,7 +765,9 @@ function showCountyDetail(c) {
       <div class="map-detail-section-title">H2 2024 Production</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Gas-equivalent</span><span class="map-detail-stat-value">${fmtBcfe(c.gasMcfe)}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Natural gas</span><span class="map-detail-stat-value">${fmtBcfe(c.gasMcf)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil</span><span class="map-detail-stat-value">${fmt.num(c.oilBbl)} bbl</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil (total)</span><span class="map-detail-stat-value">${fmt.num(c.oilBbl)} bbl</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per day</span><span class="map-detail-stat-value">${fmt.num(oilPerDay)} bbl/d</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas per day</span><span class="map-detail-stat-value">${(gasPerDay / 1000).toFixed(1)} MMcf/d</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Oil share of boe</span><span class="map-detail-stat-value">${oilShare.toFixed(1)}%</span></div>
 
       <div class="map-detail-section-title">Wells (Dec 2024)</div>
@@ -719,10 +777,10 @@ function showCountyDetail(c) {
       <div class="map-detail-stat"><span class="map-detail-stat-label">Total</span><span class="map-detail-stat-value">${fmt.num(c.totalWells)}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">New in H2 2024</span><span class="map-detail-stat-value">${fmt.num(c.newWells)}</span></div>
 
-      <div class="map-detail-section-title">Avg per producing well · H2 2024</div>
+      <div class="map-detail-section-title">Per Producing Well · H2 2024 Avg</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Gas-equiv production</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmtBcfe(c.gasMcfe / c.prodWells) : '—'}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Oil production</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(c.oilBbl / c.prodWells) + ' bbl' : '—'}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per day (avg)</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(c.oilBbl / c.prodWells / 184) + ' bbl/d' : '—'}</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(c.oilBbl / c.prodWells / H2_DAYS) + ' bbl/d' : '—'}</span></div>
 
       <div class="map-detail-section-title">Investment · H2 2024</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Drilling + roads</span><span class="map-detail-stat-value">$${c.investmentM.toFixed(1)}M</span></div>

@@ -544,6 +544,46 @@ details[open] > summary::after { content: "−"; }
 .map-kpis .kpi-value { font-size: 18px; }
 .map-kpis .kpi-sub { font-size: 9px; }
 
+.map-county-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  background: var(--blush);
+  border-left: 3px solid var(--derrick);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+}
+.map-county-picker label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--derrick);
+  text-transform: uppercase;
+}
+.map-county-picker select {
+  flex: 1;
+  max-width: 320px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  background: var(--pure);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238B1A1A' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+.map-county-picker select:focus {
+  outline: none;
+  border-color: var(--derrick);
+}
+
 .map-controls {
   display: flex;
   justify-content: space-between;
