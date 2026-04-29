@@ -269,6 +269,44 @@
           </div>
         </div>
       </details>
+
+      <details>
+        <summary>Advisor Fees</summary>
+        <div class="input-grp">
+          <label>Sale Success Fee <button class="info" type="button" data-tip="Sale success fee — paid only when the deal closes. Covers M&A work to actually sell the asset: marketing, finding qualified buyers, negotiating the purchase agreement, managing legal/tax/environmental diligence to close. 1.2% sits below bulge-bracket rates (Lazard/Evercore at 1.5–2.0%) because this is a single-asset sale with a simpler story. Default 0% — set above zero to model a Land Sale exit; otherwise the asset is held and there's nothing to sell.">i</button> <span class="unit">% of NPV</span></label>
+          <input type="range" min="0" max="3" step="0.05" data-input="saleSuccessPct" />
+          <input type="number" data-input="saleSuccessPct" />
+        </div>
+        <div class="input-grp">
+          <label>Capital Placement Fee <button class="info" type="button" data-tip="Capital placement fee — % of all outside money raised (debt + external equity combined). Covers finding investors and lenders, running the auction, negotiating term sheets, managing diligence on their side. Pure O&G uses 2.5% (more equity work, broader investor pool); Multi-Capability uses 2.2% (larger raise, rate compresses). Lazard typically charges 1.5–2.0% on equity placement and ~1% on debt; advisor blends them into one rate to keep it simple.">i</button> <span class="unit">% of capital raised</span></label>
+          <input type="range" min="0" max="5" step="0.05" data-input="capPlacementPct" />
+          <input type="number" data-input="capPlacementPct" />
+        </div>
+        <div class="input-grp">
+          <label>Promote pref hurdle <button class="info" type="button" data-tip="Preferred return hurdle — partners must receive this annual return on their capital (compounded) before advisor sees a penny of promote. Industry standard for energy/infra: 8%.">i</button> <span class="unit">%</span></label>
+          <input type="range" min="0" max="15" step="0.5" data-input="promotePref" />
+          <input type="number" data-input="promotePref" />
+        </div>
+        <div class="input-grp">
+          <label>Tiered Promote <button class="info" type="button" data-tip="Tiered promote — advisor takes this share of every dollar of cash flow above the pref hurdle to partners. Partners get their capital back + 8% before advisor participates. PE firms typically take 20% above an 8% pref — advisor's 5% is much lighter because they're an advisor, not a sponsor putting up capital. Only meaningful in scenarios where advisor stays involved through build and operations (Pure O&G, Multi-Capability). Not applicable to Land Sale (one-and-done).">i</button> <span class="unit">% above hurdle</span></label>
+          <input type="range" min="0" max="20" step="0.25" data-input="promotePct" />
+          <input type="number" data-input="promotePct" />
+        </div>
+        <div class="input-grp">
+          <label>Site Dev / Ops Retainer <button class="info" type="button" data-tip="Monthly retainer paid only while building. Covers project management, vendor and contractor selection, schedule and budget oversight, hyperscaler tenant interface, regulatory work, quarterly board reporting. $0.15M/mo for Pure O&G (drilling oversight, simpler scope); $0.25M/mo for Multi-Capability (wells + data center + power plant being built simultaneously). Stops the day construction is done — not an ongoing operating fee.">i</button> <span class="unit">$M / month</span></label>
+          <input type="range" min="0" max="0.5" step="0.01" data-input="siteAdvisoryMonthly" />
+          <input type="number" data-input="siteAdvisoryMonthly" />
+        </div>
+        <div class="input-grp with-derived">
+          <label>Site Advisory and Operations length <button class="info" type="button" data-tip="How many months advisor bills the site advisory and operations retainer. Pure O&G: 36 (3-year drilling program). Multi-Capability: 60 (5-year build for wells + DC + power). Land Sale: 0 (nothing being built). If construction runs long the fee scales with it.">i</button> <span class="unit">months</span></label>
+          <input type="range" min="0" max="120" step="1" data-input="siteAdvisoryMonths" />
+          <input type="number" data-input="siteAdvisoryMonths" />
+          <div class="derived" title="Total construction retainer over the build phase">
+            <span class="derived-label">Retainer total</span>
+            <span class="derived-value" id="siteRetainerDerived">—</span>
+          </div>
+        </div>
+      </details>
     </aside>
 
     <div class="content">
@@ -292,6 +330,16 @@
         <div class="kpi owner"><div class="kpi-label">External Equity</div><div class="kpi-value" id="kpi-extEquity">—</div><div class="kpi-sub" id="kpi-extEquity-sub"></div></div>
       </div>
 
+      <div class="kpi-section-label">Advisor Economics</div>
+      <div class="kpi-row advisor-kpis">
+        <div class="kpi advisor"><div class="kpi-label">Capital Placement</div><div class="kpi-value" id="kpi-advCap">—</div><div class="kpi-sub" id="kpi-advCap-sub"></div></div>
+        <div class="kpi advisor"><div class="kpi-label">Site Dev Retainer</div><div class="kpi-value" id="kpi-advSite">—</div><div class="kpi-sub" id="kpi-advSite-sub"></div></div>
+        <div class="kpi advisor"><div class="kpi-label">Tiered Promote</div><div class="kpi-value" id="kpi-advPromote">—</div><div class="kpi-sub" id="kpi-advPromote-sub"></div></div>
+        <div class="kpi advisor"><div class="kpi-label">Sale Success Fee</div><div class="kpi-value" id="kpi-advSale">—</div><div class="kpi-sub" id="kpi-advSale-sub"></div></div>
+        <div class="kpi advisor"><div class="kpi-label">Total Advisor Fees</div><div class="kpi-value" id="kpi-advTotal">—</div><div class="kpi-sub" id="kpi-advTotal-sub"></div></div>
+        <div class="kpi advisor"><div class="kpi-label">Fees / Project NPV</div><div class="kpi-value" id="kpi-advRatio">—</div><div class="kpi-sub" id="kpi-advRatio-sub"></div></div>
+      </div>
+
       <div class="chart-grid">
         <div class="card">
           <div class="card-head"><h3>Annual Free Cash Flow</h3><div class="card-sub" id="fcf-sub"></div></div>
@@ -305,14 +353,14 @@
           <div class="card-head"><h3>Production Decline (per well, gas)</h3><div class="card-sub">Mcf/d — IP30 to year-20 trickle</div></div>
           <div class="chart-wrap"><canvas id="declineChart"></canvas></div>
         </div>
-        <div class="card">
+        <div class="card scenarioBC">
           <div class="card-head"><h3>Total Daily Gas Output vs. Plant Demand</h3><div class="card-sub">All producing wells, scaled</div></div>
           <div class="chart-wrap"><canvas id="gasSupplyChart"></canvas></div>
         </div>
       </div>
 
       <div class="card wide">
-        <div class="card-head"><h3>Year-1 Cash Margin Waterfall ($/boe)</h3><div class="card-sub">Field-level cash profile per produced barrel</div></div>
+        <div class="card-head"><h3>Year-1 Cash Margin Waterfall ($/boe)</h3><div class="card-sub">Revenue is the weighted average per boe across crude oil, natural gas, and NGLs</div></div>
         <div class="chart-wrap"><canvas id="waterfallChart"></canvas></div>
       </div>
     </div>

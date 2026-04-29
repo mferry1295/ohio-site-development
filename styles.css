@@ -462,6 +462,10 @@ details[open] > summary::after { content: "−"; }
   border-top-color: var(--signal);
   background: linear-gradient(to bottom, #fffbfb, #ffffff);
 }
+.kpi.advisor {
+  border-top-color: var(--clay);
+  background: linear-gradient(to bottom, #fff8f5, #ffffff);
+}
 .kpi {
   background: var(--pure);
   border: 1px solid var(--line);

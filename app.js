@@ -149,6 +149,24 @@ function bindReset() {
   });
 }
 
+// Accordion: opening one sidebar section collapses the others.
+// `toggle` doesn't bubble, so listen on each <details> directly.
+function bindSidebarAccordion() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  // Collapse all but the first open section so we start in a single-open state
+  const initiallyOpen = [...sidebar.querySelectorAll('details[open]')];
+  initiallyOpen.slice(1).forEach(d => { d.open = false; });
+  sidebar.querySelectorAll('details').forEach(d => {
+    d.addEventListener('toggle', () => {
+      if (!d.open) return;
+      sidebar.querySelectorAll('details[open]').forEach(other => {
+        if (other !== d) other.open = false;
+      });
+    });
+  });
+}
+
 // ===== Charts =====
 const charts = {};
 function makeOrUpdate(id, cfg) {
@@ -226,6 +244,50 @@ function renderKPIs(model) {
   else if (f.externalIrr == null) extSub = `${extPct}% of equity`;
   else extSub = `${extPct}% · IRR ${fmt.pct(f.externalIrr)}`;
   document.getElementById('kpi-extEquity-sub').textContent = extSub;
+
+  // ===== Advisor Economics =====
+  const a = model.advisor;
+  document.getElementById('kpi-advCap').textContent = fmt.money0(a.capitalPlacementFee);
+  document.getElementById('kpi-advCap-sub').textContent =
+    `${state.capPlacementPct}% × ${fmt.money0(a.capitalRaised)} raised`;
+
+  document.getElementById('kpi-advSite').textContent = fmt.money0(a.siteAdvisoryFee);
+  document.getElementById('kpi-advSite-sub').textContent =
+    `$${state.siteAdvisoryMonthly.toFixed(2)}M/mo × ${a.siteAdvisoryMonths} mo`;
+
+  document.getElementById('kpi-advPromote').textContent = fmt.money0(a.promote);
+  document.getElementById('kpi-advPromote-sub').textContent = a.abovePref > 0
+    ? `${state.promotePct}% of ${fmt.money0(a.abovePref)} above ${state.promotePref}% pref`
+    : `Pref ${state.promotePref}% not cleared`;
+
+  document.getElementById('kpi-advSale').textContent = fmt.money0(a.saleSuccessFee);
+  document.getElementById('kpi-advSale-sub').textContent = state.saleSuccessPct > 0
+    ? `${state.saleSuccessPct}% of NPV (sale exit)`
+    : 'Land Sale only — set above 0%';
+
+  document.getElementById('kpi-advTotal').textContent = fmt.money0(a.total);
+  const totalParts = [];
+  if (a.capitalPlacementFee > 0) totalParts.push('placement');
+  if (a.siteAdvisoryFee > 0) totalParts.push('retainer');
+  if (a.promote > 0) totalParts.push('promote');
+  if (a.saleSuccessFee > 0) totalParts.push('success');
+  document.getElementById('kpi-advTotal-sub').textContent = totalParts.length
+    ? totalParts.join(' + ')
+    : 'No fees triggered';
+
+  const ratioEl = document.getElementById('kpi-advRatio');
+  if (model.npv > 0 && a.total > 0) {
+    const ratio = a.total / model.npv;
+    ratioEl.textContent = fmt.pct(ratio);
+    ratioEl.classList.toggle('neg', ratio > 0.25);
+    document.getElementById('kpi-advRatio-sub').textContent =
+      `Advisor take vs project NPV`;
+  } else {
+    ratioEl.textContent = '—';
+    ratioEl.classList.remove('neg');
+    document.getElementById('kpi-advRatio-sub').textContent =
+      model.npv <= 0 ? 'NPV ≤ 0' : 'No fees triggered';
+  }
 }
 
 function niceCeil(v) {
@@ -455,6 +517,14 @@ function renderWaterfall() {
           callbacks: {
             label: ctx => {
               const it = items[ctx.dataIndex];
+              if (it.label === 'Revenue') {
+                return [
+                  `$${it.val.toFixed(2)}/boe (weighted avg)`,
+                  `  Crude oil: $${w.oilPerBoe.toFixed(2)}/boe`,
+                  `  Natural gas: $${w.gasPerBoe.toFixed(2)}/boe`,
+                  `  NGLs: $${w.nglPerBoe.toFixed(2)}/boe`,
+                ];
+              }
               return `$${(it.val).toFixed(2)}/boe`;
             }
           }
@@ -655,6 +725,9 @@ function renderRealizedChips() {
   if (eqEl) eqEl.textContent = (100 - state.debtPct).toFixed(0) + '%';
   const extEl = document.getElementById('externalEquityPctDerived');
   if (extEl) extEl.textContent = (100 - state.ownerEquityPct).toFixed(0) + '%';
+  // Advisor retainer derived total
+  const retEl = document.getElementById('siteRetainerDerived');
+  if (retEl) retEl.textContent = fmt.money0((state.siteAdvisoryMonthly || 0) * 1e6 * (state.siteAdvisoryMonths || 0));
 }
 
 // ===========================================================
@@ -1101,6 +1174,7 @@ function boot() {
     bindNav();
     bindMobileMenu();
     bindReset();
+    bindSidebarAccordion();
     initTooltips();
     // initial visibility for Scenario A (hide BC/C panels)
     document.querySelectorAll('.scenarioBC').forEach(el => el.classList.add('hidden'));

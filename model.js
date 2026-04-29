@@ -48,6 +48,14 @@ const DEFAULTS = {
   debtRate: 7.5,         // interest rate on debt (%)
   loanTerm: 20,          // amortization term (years)
   ownerEquityPct: 30,    // landowner's share of equity (rest = external)
+  // Advisor Fees — paid to the deal advisor (M&A / capital placement / promote / retainer)
+  // Defaults reflect a Pure-O&G mandate; user can dial up for Multi-Capability or zero out for Land Sale.
+  saleSuccessPct: 0,     // % of NPV (sale price proxy) — only applies if asset is sold
+  capPlacementPct: 2.5,  // % of capital raised (debt + external equity)
+  promotePref: 8,        // % preferred return hurdle to partners before advisor participates
+  promotePct: 5,         // % of cash above pref that flows to advisor
+  siteAdvisoryMonthly: 0.15, // $M/month construction retainer
+  siteAdvisoryMonths: 36,    // months billed (Pure O&G drilling: 36; Multi-Cap build: 60)
 };
 
 // Per-well decline: Year-1 = input rate; subsequent years apply a constant
@@ -303,6 +311,11 @@ function runModel(p, scenario = 'A') {
 
   const externalIrr = irr(externalCF);
 
+  // ===== Advisor Fees =====
+  const advisor = computeAdvisorFees(p, {
+    debtAmount, externalEquity, externalCF, projNpv,
+  });
+
   return {
     rows, totals: { totalRev, totalEbitda, totalCapex },
     npv: projNpv, irr: projIrr, payback: projPayback,
@@ -315,6 +328,60 @@ function runModel(p, scenario = 'A') {
       externalIrr,
       ownerCF, leveredCF,
     },
+    advisor,
+  };
+}
+
+/* =============================================================
+ *  Advisor Fee Calculator
+ *  Four fee types modeled per the engagement letter:
+ *   1. Capital placement — % of all outside money raised (debt + external equity)
+ *   2. Site dev / ops advisory — monthly retainer × months under construction
+ *   3. Tiered promote — % of partner cash flow above an N% pref hurdle
+ *   4. Sale success fee — % of NPV / sale price (only if asset is sold)
+ * ============================================================= */
+function computeAdvisorFees(p, ctx) {
+  const capitalRaised = (ctx.debtAmount || 0) + (ctx.externalEquity || 0);
+  const capitalPlacementFee = capitalRaised * (p.capPlacementPct || 0) / 100;
+
+  const siteAdvisoryFee = (p.siteAdvisoryMonthly || 0) * 1_000_000 * (p.siteAdvisoryMonths || 0);
+
+  // Tiered promote — pref-hurdle waterfall on external-equity cash flow.
+  // Partner's outstanding balance accrues at pref% per year; distributions reduce it.
+  // Once balance is paid off, advisor takes promote% of every dollar above.
+  const prefRate = (p.promotePref || 0) / 100;
+  const promotePct = (p.promotePct || 0) / 100;
+  let balance = -(ctx.externalCF?.[0] || 0);
+  let promote = 0, abovePref = 0;
+  if (ctx.externalCF && ctx.externalCF.length > 1 && balance > 0) {
+    for (let y = 1; y < ctx.externalCF.length; y++) {
+      balance = balance * (1 + prefRate);
+      const dist = ctx.externalCF[y];
+      if (dist <= 0) continue;
+      if (dist <= balance) {
+        balance -= dist;
+      } else {
+        const above = dist - balance;
+        balance = 0;
+        abovePref += above;
+        promote += above * promotePct;
+      }
+    }
+  }
+
+  // Sale success fee — only meaningful when project NPV is positive (proxy for sale price)
+  const saleSuccessFee = (ctx.projNpv || 0) > 0
+    ? ctx.projNpv * (p.saleSuccessPct || 0) / 100
+    : 0;
+
+  const total = capitalPlacementFee + siteAdvisoryFee + promote + saleSuccessFee;
+
+  return {
+    capitalRaised, capitalPlacementFee,
+    siteAdvisoryFee, siteAdvisoryMonths: p.siteAdvisoryMonths || 0,
+    promote, abovePref,
+    saleSuccessFee,
+    total,
   };
 }
 
@@ -331,8 +398,14 @@ function singleWellMarginPerBoe(p) {
   const gasPriceMcf = Math.max(0, p.hh / 6 - GAS_BASIS);
   const nglPrice = Math.max(0, p.wti * (p.nglPct / 100));
 
-  const totalRev = oilAnnual * oilPrice + nglAnnual * nglPrice + gasAnnual * gasPriceMcf;
+  const oilRev = oilAnnual * oilPrice;
+  const gasRev = gasAnnual * gasPriceMcf;
+  const nglRev = nglAnnual * nglPrice;
+  const totalRev = oilRev + gasRev + nglRev;
   const revPerBoe = totalRev / boeAnnual;
+  const oilPerBoe = oilRev / boeAnnual;
+  const gasPerBoe = gasRev / boeAnnual;
+  const nglPerBoe = nglRev / boeAnnual;
   const opCostPerBoe = revPerBoe * (p.opCostPct / 100);
   const grossPerBoe = revPerBoe - opCostPerBoe;
   const ebitPerBoe = grossPerBoe - p.dda - p.ga;
@@ -340,7 +413,8 @@ function singleWellMarginPerBoe(p) {
   const netPerBoe = ebitPerBoe - taxPerBoe;
 
   return {
-    revPerBoe, opCostPerBoe,
+    revPerBoe, oilPerBoe, gasPerBoe, nglPerBoe,
+    opCostPerBoe,
     dda: p.dda, ga: p.ga,
     grossPerBoe, ebitPerBoe, taxPerBoe, netPerBoe,
   };
