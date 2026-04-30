@@ -89,6 +89,14 @@ function bindScenarioToggle() {
   });
 }
 
+// Tabs where the A/B/C scenario toggle is meaningful
+const SCENARIO_TABS = new Set(['dashboard', 'model', 'compare']);
+
+function setScenarioBarVisible(target) {
+  const bar = document.querySelector('.scenario-bar');
+  if (bar) bar.classList.toggle('hidden', !SCENARIO_TABS.has(target));
+}
+
 function bindNav() {
   document.querySelectorAll('.navlink').forEach(a => {
     a.addEventListener('click', e => {
@@ -98,6 +106,7 @@ function bindNav() {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       a.classList.add('active');
       document.getElementById(target).classList.add('active');
+      setScenarioBarVisible(target);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // re-render charts (canvas needs to be visible to size correctly)
       render();
@@ -183,6 +192,10 @@ function makeOrUpdate(id, cfg) {
 
 function renderKPIs(model) {
   const t = model.totals;
+  const revLabel = document.getElementById('kpi-rev-label');
+  if (revLabel) revLabel.textContent = `${state.years}-Year Revenue`;
+  const ebitLabel = document.getElementById('kpi-ebitda-label');
+  if (ebitLabel) ebitLabel.textContent = `${state.years}-Year EBITDA`;
   document.getElementById('kpi-rev').textContent = fmt.money0(t.totalRev);
   document.getElementById('kpi-rev-sub').textContent = `Avg ${fmt.money0(t.totalRev / state.years)}/yr`;
   document.getElementById('kpi-ebitda').textContent = fmt.money0(t.totalEbitda);
@@ -536,6 +549,120 @@ function renderWaterfall() {
       }
     }
   });
+}
+
+// ===== Dashboard sub-view toggle =====
+function bindDashboardViews() {
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.view;
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.dash-view').forEach(el => {
+        el.hidden = el.dataset.view !== v;
+      });
+      // Charts need a fresh sizing pass when their container becomes visible
+      if (v === 'charts') Object.values(charts).forEach(c => c.resize?.());
+    });
+  });
+}
+
+// ===== P&L Forecast table =====
+function renderPnlTable(model) {
+  const fmtM = v => (v / 1e6).toFixed(1);
+  const headers = ['Year', 'Revenue', 'Cash Op Cost', 'EBITDA', 'DD&A', 'G&A', 'EBIT', 'Taxes', 'Net Income'];
+  let html = '<thead><tr>' + headers.map(h => `<th class="num">${h}</th>`).join('') + '</tr></thead><tbody>';
+  let tRev = 0, tCC = 0, tE = 0, tDDA = 0, tGA = 0, tEBIT = 0, tTax = 0, tNI = 0;
+  model.rows.forEach(r => {
+    tRev += r.totalRev; tCC += r.totalCashCost; tE += r.ebitda;
+    tDDA += r.dda; tGA += r.ga; tEBIT += r.ebit; tTax += r.taxes; tNI += r.netIncome;
+    html += '<tr>' +
+      `<td class="num">${r.year}</td>` +
+      `<td class="num">${fmtM(r.totalRev)}</td>` +
+      `<td class="num">${fmtM(r.totalCashCost)}</td>` +
+      `<td class="num ${r.ebitda < 0 ? 'neg' : ''}">${fmtM(r.ebitda)}</td>` +
+      `<td class="num">${fmtM(r.dda)}</td>` +
+      `<td class="num">${fmtM(r.ga)}</td>` +
+      `<td class="num ${r.ebit < 0 ? 'neg' : ''}">${fmtM(r.ebit)}</td>` +
+      `<td class="num">${fmtM(r.taxes)}</td>` +
+      `<td class="num ${r.netIncome < 0 ? 'neg' : 'pos'}">${fmtM(r.netIncome)}</td>` +
+      '</tr>';
+  });
+  html += `<tr class="total">
+    <td class="num">Total</td>
+    <td class="num">${fmtM(tRev)}</td>
+    <td class="num">${fmtM(tCC)}</td>
+    <td class="num">${fmtM(tE)}</td>
+    <td class="num">${fmtM(tDDA)}</td>
+    <td class="num">${fmtM(tGA)}</td>
+    <td class="num">${fmtM(tEBIT)}</td>
+    <td class="num">${fmtM(tTax)}</td>
+    <td class="num">${fmtM(tNI)}</td>
+  </tr></tbody>`;
+  document.getElementById('pnlTable').innerHTML = html;
+  const yEl = document.getElementById('pnlYears');
+  if (yEl) yEl.textContent = state.years;
+}
+
+// ===== Annual Distribution Waterfall table =====
+// Bridge: EBITDA − CapEx + Debt Drawn − Interest − Principal − Cash Tax = Cash to Equity
+//   • Debt Drawn is the Y1 financing inflow (zero thereafter).
+//   • Cash Tax = unlevered tax minus interest tax shield, so the row reconciles to leveredCF.
+function renderDistribTable(model) {
+  const fmtM = v => (v / 1e6).toFixed(1);
+  const f = model.financing;
+  const ownerPct = (state.ownerEquityPct || 0) / 100;
+  const extPct = 1 - ownerPct;
+  const taxRate = (state.tax || 0) / 100;
+  const headers = [
+    'Year', 'EBITDA', '− CapEx', '+ Debt Drawn', '− Interest', '− Principal', '− Cash Tax',
+    '= Cash to Equity', `Owner (${state.ownerEquityPct}%)`, `External (${(100 - state.ownerEquityPct)}%)`,
+  ];
+  let html = '<thead><tr>' + headers.map(h => `<th class="num">${h}</th>`).join('') + '</tr></thead><tbody>';
+  let tE = 0, tCx = 0, tDD = 0, tI = 0, tPr = 0, tCT = 0, tCfe = 0, tOwn = 0, tExt = 0;
+  model.rows.forEach((r, i) => {
+    const sched = f.debtSchedule[i] || { interestPaid: 0, principalPaid: 0 };
+    const debtDrawn = i === 0 ? f.debtAmount : 0;
+    const cashTax = r.taxes - sched.interestPaid * taxRate; // unlevered tax minus interest shield
+    const cfe = f.leveredCF[i + 1] ?? 0;
+    const ownerCash = cfe * ownerPct;
+    const extCash = cfe * extPct;
+    tE += r.ebitda; tCx += r.capex; tDD += debtDrawn;
+    tI += sched.interestPaid; tPr += sched.principalPaid;
+    tCT += cashTax; tCfe += cfe; tOwn += ownerCash; tExt += extCash;
+    html += '<tr>' +
+      `<td class="num">${r.year}</td>` +
+      `<td class="num ${r.ebitda < 0 ? 'neg' : ''}">${fmtM(r.ebitda)}</td>` +
+      `<td class="num">${fmtM(r.capex)}</td>` +
+      `<td class="num">${fmtM(debtDrawn)}</td>` +
+      `<td class="num">${fmtM(sched.interestPaid)}</td>` +
+      `<td class="num">${fmtM(sched.principalPaid)}</td>` +
+      `<td class="num">${fmtM(cashTax)}</td>` +
+      `<td class="num ${cfe < 0 ? 'neg' : 'pos'}">${fmtM(cfe)}</td>` +
+      `<td class="num ${ownerCash < 0 ? 'neg' : ''}">${fmtM(ownerCash)}</td>` +
+      `<td class="num ${extCash < 0 ? 'neg' : ''}">${fmtM(extCash)}</td>` +
+      '</tr>';
+  });
+  html += `<tr class="total">
+    <td class="num">Total</td>
+    <td class="num">${fmtM(tE)}</td>
+    <td class="num">${fmtM(tCx)}</td>
+    <td class="num">${fmtM(tDD)}</td>
+    <td class="num">${fmtM(tI)}</td>
+    <td class="num">${fmtM(tPr)}</td>
+    <td class="num">${fmtM(tCT)}</td>
+    <td class="num ${tCfe < 0 ? 'neg' : 'pos'}">${fmtM(tCfe)}</td>
+    <td class="num ${tOwn < 0 ? 'neg' : ''}">${fmtM(tOwn)}</td>
+    <td class="num ${tExt < 0 ? 'neg' : ''}">${fmtM(tExt)}</td>
+  </tr>`;
+  const ownerIrrTxt = f.ownerIrr == null ? '—' : fmt.pct(f.ownerIrr);
+  const extIrrTxt = f.externalIrr == null ? '—' : fmt.pct(f.externalIrr);
+  html += `<tr class="total">
+    <td class="num"><strong>Equity IRR</strong></td>
+    <td colspan="7"></td>
+    <td class="num"><strong>${ownerIrrTxt}</strong></td>
+    <td class="num"><strong>${extIrrTxt}</strong></td>
+  </tr></tbody>`;
+  document.getElementById('distribTable').innerHTML = html;
 }
 
 // ===== Financial-model table =====
@@ -1101,6 +1228,8 @@ function render() {
   renderGasSupplyChart(model);
   renderWaterfall();
   renderModelTable(model);
+  renderPnlTable(model);
+  renderDistribTable(model);
   renderCompare();
 }
 
@@ -1175,6 +1304,7 @@ function boot() {
     bindMobileMenu();
     bindReset();
     bindSidebarAccordion();
+    bindDashboardViews();
     initTooltips();
     // initial visibility for Scenario A (hide BC/C panels)
     document.querySelectorAll('.scenarioBC').forEach(el => el.classList.add('hidden'));

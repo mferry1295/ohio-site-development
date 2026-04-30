@@ -279,6 +279,7 @@ function runModel(p, scenario = 'A') {
   // Year 0: equity contribution outflow
   // Year y: unlevered FCF + (interest tax shield) - debt service (during loanTerm only)
   const leveredCF = [0]; // year 0 placeholder; no cash flow yet for project
+  const debtSchedule = []; // per-year debt service breakdown for table rendering
   for (let y = 1; y <= Y; y++) {
     const unleveredFcf = rows[y - 1].fcf;
     let debtService = 0, interestPaid = 0, principalPaid = 0;
@@ -297,6 +298,7 @@ function runModel(p, scenario = 'A') {
       - debtService
       + interestTaxShield;
     leveredCF.push(cashToAllEquity);
+    debtSchedule.push({ year: y, interestPaid, principalPaid, debtService, principalRemaining, cashToAllEquity });
   }
 
   // Owner cash flow = ownerEquityPct of all-equity cash flows minus owner's Y0 contribution
@@ -326,7 +328,8 @@ function runModel(p, scenario = 'A') {
       annualDebtService, loanTerm: n,
       ownerIrr, ownerNpv, ownerPayback, ownerMoic,
       externalIrr,
-      ownerCF, leveredCF,
+      ownerCF, leveredCF, externalCF,
+      debtSchedule,
     },
     advisor,
   };

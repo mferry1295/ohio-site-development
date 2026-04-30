@@ -360,6 +360,7 @@ details[open] > summary::after { content: "−"; }
 }
 
 .scenarioBC.hidden, .scenarioC.hidden { display: none; }
+.scenario-bar.hidden { display: none; }
 
 /* ===== Info icon + tooltip ===== */
 .info {
@@ -442,6 +443,42 @@ details[open] > summary::after { content: "−"; }
   max-width: 1400px;
   margin: 0 auto;
 }
+
+/* ===== Dashboard sub-view toggle ===== */
+.view-toggle {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 4px;
+  background: #f4f4f4;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+.view-btn {
+  flex: 1 1 auto;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.view-btn:hover { color: var(--derrick); background: var(--blush); }
+.view-btn.active {
+  background: var(--derrick);
+  color: var(--pure);
+  border-color: var(--derrick);
+  box-shadow: var(--shadow);
+}
+.dash-view[hidden] { display: none !important; }
 
 /* ===== KPIs ===== */
 .kpi-section-label {

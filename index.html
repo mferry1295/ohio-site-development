@@ -310,58 +310,93 @@
     </aside>
 
     <div class="content">
-      <div class="kpi-section-label">Project (unlevered)</div>
-      <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">20-Year Revenue</div><div class="kpi-value" id="kpi-rev">—</div><div class="kpi-sub" id="kpi-rev-sub"></div></div>
-        <div class="kpi"><div class="kpi-label">20-Year EBITDA</div><div class="kpi-value" id="kpi-ebitda">—</div><div class="kpi-sub" id="kpi-ebitda-sub"></div></div>
-        <div class="kpi"><div class="kpi-label">Total CapEx</div><div class="kpi-value" id="kpi-capex">—</div><div class="kpi-sub" id="kpi-capex-sub"></div></div>
-        <div class="kpi"><div class="kpi-label">NPV @ WACC</div><div class="kpi-value" id="kpi-npv">—</div><div class="kpi-sub" id="kpi-npv-sub"></div></div>
-        <div class="kpi"><div class="kpi-label">Project IRR</div><div class="kpi-value" id="kpi-irr">—</div><div class="kpi-sub" id="kpi-irr-sub"></div></div>
-        <div class="kpi"><div class="kpi-label">Payback</div><div class="kpi-value" id="kpi-payback">—</div><div class="kpi-sub" id="kpi-payback-sub"></div></div>
+      <div class="view-toggle" role="tablist">
+        <button class="view-btn active" data-view="kpis">KPI Metrics</button>
+        <button class="view-btn" data-view="charts">Charts &amp; Graphs</button>
+        <button class="view-btn" data-view="pnl">P&amp;L Forecast</button>
+        <button class="view-btn" data-view="distrib">Distributions</button>
       </div>
 
-      <div class="kpi-section-label">Owner Economics (levered)</div>
-      <div class="kpi-row owner-kpis">
-        <div class="kpi owner"><div class="kpi-label">Owner Check-Write</div><div class="kpi-value" id="kpi-ownerEquity">—</div><div class="kpi-sub" id="kpi-ownerEquity-sub"></div></div>
-        <div class="kpi owner"><div class="kpi-label">Owner Equity IRR</div><div class="kpi-value" id="kpi-ownerIrr">—</div><div class="kpi-sub" id="kpi-ownerIrr-sub"></div></div>
-        <div class="kpi owner"><div class="kpi-label">Owner Cash Multiple</div><div class="kpi-value" id="kpi-ownerMoic">—</div><div class="kpi-sub" id="kpi-ownerMoic-sub"></div></div>
-        <div class="kpi owner"><div class="kpi-label">Owner Payback</div><div class="kpi-value" id="kpi-ownerPayback">—</div><div class="kpi-sub" id="kpi-ownerPayback-sub"></div></div>
-        <div class="kpi owner"><div class="kpi-label">Debt Raised</div><div class="kpi-value" id="kpi-debt">—</div><div class="kpi-sub" id="kpi-debt-sub"></div></div>
-        <div class="kpi owner"><div class="kpi-label">External Equity</div><div class="kpi-value" id="kpi-extEquity">—</div><div class="kpi-sub" id="kpi-extEquity-sub"></div></div>
-      </div>
+      <!-- View 1 — KPI Metrics -->
+      <div class="dash-view" data-view="kpis">
+        <div class="kpi-section-label">Project (unlevered)</div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="kpi-label" id="kpi-rev-label">20-Year Revenue</div><div class="kpi-value" id="kpi-rev">—</div><div class="kpi-sub" id="kpi-rev-sub"></div></div>
+          <div class="kpi"><div class="kpi-label" id="kpi-ebitda-label">20-Year EBITDA</div><div class="kpi-value" id="kpi-ebitda">—</div><div class="kpi-sub" id="kpi-ebitda-sub"></div></div>
+          <div class="kpi"><div class="kpi-label">Total CapEx</div><div class="kpi-value" id="kpi-capex">—</div><div class="kpi-sub" id="kpi-capex-sub"></div></div>
+          <div class="kpi"><div class="kpi-label">NPV @ WACC</div><div class="kpi-value" id="kpi-npv">—</div><div class="kpi-sub" id="kpi-npv-sub"></div></div>
+          <div class="kpi"><div class="kpi-label">Project IRR</div><div class="kpi-value" id="kpi-irr">—</div><div class="kpi-sub" id="kpi-irr-sub"></div></div>
+          <div class="kpi"><div class="kpi-label">Payback</div><div class="kpi-value" id="kpi-payback">—</div><div class="kpi-sub" id="kpi-payback-sub"></div></div>
+        </div>
 
-      <div class="kpi-section-label">Advisor Economics</div>
-      <div class="kpi-row advisor-kpis">
-        <div class="kpi advisor"><div class="kpi-label">Capital Placement</div><div class="kpi-value" id="kpi-advCap">—</div><div class="kpi-sub" id="kpi-advCap-sub"></div></div>
-        <div class="kpi advisor"><div class="kpi-label">Site Dev Retainer</div><div class="kpi-value" id="kpi-advSite">—</div><div class="kpi-sub" id="kpi-advSite-sub"></div></div>
-        <div class="kpi advisor"><div class="kpi-label">Tiered Promote</div><div class="kpi-value" id="kpi-advPromote">—</div><div class="kpi-sub" id="kpi-advPromote-sub"></div></div>
-        <div class="kpi advisor"><div class="kpi-label">Sale Success Fee</div><div class="kpi-value" id="kpi-advSale">—</div><div class="kpi-sub" id="kpi-advSale-sub"></div></div>
-        <div class="kpi advisor"><div class="kpi-label">Total Advisor Fees</div><div class="kpi-value" id="kpi-advTotal">—</div><div class="kpi-sub" id="kpi-advTotal-sub"></div></div>
-        <div class="kpi advisor"><div class="kpi-label">Fees / Project NPV</div><div class="kpi-value" id="kpi-advRatio">—</div><div class="kpi-sub" id="kpi-advRatio-sub"></div></div>
-      </div>
+        <div class="kpi-section-label">Owner Economics (levered)</div>
+        <div class="kpi-row owner-kpis">
+          <div class="kpi owner"><div class="kpi-label">Owner Check-Write</div><div class="kpi-value" id="kpi-ownerEquity">—</div><div class="kpi-sub" id="kpi-ownerEquity-sub"></div></div>
+          <div class="kpi owner"><div class="kpi-label">Owner Equity IRR</div><div class="kpi-value" id="kpi-ownerIrr">—</div><div class="kpi-sub" id="kpi-ownerIrr-sub"></div></div>
+          <div class="kpi owner"><div class="kpi-label">Owner Cash Multiple</div><div class="kpi-value" id="kpi-ownerMoic">—</div><div class="kpi-sub" id="kpi-ownerMoic-sub"></div></div>
+          <div class="kpi owner"><div class="kpi-label">Owner Payback</div><div class="kpi-value" id="kpi-ownerPayback">—</div><div class="kpi-sub" id="kpi-ownerPayback-sub"></div></div>
+          <div class="kpi owner"><div class="kpi-label">Debt Raised</div><div class="kpi-value" id="kpi-debt">—</div><div class="kpi-sub" id="kpi-debt-sub"></div></div>
+          <div class="kpi owner"><div class="kpi-label">External Equity</div><div class="kpi-value" id="kpi-extEquity">—</div><div class="kpi-sub" id="kpi-extEquity-sub"></div></div>
+        </div>
 
-      <div class="chart-grid">
-        <div class="card">
-          <div class="card-head"><h3>Annual Free Cash Flow</h3><div class="card-sub" id="fcf-sub"></div></div>
-          <div class="chart-wrap"><canvas id="fcfChart"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h3>Revenue by Stream</h3><div class="card-sub">Oil · NGLs · Gas/Power/Compute (stacked)</div></div>
-          <div class="chart-wrap"><canvas id="revStackChart"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h3>Production Decline (per well, gas)</h3><div class="card-sub">Mcf/d — IP30 to year-20 trickle</div></div>
-          <div class="chart-wrap"><canvas id="declineChart"></canvas></div>
-        </div>
-        <div class="card scenarioBC">
-          <div class="card-head"><h3>Total Daily Gas Output vs. Plant Demand</h3><div class="card-sub">All producing wells, scaled</div></div>
-          <div class="chart-wrap"><canvas id="gasSupplyChart"></canvas></div>
+        <div class="kpi-section-label">Advisor Economics</div>
+        <div class="kpi-row advisor-kpis">
+          <div class="kpi advisor"><div class="kpi-label">Capital Placement</div><div class="kpi-value" id="kpi-advCap">—</div><div class="kpi-sub" id="kpi-advCap-sub"></div></div>
+          <div class="kpi advisor"><div class="kpi-label">Site Dev Retainer</div><div class="kpi-value" id="kpi-advSite">—</div><div class="kpi-sub" id="kpi-advSite-sub"></div></div>
+          <div class="kpi advisor"><div class="kpi-label">Tiered Promote</div><div class="kpi-value" id="kpi-advPromote">—</div><div class="kpi-sub" id="kpi-advPromote-sub"></div></div>
+          <div class="kpi advisor"><div class="kpi-label">Sale Success Fee</div><div class="kpi-value" id="kpi-advSale">—</div><div class="kpi-sub" id="kpi-advSale-sub"></div></div>
+          <div class="kpi advisor"><div class="kpi-label">Total Advisor Fees</div><div class="kpi-value" id="kpi-advTotal">—</div><div class="kpi-sub" id="kpi-advTotal-sub"></div></div>
+          <div class="kpi advisor"><div class="kpi-label">Fees / Project NPV</div><div class="kpi-value" id="kpi-advRatio">—</div><div class="kpi-sub" id="kpi-advRatio-sub"></div></div>
         </div>
       </div>
 
-      <div class="card wide">
-        <div class="card-head"><h3>Year-1 Cash Margin Waterfall ($/boe)</h3><div class="card-sub">Revenue is the weighted average per boe across crude oil, natural gas, and NGLs</div></div>
-        <div class="chart-wrap"><canvas id="waterfallChart"></canvas></div>
+      <!-- View 2 — Charts and Graphs -->
+      <div class="dash-view" data-view="charts" hidden>
+        <div class="chart-grid">
+          <div class="card">
+            <div class="card-head"><h3>Annual Free Cash Flow</h3><div class="card-sub" id="fcf-sub"></div></div>
+            <div class="chart-wrap"><canvas id="fcfChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Revenue by Stream</h3><div class="card-sub">Oil · NGLs · Gas/Power/Compute (stacked)</div></div>
+            <div class="chart-wrap"><canvas id="revStackChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Production Decline (per well, gas)</h3><div class="card-sub">Mcf/d — IP30 to year-20 trickle</div></div>
+            <div class="chart-wrap"><canvas id="declineChart"></canvas></div>
+          </div>
+          <div class="card scenarioBC">
+            <div class="card-head"><h3>Total Daily Gas Output vs. Plant Demand</h3><div class="card-sub">All producing wells, scaled</div></div>
+            <div class="chart-wrap"><canvas id="gasSupplyChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card wide">
+          <div class="card-head"><h3>Year-1 Cash Margin Waterfall ($/boe)</h3><div class="card-sub">Revenue is the weighted average per boe across crude oil, natural gas, and NGLs</div></div>
+          <div class="chart-wrap"><canvas id="waterfallChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- View 3 — P&L Forecast -->
+      <div class="dash-view" data-view="pnl" hidden>
+        <div class="card wide">
+          <div class="card-head">
+            <h3>P&amp;L Forecast over <span id="pnlYears">—</span> years</h3>
+            <div class="card-sub">Annual P&amp;L roll-up. All figures in $M unless noted.</div>
+          </div>
+          <div class="table-scroll"><table id="pnlTable" class="data-table"></table></div>
+        </div>
+      </div>
+
+      <!-- View 4 — Annual Distribution Waterfall -->
+      <div class="dash-view" data-view="distrib" hidden>
+        <div class="card wide">
+          <div class="card-head">
+            <h3>Annual Distribution Waterfall</h3>
+            <div class="card-sub">Per-year cash bridge from EBITDA → cash to equity, split between owner and external partners. All figures in $M.</div>
+          </div>
+          <div class="table-scroll"><table id="distribTable" class="data-table"></table></div>
+        </div>
       </div>
     </div>
   </div>
