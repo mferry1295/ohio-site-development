@@ -1049,11 +1049,9 @@ const MAP_STATE = {
 
 // metric configuration
 const MAP_METRICS = {
-  gasMcfe:     { label: 'Gas-equivalent production (Mcfe)', short: 'Production',  fmt: v => fmtBcfe(v) },
-  oilBbl:      { label: 'Oil production (bbl)',             short: 'Oil',          fmt: v => fmt.num(v) + ' bbl' },
-  totalWells:  { label: 'Total wells (drilled+drilling+producing)', short: 'Wells', fmt: v => fmt.num(v) + ' wells' },
-  newWells:    { label: 'New wells in H2 2024',             short: 'New Wells',    fmt: v => fmt.num(v) + ' new' },
-  investmentM: { label: 'H2 2024 upstream investment ($M)', short: 'Investment',   fmt: v => '$' + v.toFixed(1) + 'M' },
+  gasMcfe:     { label: '2025 gas-equivalent production (Mcfe)', short: 'Production',  fmt: v => fmtBcfe(v) },
+  oilBbl:      { label: '2025 oil production (bbl)',             short: 'Oil',          fmt: v => fmt.num(v) + ' bbl' },
+  prodWells:   { label: '2025 producing wells',                  short: 'Wells',        fmt: v => fmt.num(v) + ' wells' },
 };
 
 function fmtBcfe(mcfe) {
@@ -1253,16 +1251,13 @@ function showCountyDetail(c) {
   restylePolygons();
   const det = document.getElementById('mapDetail');
   if (!det) return;
-  // H2 2024 = July through December = 184 days
-  const H2_DAYS = 184;
-  const oilPerWellPerDay = c.prodWells > 0 ? c.oilBbl / c.prodWells / H2_DAYS : 0;
-  // Convert gas Mcf/d → bbl-oe/d using the same 5.659 Mcf/boe factor used
-  // elsewhere in the model so all per-day production reads in barrels.
-  const gasPerWellPerDayBoe = c.prodWells > 0 ? (c.gasMcf / c.prodWells / H2_DAYS) / 5.659 : 0;
-  // Annualize H2 2024 figures (×2) for any totals shown to the user.
-  const newWellsAnnual = c.newWells * 2;
-  const investmentAnnual = c.investmentM * 2;
-  const loeAnnual = c.loeM * 2;
+  // True per-well-per-day average uses total well-days as the denominator
+  // (sum of "Days in Production" across every well × every quarter that
+  // reported in 2025). This naturally handles wells that came online or
+  // shut in mid-year.
+  const oilPerWellPerDay = c.wellDays > 0 ? c.oilBbl / c.wellDays : 0;
+  // Convert gas Mcf/d → bbl-oe/d using the 5.659 Mcf/boe factor.
+  const gasPerWellPerDayBoe = c.wellDays > 0 ? (c.gasMcf / c.wellDays) / 5.659 : 0;
   det.innerHTML = `
     <div class="map-detail-header">
       <div class="map-detail-tag">${c.name.toUpperCase()} COUNTY · OHIO</div>
@@ -1270,21 +1265,12 @@ function showCountyDetail(c) {
       <div class="map-detail-sub">${c.note}</div>
     </div>
     <div class="map-detail-body">
-      <div class="map-detail-section-title">Production</div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(oilPerWellPerDay) + ' bbl/d' : '—'}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(gasPerWellPerDayBoe) + ' bbl/d' : '—'}</span></div>
-
-      <div class="map-detail-section-title">Wells</div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Producing</span><span class="map-detail-stat-value">${fmt.num(c.producing)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Drilling</span><span class="map-detail-stat-value">${fmt.num(c.drilling)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Drilled (awaiting)</span><span class="map-detail-stat-value">${fmt.num(c.drilled)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Total</span><span class="map-detail-stat-value">${fmt.num(c.totalWells)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">New wells (annual)</span><span class="map-detail-stat-value">${fmt.num(newWellsAnnual)}</span></div>
-
-      <div class="map-detail-section-title">Investment · annual</div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Drilling + roads</span><span class="map-detail-stat-value">$${investmentAnnual.toFixed(1)}M</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Lease operating expense</span><span class="map-detail-stat-value">$${loeAnnual.toFixed(2)}M</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Total upstream</span><span class="map-detail-stat-value">$${(investmentAnnual + loeAnnual).toFixed(1)}M</span></div>
+      <div class="map-detail-section-title">Production · 2025</div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Avg. Oil per well per day</span><span class="map-detail-stat-value">${c.wellDays > 0 ? fmt.num(oilPerWellPerDay) + ' bbl/d' : '—'}</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Avg. Gas per well per day</span><span class="map-detail-stat-value">${c.wellDays > 0 ? fmt.num(gasPerWellPerDayBoe) + ' bbl/d' : '—'}</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Producing wells</span><span class="map-detail-stat-value">${fmt.num(c.prodWells)}</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Total oil</span><span class="map-detail-stat-value">${fmt.num(c.oilBbl)} bbl</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Total gas</span><span class="map-detail-stat-value">${fmtBcfe(c.gasMcf)}</span></div>
 
       ${renderOperatorBreakdown(c.name)}
 

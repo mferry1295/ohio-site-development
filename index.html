@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="styles.css?v=2026-04-30e" />
+<link rel="stylesheet" href="styles.css?v=2026-04-30f" />
 </head>
 <body>
 
@@ -569,8 +569,8 @@
 <!-- =========== FIELD MAP =========== -->
 <section id="fieldmap" class="page">
   <div class="content full">
-    <h2 class="page-title">Ohio Utica Field Map · H2 2024</h2>
-    <p class="page-lead">All 88 Ohio counties are shown; the 18 producing in the Utica/Point Pleasant are shaded by the selected metric. Click any county for production, well count, operator breakdown, and investment detail. Source: Ohio DNR &amp; CSU Levin College Energy Policy Center, <em>Shale Investment Dashboard Q3/Q4 2024</em>.</p>
+    <h2 class="page-title">Ohio Utica Field Map · 2025</h2>
+    <p class="page-lead">All 88 Ohio counties are shown; the 18 producing in the Utica/Point Pleasant are shaded by the selected metric. Click any county for 2025 production and operator-level detail. Source: Ohio Department of Natural Resources horizontal-well quarterly production filings, Q1–Q4 2025.</p>
 
     <div class="map-county-picker">
       <label for="countySelect">Jump to county</label>
@@ -582,9 +582,7 @@
       <div class="map-metric-toggle" role="tablist">
         <button class="map-metric-btn active" data-metric="gasMcfe">Production (Bcfe)</button>
         <button class="map-metric-btn" data-metric="oilBbl">Oil (bbl)</button>
-        <button class="map-metric-btn" data-metric="totalWells">Total Wells</button>
-        <button class="map-metric-btn" data-metric="newWells">New Wells (H2 '24)</button>
-        <button class="map-metric-btn" data-metric="investmentM">Investment ($M)</button>
+        <button class="map-metric-btn" data-metric="prodWells">Producing Wells</button>
       </div>
       <div class="map-legend">
         <span class="map-legend-label">Shading:</span>
@@ -737,22 +735,6 @@
       <p class="callout">Mental model: BOE is an <em>energy</em> conversion (6 Mcf gas = 1 boe), but at today's prices 1 boe of gas is worth ~18% of 1 boe of oil. A "1,000 boe/d at 50% gas" well has revenue 90% tilted to oil.</p>
     </article>
 
-    <article id="r2" class="research-article">
-      <div class="r-tag">02 · From Drill Bit to Pump</div>
-      <h3>The 8 steps of a Tuscarawas well</h3>
-      <ol>
-        <li><strong>Lease</strong> — sign with mineral-rights owners. ~$5K/acre signing bonus + 18–22% royalty.</li>
-        <li><strong>Permit &amp; unitize</strong> — Ohio DNR + combine leases into a unit big enough for 3-mile laterals.</li>
-        <li><strong>Pad &amp; roads</strong> — bulldoze 5-acre site, gravel, containment. ~$1M/pad.</li>
-        <li><strong>Drill vertical</strong> — straight down ~8,000 ft to top of Point Pleasant.</li>
-        <li><strong>Drill lateral</strong> — curve 90° and drill horizontally ~15,500 ft inside the 100-ft target rock.</li>
-        <li><strong>Casing &amp; cement</strong> — steel pipe + cement to isolate from groundwater.</li>
-        <li><strong>Frac</strong> — 15–20M gallons water + 30–40M lbs sand + 0.5% chemicals at 9,000 psi across 50 stages.</li>
-        <li><strong>Flowback &amp; first oil</strong> — 1–3 weeks for water to flow back, then hydrocarbons.</li>
-      </ol>
-      <p>Spud-to-first-production: 90–120 days. Total D&amp;C cost: <strong>~$11.4M</strong>. A typical pad bundles 3–6 wells drilled with one rig, then all fracked together.</p>
-    </article>
-
     <article id="r3" class="research-article">
       <div class="r-tag">03 · Single-Well Economics</div>
       <h3>The unit of analysis</h3>
@@ -825,9 +807,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="counties.js?v=2026-04-30e"></script>
-<script src="operators.js?v=2026-04-30e"></script>
-<script src="model.js?v=2026-04-30e"></script>
-<script src="app.js?v=2026-04-30e"></script>
+<script src="counties.js?v=2026-04-30f"></script>
+<script src="operators.js?v=2026-04-30f"></script>
+<script src="model.js?v=2026-04-30f"></script>
+<script src="app.js?v=2026-04-30f"></script>
 </body>
 </html>
