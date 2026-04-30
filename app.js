@@ -88,6 +88,12 @@ function applyScenarioVisibility() {
 function syncScenarioButtons() {
   document.querySelectorAll('.scenario-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.scenario === state.scenario));
+  // Don't overwrite the "Evaluates all scenarios" placeholder when the picker
+  // is disabled (Scenario Analysis view).
+  document.querySelectorAll('.scenario-select').forEach(sel => {
+    if (sel.disabled) return;
+    if (sel.value !== state.scenario) sel.value = state.scenario;
+  });
 }
 
 function bindScenarioToggle() {
@@ -97,6 +103,12 @@ function bindScenarioToggle() {
       syncScenarioButtons();
       applyScenarioVisibility();
       render();
+    });
+  });
+  document.querySelectorAll('.scenario-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const target = document.querySelector(`.scenario-btn[data-scenario="${sel.value}"]`);
+      if (target) target.click();
     });
   });
 }
@@ -461,18 +473,44 @@ function renderWaterfall() {
 }
 
 // ===== Dashboard sub-view toggle =====
+function applyScenarioPickerDisabled(view) {
+  // Scenario Analysis aggregates all four scenarios, so picking one is moot.
+  const disabled = view === 'analysis';
+  document.querySelectorAll('.bar-with-label--scenario').forEach(el =>
+    el.classList.toggle('is-disabled', disabled));
+  document.querySelectorAll('.scenario-btn').forEach(b => { b.disabled = disabled; });
+  document.querySelectorAll('.scenario-select').forEach(s => {
+    s.disabled = disabled;
+    s.value = disabled ? 'all' : state.scenario;
+  });
+}
+
 function bindDashboardViews() {
   document.querySelectorAll('.view-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.view;
       document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.view-select').forEach(sel => {
+        if (sel.value !== v) sel.value = v;
+      });
       document.querySelectorAll('.dash-view').forEach(el => {
         el.hidden = el.dataset.view !== v;
       });
+      applyScenarioPickerDisabled(v);
       // Charts need a fresh sizing pass when their container becomes visible
       if (v === 'charts') Object.values(charts).forEach(c => c.resize?.());
     });
   });
+  document.querySelectorAll('.view-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const target = document.querySelector(`.view-btn[data-view="${sel.value}"]`);
+      if (target) target.click();
+    });
+  });
+  // Initial pass: default view is "analysis", so the scenario picker should
+  // start disabled until the user switches to a per-scenario view.
+  const initial = document.querySelector('.view-btn.active')?.dataset.view || 'analysis';
+  applyScenarioPickerDisabled(initial);
 }
 
 // ===== P&L Forecast table (years across top, metrics down) =====
@@ -1215,12 +1253,16 @@ function showCountyDetail(c) {
   restylePolygons();
   const det = document.getElementById('mapDetail');
   if (!det) return;
-  const cumBcfe = c.cumulativeBcfe;
-  const oilShare = c.gasMcfe > 0 ? (c.oilBbl * 5.659 / c.gasMcfe * 100) : 0;
   // H2 2024 = July through December = 184 days
   const H2_DAYS = 184;
   const oilPerWellPerDay = c.prodWells > 0 ? c.oilBbl / c.prodWells / H2_DAYS : 0;
-  const gasPerWellPerDay = c.prodWells > 0 ? c.gasMcf / c.prodWells / H2_DAYS : 0;
+  // Convert gas Mcf/d → bbl-oe/d using the same 5.659 Mcf/boe factor used
+  // elsewhere in the model so all per-day production reads in barrels.
+  const gasPerWellPerDayBoe = c.prodWells > 0 ? (c.gasMcf / c.prodWells / H2_DAYS) / 5.659 : 0;
+  // Annualize H2 2024 figures (×2) for any totals shown to the user.
+  const newWellsAnnual = c.newWells * 2;
+  const investmentAnnual = c.investmentM * 2;
+  const loeAnnual = c.loeM * 2;
   det.innerHTML = `
     <div class="map-detail-header">
       <div class="map-detail-tag">${c.name.toUpperCase()} COUNTY · OHIO</div>
@@ -1228,32 +1270,21 @@ function showCountyDetail(c) {
       <div class="map-detail-sub">${c.note}</div>
     </div>
     <div class="map-detail-body">
-      <div class="map-detail-section-title">H2 2024 Production</div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas-equivalent</span><span class="map-detail-stat-value">${fmtBcfe(c.gasMcfe)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Natural gas</span><span class="map-detail-stat-value">${fmtBcfe(c.gasMcf)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil (total)</span><span class="map-detail-stat-value">${fmt.num(c.oilBbl)} bbl</span></div>
+      <div class="map-detail-section-title">Production</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Oil per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(oilPerWellPerDay) + ' bbl/d' : '—'}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(gasPerWellPerDay) + ' Mcf/d' : '—'}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil share of boe</span><span class="map-detail-stat-value">${oilShare.toFixed(1)}%</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas per well per day</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(gasPerWellPerDayBoe) + ' bbl/d' : '—'}</span></div>
 
-      <div class="map-detail-section-title">Wells (Dec 2024)</div>
+      <div class="map-detail-section-title">Wells</div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Producing</span><span class="map-detail-stat-value">${fmt.num(c.producing)}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Drilling</span><span class="map-detail-stat-value">${fmt.num(c.drilling)}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Drilled (awaiting)</span><span class="map-detail-stat-value">${fmt.num(c.drilled)}</span></div>
       <div class="map-detail-stat"><span class="map-detail-stat-label">Total</span><span class="map-detail-stat-value">${fmt.num(c.totalWells)}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">New in H2 2024</span><span class="map-detail-stat-value">${fmt.num(c.newWells)}</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">New wells (annual)</span><span class="map-detail-stat-value">${fmt.num(newWellsAnnual)}</span></div>
 
-      <div class="map-detail-section-title">Per Producing Well · H2 2024 Avg</div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Gas-equiv production</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmtBcfe(c.gasMcfe / c.prodWells) : '—'}</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Oil production</span><span class="map-detail-stat-value">${c.prodWells > 0 ? fmt.num(c.oilBbl / c.prodWells) + ' bbl' : '—'}</span></div>
-
-      <div class="map-detail-section-title">Investment · H2 2024</div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Drilling + roads</span><span class="map-detail-stat-value">$${c.investmentM.toFixed(1)}M</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Lease operating expense</span><span class="map-detail-stat-value">$${c.loeM.toFixed(2)}M</span></div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Total upstream</span><span class="map-detail-stat-value">$${(c.investmentM + c.loeM).toFixed(1)}M</span></div>
-
-      <div class="map-detail-section-title">Cumulative</div>
-      <div class="map-detail-stat"><span class="map-detail-stat-label">Total Utica production</span><span class="map-detail-stat-value">${cumBcfe.toLocaleString()} Bcfe</span></div>
+      <div class="map-detail-section-title">Investment · annual</div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Drilling + roads</span><span class="map-detail-stat-value">$${investmentAnnual.toFixed(1)}M</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Lease operating expense</span><span class="map-detail-stat-value">$${loeAnnual.toFixed(2)}M</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Total upstream</span><span class="map-detail-stat-value">$${(investmentAnnual + loeAnnual).toFixed(1)}M</span></div>
 
       ${renderOperatorBreakdown(c.name)}
 
@@ -1283,7 +1314,10 @@ function renderOperatorBreakdown(countyName) {
           <span>${oilStr} oil</span>
           <span>${gasStr} gas</span>
         </div>
-        <div class="map-op-bar"><div class="map-op-bar-fill" style="width:${sharePct}%"></div><span class="map-op-bar-pct">${sharePct}%</span></div>
+        <div class="map-op-bar-row">
+          <div class="map-op-bar"><div class="map-op-bar-fill" style="width:${sharePct}%"></div></div>
+          <span class="map-op-bar-pct">${sharePct}%</span>
+        </div>
       </div>
     `;
   }).join('');
@@ -1294,22 +1328,8 @@ function renderOperatorBreakdown(countyName) {
   `;
 }
 
-function renderMapKPIs() {
-  const T = window.OhioCounties.STATE_TOTALS;
-  const html = `
-    <div class="kpi"><div class="kpi-label">Producing Wells</div><div class="kpi-value">${T.prodWells.toLocaleString()}</div><div class="kpi-sub">As of Dec 2024</div></div>
-    <div class="kpi"><div class="kpi-label">New Wells (H2 '24)</div><div class="kpi-value">${T.newWells}</div><div class="kpi-sub">+34% vs H1 2024</div></div>
-    <div class="kpi"><div class="kpi-label">Gas Equivalent</div><div class="kpi-value">${(T.gasMcfe / 1e9).toFixed(1)} Tcfe</div><div class="kpi-sub">H2 2024 total</div></div>
-    <div class="kpi"><div class="kpi-label">Oil Production</div><div class="kpi-value">${(T.oilBbl / 1e6).toFixed(1)}M bbl</div><div class="kpi-sub">H2 2024 · +27% YoY</div></div>
-    <div class="kpi"><div class="kpi-label">Upstream Invested</div><div class="kpi-value">$${(T.investmentM / 1e3).toFixed(2)}B</div><div class="kpi-sub">H2 2024 drilling+roads</div></div>
-    <div class="kpi"><div class="kpi-label">Cumulative Shale $</div><div class="kpi-value">$${(T.cumulativeShaleM / 1e3).toFixed(1)}B</div><div class="kpi-sub">2011–2024 all-stream</div></div>
-  `;
-  document.getElementById('mapKpis').innerHTML = html;
-}
-
 function renderFieldMap() {
   if (typeof L === 'undefined' || !window.OhioCounties) return;
-  renderMapKPIs();
   initMap();
   // Leaflet sometimes mis-sizes when initialized in a hidden tab; nudge it
   setTimeout(() => MAP_STATE.map && MAP_STATE.map.invalidateSize(), 50);

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="styles.css?v=2026-04-30d" />
+<link rel="stylesheet" href="styles.css?v=2026-04-30e" />
 </head>
 <body>
 
@@ -245,7 +245,7 @@
       </div>
 
       <details open>
-        <summary>Commodity Pricing (Apr 2026)</summary>
+        <summary>Commodity Pricing</summary>
         <div class="input-grp with-derived">
           <label>WTI crude <button class="info" type="button" data-tip="West Texas Intermediate — the U.S. benchmark crude oil price (priced at Cushing, OK). Utica condensate sells at a small discount to WTI due to quality differentials and transport costs.">i</button> <span class="unit">$/bbl</span></label>
           <input type="range" min="40" max="160" step="1" data-input="wti" />
@@ -466,16 +466,7 @@
     </aside>
 
     <div class="content">
-      <div class="bar-with-label">
-        <div class="bar-label">Scenario</div>
-        <div class="scenario-toggle-bar" role="tablist" aria-label="Development scenario">
-          <button class="scenario-btn" data-scenario="A">A · Land Sale</button>
-          <button class="scenario-btn active" data-scenario="B">B · Wells Only</button>
-          <button class="scenario-btn" data-scenario="C">C · Wells + Power Plant</button>
-          <button class="scenario-btn" data-scenario="D">D · Full Integration</button>
-        </div>
-      </div>
-      <div class="bar-with-label">
+      <div class="bar-with-label bar-with-label--view">
         <div class="bar-label">View</div>
         <div class="view-toggle" role="tablist">
           <button class="view-btn active" data-view="analysis">Scenario Analysis</button>
@@ -483,6 +474,28 @@
           <button class="view-btn" data-view="distrib">Distributions</button>
           <button class="view-btn" data-view="charts">Charts &amp; Graphs</button>
         </div>
+        <select class="view-select" aria-label="Dashboard view">
+          <option value="analysis" selected>Scenario Analysis</option>
+          <option value="pnl">P&amp;L Forecast</option>
+          <option value="distrib">Distributions</option>
+          <option value="charts">Charts &amp; Graphs</option>
+        </select>
+      </div>
+      <div class="bar-with-label bar-with-label--scenario">
+        <div class="bar-label">Scenario</div>
+        <div class="scenario-toggle-bar" role="tablist" aria-label="Development scenario">
+          <button class="scenario-btn" data-scenario="A">A · Land Sale</button>
+          <button class="scenario-btn active" data-scenario="B">B · Wells Only</button>
+          <button class="scenario-btn" data-scenario="C">C · Wells + Power Plant</button>
+          <button class="scenario-btn" data-scenario="D">D · Full Integration</button>
+        </div>
+        <select class="scenario-select" aria-label="Development scenario">
+          <option value="all" data-all-scenarios>Evaluates all scenarios</option>
+          <option value="A">A · Land Sale</option>
+          <option value="B" selected>B · Wells Only</option>
+          <option value="C">C · Wells + Power Plant</option>
+          <option value="D">D · Full Integration</option>
+        </select>
       </div>
 
       <!-- Charts and Graphs -->
@@ -559,8 +572,6 @@
     <h2 class="page-title">Ohio Utica Field Map · H2 2024</h2>
     <p class="page-lead">All 88 Ohio counties are shown; the 18 producing in the Utica/Point Pleasant are shaded by the selected metric. Click any county for production, well count, operator breakdown, and investment detail. Source: Ohio DNR &amp; CSU Levin College Energy Policy Center, <em>Shale Investment Dashboard Q3/Q4 2024</em>.</p>
 
-    <div class="map-kpis" id="mapKpis"></div>
-
     <div class="map-county-picker">
       <label for="countySelect">Jump to county</label>
       <select id="countySelect" aria-label="Select a county"></select>
@@ -610,39 +621,6 @@
   <div class="content full">
     <h2 class="page-title">Oil and Gas Primer</h2>
     <p class="page-lead">A working primer on the unit economics behind every assumption in this model — drawn from the Tuscarawas/Carroll/Harrison Utica volatile-oil window and EOG-comparable wells.</p>
-
-    <div class="research-grid">
-      <a class="research-card" href="#r1">
-        <div class="r-num">01</div>
-        <div class="r-title">The Three Streams</div>
-        <div class="r-desc">Why every Utica well produces oil, gas, and NGLs simultaneously — and why their supply chains diverge.</div>
-      </a>
-      <a class="research-card" href="#r2">
-        <div class="r-num">02</div>
-        <div class="r-title">From Drill Bit to Pump</div>
-        <div class="r-desc">The 8 steps of drilling a Tuscarawas well. ~$11.4M, 90–120 days, 3-mile lateral.</div>
-      </a>
-      <a class="research-card" href="#r3">
-        <div class="r-num">03</div>
-        <div class="r-title">Single-Well Economics</div>
-        <div class="r-desc">~$95K/day at peak, 35–50% IRR, 1.5–2.5 yr payback. The unit of analysis behind every line in the model.</div>
-      </a>
-      <a class="research-card" href="#r4">
-        <div class="r-num">04</div>
-        <div class="r-title">Behind-the-Meter Thesis</div>
-        <div class="r-desc">Why hyperscalers pay 4× for on-site gas-fired electricity, and what the drilling treadmill costs.</div>
-      </a>
-      <a class="research-card" href="#r5">
-        <div class="r-num">05</div>
-        <div class="r-title">Pricing &amp; Realized Price</div>
-        <div class="r-desc">WTI, Henry Hub, NGL basket — and the basis discounts that haircut every barrel coming out of Ohio.</div>
-      </a>
-      <a class="research-card" href="#r6">
-        <div class="r-num">06</div>
-        <div class="r-title">Glossary</div>
-        <div class="r-desc">API gravity, BOE, EUR, IP30, GOR, basis, fractionation spread — the meeting-room vocabulary.</div>
-      </a>
-    </div>
 
     <article id="r1" class="research-article">
       <div class="r-tag">01 · The Three Streams</div>
@@ -847,9 +825,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="counties.js?v=2026-04-30d"></script>
-<script src="operators.js?v=2026-04-30d"></script>
-<script src="model.js?v=2026-04-30d"></script>
-<script src="app.js?v=2026-04-30d"></script>
+<script src="counties.js?v=2026-04-30e"></script>
+<script src="operators.js?v=2026-04-30e"></script>
+<script src="model.js?v=2026-04-30e"></script>
+<script src="app.js?v=2026-04-30e"></script>
 </body>
 </html>
