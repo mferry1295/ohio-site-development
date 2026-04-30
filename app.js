@@ -600,20 +600,29 @@ function bindPnlToggle() {
 
 // ===== Annual Distribution Waterfall table (years across top, metrics down) =====
 // Bridge: EBITDA − CapEx + Debt Drawn − Interest − Principal − Cash Tax = Cash to Equity
-//   • Debt Drawn is the Y1 financing inflow (zero thereafter).
-//   • Cash Tax = unlevered tax minus interest tax shield, so the row reconciles to leveredCF.
+// Then the three-tier waterfall:
+//   T1 Return of Capital → T2 8% Pref → T3 Residual (advisor promote / equity)
 function renderDistribTable(model) {
   const fmtM = v => (v / 1e6).toFixed(1);
   const f = model.financing;
-  const ownerPct = (state.ownerEquityPct || 0) / 100;
-  const extPct = 1 - ownerPct;
   const taxRate = (state.tax || 0) / 100;
+  // For Land Sale (no equity at risk), the waterfall uses 0% pref and 0% promote
+  // so the advisor isn't double-charged on top of the success fee.
+  const promotePct = model.isLandSale ? 0 : (state.promotePct || 0);
+  const equityPct = 100 - promotePct;
+  const prefPct = model.isLandSale ? 0 : (state.promotePref || 0);
   const sign = v => v < 0 ? 'neg' : '';
   const signed = v => v < 0 ? 'neg' : 'pos';
+  const tier = f.tierSchedule || [];
 
   // Pre-compute per-year derived series
   const series = model.rows.map((r, i) => {
     const sched = f.debtSchedule[i] || { interestPaid: 0, principalPaid: 0 };
+    const t = tier[i] || {
+      beginUC: 0, distT1: 0, endUC: 0,
+      beginPB: 0, prefAccrued: 0, distT2: 0, endPB: 0,
+      residual: 0, advisorPromote: 0, equityResidual: 0,
+    };
     const debtDrawn = i === 0 ? f.debtAmount : 0;
     const cashTax = r.taxes - sched.interestPaid * taxRate;
     const cfe = f.leveredCF[i + 1] ?? 0;
@@ -622,20 +631,36 @@ function renderDistribTable(model) {
       ebitda: r.ebitda, capex: r.capex, debtDrawn,
       interest: sched.interestPaid, principal: sched.principalPaid,
       cashTax, cfe,
-      ownerCash: cfe * ownerPct, extCash: cfe * extPct,
+      beginUC: t.beginUC, distT1: t.distT1, endUC: t.endUC,
+      beginPB: t.beginPB, prefAccrued: t.prefAccrued, distT2: t.distT2, endPB: t.endPB,
+      residual: t.residual, advisorPromote: t.advisorPromote, equityResidual: t.equityResidual,
     };
   });
 
   const metrics = [
-    { label: 'EBITDA',         get: s => s.ebitda,    cls: sign,   bold: true },
-    { label: '− CapEx',        get: s => s.capex },
-    { label: '+ Debt Drawn',   get: s => s.debtDrawn },
-    { label: '− Interest',     get: s => s.interest },
-    { label: '− Principal',    get: s => s.principal },
-    { label: '− Cash Tax',     get: s => s.cashTax },
+    { label: 'EBITDA',           get: s => s.ebitda,    cls: sign,   bold: true },
+    { label: '− CapEx',          get: s => s.capex },
+    { label: '+ Debt Drawn',     get: s => s.debtDrawn },
+    { label: '− Interest',       get: s => s.interest },
+    { label: '− Principal',      get: s => s.principal },
+    { label: '− Cash Tax',       get: s => s.cashTax },
     { label: '= Cash to Equity', get: s => s.cfe, cls: signed, bold: true, divider: true },
-    { label: `Owner (${state.ownerEquityPct}%)`, get: s => s.ownerCash, cls: sign },
-    { label: `External (${100 - state.ownerEquityPct}%)`, get: s => s.extCash, cls: sign },
+
+    { section: 'Tier 1 — Return of Capital (to equity holders)' },
+    { label: 'Beginning unreturned capital', get: s => s.beginUC },
+    { label: 'Distribution (Tier 1)',        get: s => s.distT1, cls: () => 'pos' },
+    { label: 'Ending unreturned capital',    get: s => s.endUC },
+
+    { section: `Tier 2 — ${prefPct}% Pref on unreturned capital` },
+    { label: 'Beginning pref balance',       get: s => s.beginPB },
+    { label: 'Pref accrued this year',       get: s => s.prefAccrued },
+    { label: 'Distribution (Tier 2)',        get: s => s.distT2, cls: () => 'pos' },
+    { label: 'Ending pref balance',          get: s => s.endPB },
+
+    { section: `Tier 3 — Residual: Advisor promote ${promotePct}% / Equity ${equityPct}%` },
+    { label: 'Residual pool (after Tiers 1+2)', get: s => s.residual },
+    { label: `Advisor promote (${promotePct}%)`, get: s => s.advisorPromote, cls: v => v > 0 ? 'neg' : '' },
+    { label: `Equity (${equityPct}%)`,           get: s => s.equityResidual, cls: () => 'pos', bold: true },
   ];
 
   let html = '<thead><tr><th class="rowhead">Metric</th>';
@@ -643,6 +668,10 @@ function renderDistribTable(model) {
   html += '<th class="num total-col">Total</th></tr></thead><tbody>';
 
   metrics.forEach(m => {
+    if (m.section) {
+      html += `<tr class="tier-section"><td colspan="${series.length + 2}">${m.section}</td></tr>`;
+      return;
+    }
     let total = 0;
     const cls = m.cls || (() => '');
     const cellClass = v => `num ${cls(v)}${m.bold ? ' bold' : ''}`;
@@ -827,48 +856,6 @@ function renderDecisionGrid(results) {
       <div class="decision-body">${c.body}</div>
     </div>
   `).join('');
-}
-
-// ===== Financial-model table =====
-function renderModelTable(model) {
-  const headers = ['Year', 'Wells', 'Oil bbl/d', 'Gas Mcf/d', 'NGL bbl/d',
-    'Oil $M', 'NGL $M', 'Gas $M', 'Power $M', 'Total Rev $M',
-    'Cash Cost $M', 'EBITDA $M', 'CapEx $M', 'FCF $M'];
-  let html = '<thead><tr>' + headers.map(h => '<th class="num">' + h + '</th>').join('') + '</tr></thead><tbody>';
-  let totalRev = 0, totalCC = 0, totalE = 0, totalC = 0, totalF = 0;
-  model.rows.forEach(r => {
-    totalRev += r.totalRev; totalCC += r.totalCashCost; totalE += r.ebitda; totalC += r.capex; totalF += r.fcf;
-    html += '<tr>' +
-      `<td class="num">${r.year}</td>` +
-      `<td class="num">${r.wells}</td>` +
-      `<td class="num">${fmt.num(r.oilDaily)}</td>` +
-      `<td class="num">${fmt.num(r.gasDaily)}</td>` +
-      `<td class="num">${fmt.num(r.nglDaily)}</td>` +
-      `<td class="num">${(r.oilRev / 1e6).toFixed(1)}</td>` +
-      `<td class="num">${(r.nglRev / 1e6).toFixed(1)}</td>` +
-      `<td class="num">${(r.gasMarketRev / 1e6).toFixed(1)}</td>` +
-      `<td class="num">${(r.powerRev / 1e6).toFixed(1)}</td>` +
-      `<td class="num">${(r.totalRev / 1e6).toFixed(1)}</td>` +
-      `<td class="num">${(r.totalCashCost / 1e6).toFixed(1)}</td>` +
-      `<td class="num ${r.ebitda < 0 ? 'neg' : ''}">${(r.ebitda / 1e6).toFixed(1)}</td>` +
-      `<td class="num">${(r.capex / 1e6).toFixed(1)}</td>` +
-      `<td class="num ${r.fcf < 0 ? 'neg' : 'pos'}">${(r.fcf / 1e6).toFixed(1)}</td>` +
-      '</tr>';
-  });
-  html += `<tr class="total">
-      <td class="num">Total</td><td></td><td></td><td></td><td></td>
-      <td class="num">${(model.rows.reduce((s,r)=>s+r.oilRev,0)/1e6).toFixed(1)}</td>
-      <td class="num">${(model.rows.reduce((s,r)=>s+r.nglRev,0)/1e6).toFixed(1)}</td>
-      <td class="num">${(model.rows.reduce((s,r)=>s+r.gasMarketRev,0)/1e6).toFixed(1)}</td>
-      <td class="num">${(model.rows.reduce((s,r)=>s+r.powerRev,0)/1e6).toFixed(1)}</td>
-      <td class="num">${(totalRev/1e6).toFixed(1)}</td>
-      <td class="num">${(totalCC/1e6).toFixed(1)}</td>
-      <td class="num">${(totalE/1e6).toFixed(1)}</td>
-      <td class="num">${(totalC/1e6).toFixed(1)}</td>
-      <td class="num">${(totalF/1e6).toFixed(1)}</td>
-    </tr>`;
-  html += '</tbody>';
-  document.getElementById('modelTable').innerHTML = html;
 }
 
 function renderRealizedChips() {
@@ -1198,52 +1185,9 @@ function renderMapKPIs() {
   document.getElementById('mapKpis').innerHTML = html;
 }
 
-function renderCountyTable() {
-  const { COUNTIES } = window.OhioCounties;
-  const top = [...COUNTIES].sort((a, b) => b.gasMcfe - a.gasMcfe).slice(0, 10);
-  let html = `<thead><tr>
-    <th>County</th>
-    <th class="num">Gas Equiv (Bcfe)</th>
-    <th class="num">Oil (bbl)</th>
-    <th class="num">Producing</th>
-    <th class="num">Total Wells</th>
-    <th class="num">New (H2 '24)</th>
-    <th class="num">Investment $M</th>
-    <th class="num">LOE $M</th>
-  </tr></thead><tbody>`;
-  top.forEach(c => {
-    html += `<tr data-county="${c.name}">
-      <td><strong>${c.name}</strong></td>
-      <td class="num">${(c.gasMcfe / 1e6).toFixed(1)}</td>
-      <td class="num">${c.oilBbl.toLocaleString()}</td>
-      <td class="num">${c.producing}</td>
-      <td class="num">${c.totalWells}</td>
-      <td class="num">${c.newWells}</td>
-      <td class="num">${c.investmentM.toFixed(1)}</td>
-      <td class="num">${c.loeM.toFixed(2)}</td>
-    </tr>`;
-  });
-  html += '</tbody>';
-  const t = document.getElementById('countyTable');
-  if (!t) return;
-  t.innerHTML = html;
-  // Click a row → focus the map and show detail
-  t.querySelectorAll('tbody tr').forEach(tr => {
-    tr.addEventListener('click', () => {
-      const name = tr.dataset.county;
-      const c = COUNTIES.find(x => x.name === name);
-      if (c && MAP_STATE.map) {
-        MAP_STATE.map.flyTo([c.lat, c.lng], 10, { duration: 0.8 });
-        showCountyDetail(c);
-      }
-    });
-  });
-}
-
 function renderFieldMap() {
   if (typeof L === 'undefined' || !window.OhioCounties) return;
   renderMapKPIs();
-  renderCountyTable();
   initMap();
   // Leaflet sometimes mis-sizes when initialized in a hidden tab; nudge it
   setTimeout(() => MAP_STATE.map && MAP_STATE.map.invalidateSize(), 50);
@@ -1258,7 +1202,6 @@ function render() {
   renderDeclineChart();
   renderGasSupplyChart(model);
   renderWaterfall();
-  renderModelTable(model);
   renderPnlTable(model);
   renderDistribTable(model);
   renderScenarioAnalysis();

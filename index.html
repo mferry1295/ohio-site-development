@@ -14,10 +14,11 @@
 
 <header class="topbar">
   <div class="brand">
-    <div class="brand-mark"></div>
     <div class="brand-text">
-      <div class="brand-name">OHIO SITE DEVELOPMENT</div>
-      <div class="brand-sub">Tuscarawas County · Volatile Oil Window · Utica/Point Pleasant</div>
+      <div class="brand-name">
+        <span class="brand-project">PROJECT</span><span class="brand-divider">|</span><span class="brand-lantern">LANTERN</span>
+      </div>
+      <div class="brand-sub">Ohio Site Development</div>
     </div>
   </div>
   <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open navigation menu" aria-expanded="false">
@@ -27,7 +28,6 @@
   </button>
   <nav class="topnav" id="topnav">
     <a href="#dashboard" class="navlink active" data-target="dashboard">Dashboard</a>
-    <a href="#model" class="navlink" data-target="model">Financial Model</a>
     <a href="#fieldmap" class="navlink" data-target="fieldmap">Field Map</a>
     <a href="#research" class="navlink" data-target="research">Oil and Gas Primer</a>
   </nav>
@@ -200,26 +200,12 @@
       </details>
 
       <details open>
-        <summary>Project</summary>
+        <summary>Financing</summary>
         <div class="input-grp">
           <label>Project term <button class="info" type="button" data-tip="Length of the analysis horizon in years. Hyperscaler colocation leases typically run 10–15 years with renewal options; the model defaults to 20 years to capture the full investment cycle plus several years of stabilized operation.">i</button> <span class="unit">years</span></label>
           <input type="range" min="10" max="30" step="1" data-input="years" />
           <input type="number" data-input="years" />
         </div>
-        <div class="input-grp">
-          <label>DD&amp;A (E&amp;P) <button class="info" type="button" data-tip="Depreciation, Depletion &amp; Amortization for the Exploration &amp; Production segment. A non-cash accounting charge that spreads the $11.4M per-well drilling cost (and other capitalized costs) across the barrels produced over the well's life. Applied per boe (barrel of oil equivalent). Reduces taxable income but doesn't affect cash flow.">i</button> <span class="unit">$/boe</span></label>
-          <input type="range" min="6" max="20" step="0.5" data-input="dda" />
-          <input type="number" data-input="dda" />
-        </div>
-        <div class="input-grp">
-          <label>G&amp;A <button class="info" type="button" data-tip="General &amp; Administrative — corporate overhead allocated to each barrel produced: executive salaries, accounting, legal, HQ costs, IT systems. EOG-comparable Utica operators run ~$1.50/boe.">i</button> <span class="unit">$/boe</span></label>
-          <input type="range" min="0.5" max="5" step="0.1" data-input="ga" />
-          <input type="number" data-input="ga" />
-        </div>
-      </details>
-
-      <details open>
-        <summary>Financing</summary>
         <div class="input-grp">
           <label>Discount rate (WACC) <button class="info" type="button" data-tip="Weighted Average Cost of Capital — used to discount unlevered project cash flows back to present value. Sets the hurdle rate the project IRR must beat. Energy &amp; infrastructure projects typically use 8–12%.">i</button> <span class="unit">%</span></label>
           <input type="range" min="4" max="20" step="0.5" data-input="wacc" />
@@ -387,26 +373,6 @@
 </section>
 
 <!-- =========== FINANCIAL MODEL =========== -->
-<section id="model" class="page">
-  <div class="content full">
-    <div class="bar-with-label">
-      <div class="bar-label">Scenario</div>
-      <div class="scenario-toggle-bar" role="tablist" aria-label="Development scenario">
-        <button class="scenario-btn" data-scenario="A">A · Land Sale</button>
-        <button class="scenario-btn active" data-scenario="B">B · Wells Only</button>
-        <button class="scenario-btn" data-scenario="C">C · Wells + Power Plant</button>
-        <button class="scenario-btn" data-scenario="D">D · Full Integration</button>
-      </div>
-    </div>
-    <h2 class="page-title">20-Year Financial Model</h2>
-    <p class="page-lead">Annualized P&amp;L roll-up for the active scenario. All figures in $M unless labeled. Production declines applied per-well using a multi-segment hyperbolic curve calibrated to EOG-comparable Utica wells.</p>
-    <div class="table-scroll">
-      <table id="modelTable" class="data-table"></table>
-    </div>
-  </div>
-</section>
-
-
 <!-- =========== FIELD MAP =========== -->
 <section id="fieldmap" class="page">
   <div class="content full">
@@ -455,11 +421,6 @@
           </div>
         </div>
       </aside>
-    </div>
-
-    <div class="card wide" style="margin-top:16px">
-      <div class="card-head"><h3>Top 10 counties — H2 2024 production &amp; activity</h3><div class="card-sub">Click any row to focus the map</div></div>
-      <div class="table-scroll"><table id="countyTable" class="data-table"></table></div>
     </div>
   </div>
 </section>

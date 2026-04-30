@@ -311,9 +311,24 @@ function runModel(p, scenario = 'B') {
     debtSchedule.push({ year: y, interestPaid, principalPaid, debtService, principalRemaining, cashToAllEquity });
   }
 
-  // Owner cash flow = ownerEquityPct of all-equity cash flows minus owner's Y0 contribution
-  const ownerCF = [-ownerEquity, ...leveredCF.slice(1).map(v => v * ownerEquityPct)];
-  const externalCF = [-externalEquity, ...leveredCF.slice(1).map(v => v * externalEquityPct)];
+  // ===== Tiered waterfall on combined equity =====
+  // Tier 1: return of capital (combined owner + external equity)
+  // Tier 2: 8% pref accrued (compounding) on outstanding capital + accrued pref
+  // Tier 3: residual split — promotePct% to advisor, the rest to equity (95% / 5% by default)
+  const prefRate = (p.promotePref || 0) / 100;
+  const promotePctNum = (p.promotePct || 0) / 100;
+  const tierSchedule = computeTierWaterfall(equityAmount, leveredCF, prefRate, promotePctNum);
+  const advisorPromotePerYear = [0, ...tierSchedule.map(t => t.advisorPromote)];
+
+  // Owner / external cash flows are post-promote: equity gets leveredCF − advisor promote each year,
+  // split pro-rata by ownership %. (Negative CFE years are passed through unchanged.)
+  const ownerCF = [-ownerEquity];
+  const externalCF = [-externalEquity];
+  for (let y = 1; y <= Y; y++) {
+    const equityShare = leveredCF[y] - advisorPromotePerYear[y];
+    ownerCF.push(equityShare * ownerEquityPct);
+    externalCF.push(equityShare * externalEquityPct);
+  }
 
   const ownerIrr = irr(ownerCF);
   const ownerNpv = npv(p.wacc / 100, ownerCF);
@@ -325,7 +340,7 @@ function runModel(p, scenario = 'B') {
 
   // ===== Advisor Fees =====
   const advisor = computeAdvisorFees(p, {
-    debtAmount, externalEquity, externalCF, projNpv,
+    debtAmount, externalEquity, projNpv, tierSchedule,
   });
 
   return {
@@ -339,10 +354,49 @@ function runModel(p, scenario = 'B') {
       ownerIrr, ownerNpv, ownerPayback, ownerMoic,
       externalIrr,
       ownerCF, leveredCF, externalCF,
-      debtSchedule,
+      debtSchedule, tierSchedule,
     },
     advisor,
   };
+}
+
+/* =============================================================
+ *  Tiered Waterfall Helper
+ *  Runs the three-tier distribution waterfall on a single combined-equity stream.
+ *    Tier 1: return of capital (until UC = 0)
+ *    Tier 2: pref balance — accrues at prefRate × (UC + PB) each year (compounding),
+ *            paid down once T1 is satisfied
+ *    Tier 3: residual — promotePct% to advisor, the rest to equity
+ *  Negative CFE years: no distributions; UC unchanged; pref still accrues.
+ * ============================================================= */
+function computeTierWaterfall(totalEquity, leveredCF, prefRate, promotePct) {
+  const schedule = [];
+  let uc = totalEquity;
+  let pb = 0;
+  for (let y = 1; y < leveredCF.length; y++) {
+    const cfe = leveredCF[y];
+    const beginUC = uc;
+    const beginPB = pb;
+    const prefAccrued = (uc + pb) * prefRate;
+    pb += prefAccrued;
+
+    let cash = Math.max(0, cfe);
+    const distT1 = Math.min(cash, uc);
+    cash -= distT1; uc -= distT1;
+    const distT2 = Math.min(cash, pb);
+    cash -= distT2; pb -= distT2;
+    const residual = cash;
+    const advisorPromote = residual * promotePct;
+    const equityResidual = residual - advisorPromote;
+
+    schedule.push({
+      year: y,
+      beginUC, distT1, endUC: uc,
+      beginPB, prefAccrued, distT2, endPB: pb,
+      residual, advisorPromote, equityResidual,
+    });
+  }
+  return schedule;
 }
 
 /* =============================================================
@@ -404,6 +458,10 @@ function runLandSale(p) {
     total: advisorFee,
   };
 
+  // No equity at risk → tier waterfall is degenerate: UC=0, PB=0, residual=CFE every year
+  // and no advisor promote (already taken via saleSuccessFee).
+  const tierSchedule = computeTierWaterfall(0, leveredCF, 0, 0);
+
   return {
     rows, totals,
     npv: projNpv, irr: projIrr, payback: projPayback,
@@ -421,7 +479,7 @@ function runLandSale(p) {
       ownerPayback: projPayback, ownerMoic: null,
       externalIrr: null,
       ownerCF, leveredCF, externalCF,
-      debtSchedule,
+      debtSchedule, tierSchedule,
     },
     advisor,
     isLandSale: true,
@@ -443,28 +501,11 @@ function computeAdvisorFees(p, ctx) {
 
   const siteAdvisoryFee = (p.siteAdvisoryMonthly || 0) * 1_000_000 * (p.siteAdvisoryMonths || 0);
 
-  // Tiered promote — pref-hurdle waterfall on external-equity cash flow.
-  // Partner's outstanding balance accrues at pref% per year; distributions reduce it.
-  // Once balance is paid off, advisor takes promote% of every dollar above.
-  const prefRate = (p.promotePref || 0) / 100;
-  const promotePct = (p.promotePct || 0) / 100;
-  let balance = -(ctx.externalCF?.[0] || 0);
-  let promote = 0, abovePref = 0;
-  if (ctx.externalCF && ctx.externalCF.length > 1 && balance > 0) {
-    for (let y = 1; y < ctx.externalCF.length; y++) {
-      balance = balance * (1 + prefRate);
-      const dist = ctx.externalCF[y];
-      if (dist <= 0) continue;
-      if (dist <= balance) {
-        balance -= dist;
-      } else {
-        const above = dist - balance;
-        balance = 0;
-        abovePref += above;
-        promote += above * promotePct;
-      }
-    }
-  }
+  // Tiered promote — pulled from the combined-equity tier waterfall computed in runModel.
+  // Promote = sum of advisor's per-year residual cut; abovePref = sum of residual pool (T3 base).
+  const tierSchedule = ctx.tierSchedule || [];
+  const promote = tierSchedule.reduce((s, t) => s + t.advisorPromote, 0);
+  const abovePref = tierSchedule.reduce((s, t) => s + t.residual, 0);
 
   // Sale success fee — only meaningful when project NPV is positive (proxy for sale price)
   const saleSuccessFee = (ctx.projNpv || 0) > 0
