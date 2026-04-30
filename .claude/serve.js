@@ -4,7 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = '/Users/michaelferry/Documents/GitHub/Ohio Site';
+const ROOT = path.resolve(__dirname, '..');
 const PORT = 5173;
 
 const MIME = {
