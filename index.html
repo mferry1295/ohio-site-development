@@ -8,26 +8,27 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="styles.css?v=2026-04-30c" />
+<link rel="stylesheet" href="styles.css?v=2026-04-30d" />
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand">
+  <a class="brand" href="#overview" data-target="overview" aria-label="Go to Project Overview">
     <div class="brand-text">
       <div class="brand-name">
         <span class="brand-project">PROJECT</span><span class="brand-divider">|</span><span class="brand-lantern">LANTERN</span>
       </div>
       <div class="brand-sub">Ohio Site Development</div>
     </div>
-  </div>
+  </a>
   <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open navigation menu" aria-expanded="false">
     <span class="dots-icon" aria-hidden="true">
       <span></span><span></span><span></span>
     </span>
   </button>
   <nav class="topnav" id="topnav">
-    <a href="#dashboard" class="navlink active" data-target="dashboard">Dashboard</a>
+    <a href="#overview" class="navlink active" data-target="overview">Project Overview</a>
+    <a href="#dashboard" class="navlink" data-target="dashboard">Dashboard</a>
     <a href="#fieldmap" class="navlink" data-target="fieldmap">Field Map</a>
     <a href="#research" class="navlink" data-target="research">Oil and Gas Primer</a>
   </nav>
@@ -35,8 +36,223 @@
 
 <main>
 
+<!-- =========== PROJECT OVERVIEW =========== -->
+<section id="overview" class="page active">
+  <div class="content full">
+
+    <!-- Hero -->
+    <div class="ov-hero">
+      <div class="ov-hero-inner">
+        <div class="ov-hero-tag">PROJECT LANTERN · APR 2026</div>
+        <h1 class="ov-hero-title">3,000 acres in the Utica land position.</h1>
+        <div class="ov-hero-questions">
+          <p class="ov-hero-q">What is the most profitable use of the land?</p>
+          <p class="ov-hero-a">Sell, Drill, or Build to extract the most value?</p>
+          <p class="ov-hero-q">What is the optimal way to finance this development?</p>
+          <p class="ov-hero-a">Debt, Equity, Joint Venture &mdash; what combination of capital?</p>
+        </div>
+      </div>
+      <div class="ov-hero-shapes" aria-hidden="true">
+        <!-- Populated from ohio_counties.geojson by renderOverviewMap() in app.js -->
+        <svg class="ov-hero-map" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+
+    <!-- Site Facts -->
+    <div class="ov-section-tag">SITE SNAPSHOT</div>
+    <div class="ov-facts">
+      <div class="fact-card">
+        <div class="fact-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19h18"/><path d="M5 19V9l7-5 7 5v10"/><path d="M9 19v-6h6v6"/></svg>
+        </div>
+        <div class="fact-label">Acreage</div>
+        <div class="fact-value">~3,000 <span class="fact-unit">acres</span></div>
+        <div class="fact-detail">Contiguous mineral + surface rights · pad-ready</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+        </div>
+        <div class="fact-label">Power Potential</div>
+        <div class="fact-value">150 <span class="fact-unit">MW CCGT</span></div>
+        <div class="fact-detail">Sized for a 100&nbsp;MW IT-load data-center load (PUE&nbsp;1.2)</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 1 1 2 0 2-2 0-1 0-2 0-3z"/></svg>
+        </div>
+        <div class="fact-label">Gas Takeaway</div>
+        <div class="fact-value">3 <span class="fact-unit">pipelines</span></div>
+        <div class="fact-detail">NEXUS · Rover · REX corridor within 10&nbsp;mi of site</div>
+      </div>
+      <div class="fact-card">
+        <div class="fact-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-4 7 11"/><circle cx="7" cy="7" r="2"/></svg>
+        </div>
+        <div class="fact-label">Geology</div>
+        <div class="fact-value">Volatile-Oil <span class="fact-unit">window</span></div>
+        <div class="fact-detail">Oil + NGLs + gas through one wellbore · ~$95K/well-day at peak</div>
+      </div>
+    </div>
+
+    <!-- Opportunity narrative -->
+    <div class="ov-opportunity">
+      <div class="opp-block opp-block--situation">
+        <div class="opp-tag">THE SITUATION</div>
+        <h3>Landowner with optionality</h3>
+        <ul class="opp-bullets">
+          <li>
+            <span class="opp-b-lead">Location.</span>
+            <span class="opp-b-body">Volatile-oil window of the Utica/Point Pleasant &mdash; immediately adjacent to producing EOG-comparable acreage in Carroll and Harrison counties.</span>
+          </li>
+          <li>
+            <span class="opp-b-lead">Status today.</span>
+            <span class="opp-b-body">Undeveloped &mdash; held but not drilled, leased but not built upon. Pad-ready and clean.</span>
+          </li>
+          <li>
+            <span class="opp-b-lead">Optionality.</span>
+            <span class="opp-b-body">Each acre can be sold outright, drilled for hydrocarbons, host a power plant, or anchor a behind-the-meter data-center campus.</span>
+          </li>
+          <li>
+            <span class="opp-b-lead">Decision space.</span>
+            <span class="opp-b-body">The right answer depends on capital available, risk tolerance, and how one reads the market.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="opp-arrow" aria-hidden="true">→</div>
+      <div class="opp-block opp-block--market">
+        <div class="opp-tag">THE MARKET</div>
+        <h3>Why the window is open now</h3>
+        <ul class="opp-bullets">
+          <li>
+            <span class="opp-b-lead">Oil prices elevated.</span>
+            <span class="opp-b-body">WTI near $100 on OPEC+ discipline and geopolitics &mdash; a multi-year tailwind for upstream economics.</span>
+          </li>
+          <li>
+            <span class="opp-b-lead">Data-center build-out.</span>
+            <span class="opp-b-body">Central Ohio is absorbing every megawatt available &mdash; Microsoft, Google, AWS, Meta all expanding in-state.</span>
+          </li>
+          <li>
+            <span class="opp-b-lead">Behind-the-meter premium.</span>
+            <span class="opp-b-body">PJM interconnect runs 4&ndash;7 years; hyperscalers pay ~4&times; for on-site gas-fired power that can come online faster.</span>
+          </li>
+          <li>
+            <span class="opp-b-lead">Selling power to the grid.</span>
+            <span class="opp-b-body">AEP-Ohio LMPs lifted by AI demand; spark-spreads for new gas-fired capacity widen as coal retires.</span>
+          </li>
+          <li>
+            <span class="opp-b-lead">Gas basis tightening.</span>
+            <span class="opp-b-body">In-basin power demand is finally absorbing stranded Appalachian gas &mdash; the discount to Henry Hub is structurally narrowing.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="opp-arrow" aria-hidden="true">→</div>
+      <div class="opp-block opp-block--question">
+        <div class="opp-tag">THE QUESTION</div>
+        <h3>Which path, and how to fund it?</h3>
+        <p>Each path carries a different capital commitment, time horizon, and risk profile. The right answer depends on commodity prices, lease rates, and how the market plays out &mdash; it&rsquo;s a numbers question.</p>
+        <p><strong>This application helps answer that question.</strong> It&rsquo;s a working financial model that runs all four paths end-to-end &mdash; capex, revenue, financing, taxes, distributions &mdash; and ranks them by Owner&nbsp;NPV under whatever assumptions you set.</p>
+        <a class="opp-cta" href="#dashboard" data-target="dashboard">
+          Open the Dashboard
+          <span class="opp-cta-arrow" aria-hidden="true">→</span>
+        </a>
+        <p class="opp-cta-sub">Tune commodity prices, well economics, lease rates, and capital structure &mdash; the recommendation updates live.</p>
+      </div>
+    </div>
+
+    <!-- Four monetization paths -->
+    <div class="ov-section-tag">FOUR MONETIZATION PATHS</div>
+    <div class="ov-paths">
+      <div class="path-card path-A">
+        <div class="path-head">
+          <div class="path-letter">A</div>
+          <div class="path-title">
+            <div class="path-name">Land Sale</div>
+            <div class="path-tagline">Exit · one transaction</div>
+          </div>
+        </div>
+        <div class="path-bars">
+          <div class="path-bar"><span class="path-bar-label">CapEx</span><span class="path-bar-track"><span class="path-bar-fill" style="width:4%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Time</span><span class="path-bar-track"><span class="path-bar-fill" style="width:8%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Complexity</span><span class="path-bar-track"><span class="path-bar-fill" style="width:8%"></span></span></div>
+        </div>
+        <p class="path-desc">Sell mineral + surface rights to an upstream operator or strategic. Proceeds in Y1, then done.</p>
+        <div class="path-bet">Bet: today&rsquo;s sale price beats the risk-adjusted PV of any development path.</div>
+      </div>
+
+      <div class="path-card path-B">
+        <div class="path-head">
+          <div class="path-letter">B</div>
+          <div class="path-title">
+            <div class="path-name">Wells Only</div>
+            <div class="path-tagline">Pure E&amp;P · sell at market</div>
+          </div>
+        </div>
+        <div class="path-bars">
+          <div class="path-bar"><span class="path-bar-label">CapEx</span><span class="path-bar-track"><span class="path-bar-fill" style="width:25%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Time</span><span class="path-bar-track"><span class="path-bar-fill" style="width:25%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Complexity</span><span class="path-bar-track"><span class="path-bar-fill" style="width:30%"></span></span></div>
+        </div>
+        <p class="path-desc">Drill, complete, produce. Sell oil to refiners, gas into the pipeline, NGLs through midstream.</p>
+        <div class="path-bet">Bet: Utica unit economics &mdash; $95K/day at peak, 35&ndash;50% IRR per well &mdash; hold up.</div>
+      </div>
+
+      <div class="path-card path-C">
+        <div class="path-head">
+          <div class="path-letter">C</div>
+          <div class="path-title">
+            <div class="path-name">Wells + Power Plant</div>
+            <div class="path-tagline">Captive gas · sell power to PJM</div>
+          </div>
+        </div>
+        <div class="path-bars">
+          <div class="path-bar"><span class="path-bar-label">CapEx</span><span class="path-bar-track"><span class="path-bar-fill" style="width:55%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Time</span><span class="path-bar-track"><span class="path-bar-fill" style="width:60%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Complexity</span><span class="path-bar-track"><span class="path-bar-fill" style="width:65%"></span></span></div>
+        </div>
+        <p class="path-desc">Burn produced gas in a 150&nbsp;MW CCGT on-site, sell electricity at the AEP Ohio LMP.</p>
+        <div class="path-bet">Bet: spark-spread (power price &minus; gas cost) beats the value of pipeline gas.</div>
+      </div>
+
+      <div class="path-card path-D">
+        <div class="path-head">
+          <div class="path-letter">D</div>
+          <div class="path-title">
+            <div class="path-name">Full Integration</div>
+            <div class="path-tagline">Wells + CCGT + data center · hyperscaler lease</div>
+          </div>
+        </div>
+        <div class="path-bars">
+          <div class="path-bar"><span class="path-bar-label">CapEx</span><span class="path-bar-track"><span class="path-bar-fill" style="width:100%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Time</span><span class="path-bar-track"><span class="path-bar-fill" style="width:100%"></span></span></div>
+          <div class="path-bar"><span class="path-bar-label">Complexity</span><span class="path-bar-track"><span class="path-bar-fill" style="width:100%"></span></span></div>
+        </div>
+        <p class="path-desc">Behind-the-meter campus: a 100&nbsp;MW IT-load data center fed by the on-site plant under a 10&ndash;15 yr hyperscaler colo lease.</p>
+        <div class="path-bet">Bet: a single hyperscaler signs a long-dated lease at a 4&times; premium on the same molecules.</div>
+      </div>
+    </div>
+
+    <!-- Live headline metrics -->
+    <div class="ov-headline" id="ovHeadline">
+      <div class="ov-headline-head">
+        <div class="ov-headline-tag">RECOMMENDED AT CURRENT INPUTS</div>
+        <h2 class="ov-headline-title" id="ovRecTitle">&mdash;</h2>
+        <p class="ov-headline-desc" id="ovRecDesc">Loading model&hellip;</p>
+      </div>
+      <div class="ov-headline-grid" id="ovRecMetrics"></div>
+      <div class="ov-headline-foot">
+        <span class="ov-live-dot" aria-hidden="true"></span>
+        Live from the model. Tune assumptions in the
+        <a href="#dashboard" data-target="dashboard" class="ov-jump">Dashboard tab</a>
+        and these refresh.
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- =========== DASHBOARD =========== -->
-<section id="dashboard" class="page active">
+<section id="dashboard" class="page">
   <div class="layout">
     <aside class="sidebar">
       <div class="sidebar-head">
@@ -647,9 +863,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="counties.js?v=2026-04-30c"></script>
-<script src="operators.js?v=2026-04-30c"></script>
-<script src="model.js?v=2026-04-30c"></script>
-<script src="app.js?v=2026-04-30c"></script>
+<script src="counties.js?v=2026-04-30d"></script>
+<script src="operators.js?v=2026-04-30d"></script>
+<script src="model.js?v=2026-04-30d"></script>
+<script src="app.js?v=2026-04-30d"></script>
 </body>
 </html>

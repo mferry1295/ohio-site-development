@@ -115,6 +115,12 @@ function bindNav() {
       render();
       // map needs explicit init / resize when its tab becomes visible
       if (target === 'fieldmap') renderFieldMap();
+      // Chart.js mis-sizes when canvases are created in a hidden parent (e.g. when
+      // the user lands on the Project Overview tab first). Force a resize on
+      // dashboard activation so canvases pick up their now-visible dimensions.
+      if (target === 'dashboard') {
+        setTimeout(() => Object.values(charts).forEach(c => c.resize?.()), 0);
+      }
       // Close mobile menu after selection
       closeMobileMenu();
     });
@@ -150,6 +156,18 @@ function bindMobileMenu() {
   // Close on Escape
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeMobileMenu();
+  });
+}
+
+// In-page jump links (e.g. "Dashboard tab" inside Project Overview) — proxy to the
+// matching topnav link so a single navigation path runs (re-render + scroll + close mobile menu).
+function bindJumpLinks() {
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[data-target]');
+    if (!a || a.classList.contains('navlink')) return; // navlinks are handled by bindNav
+    e.preventDefault();
+    const link = document.querySelector(`.navlink[data-target="${a.dataset.target}"]`);
+    if (link) link.click();
   });
 }
 
@@ -858,6 +876,151 @@ function renderDecisionGrid(results) {
   `).join('');
 }
 
+// ===== Project Overview tab — Ohio map (decorative) =====
+// Renders an actual outline of Ohio (all 88 counties from ohio_counties.geojson),
+// shades the 18 Utica producing counties listed in window.OhioCounties.COUNTIES,
+// highlights Tuscarawas County (the project's county), and drops a pin at its centroid.
+// Runs once on boot — the map is static.
+function renderOverviewMap() {
+  const svg = document.querySelector('.ov-hero-map');
+  if (!svg || svg.dataset.rendered === '1') return;
+  fetch('ohio_counties.geojson')
+    .then(r => r.json())
+    .then(geo => {
+      const PRODUCING = new Set((window.OhioCounties?.COUNTIES || []).map(c => c.name));
+
+      // Compute lng/lat bounding box across all county polygons
+      let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+      const eachRing = (f, fn) => {
+        const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+        polys.forEach(poly => poly.forEach(ring => fn(ring)));
+      };
+      geo.features.forEach(f => eachRing(f, ring => {
+        ring.forEach(([x, y]) => {
+          if (x < minLng) minLng = x;
+          if (x > maxLng) maxLng = x;
+          if (y < minLat) minLat = y;
+          if (y > maxLat) maxLat = y;
+        });
+      }));
+
+      // Project lng/lat → SVG x/y inside a 220×220 viewBox with padding.
+      // Equirectangular projection — fine for a single state at this scale.
+      const VB = 220, PAD = 14;
+      const w = maxLng - minLng;
+      const h = maxLat - minLat;
+      const scale = Math.min((VB - 2 * PAD) / w, (VB - 2 * PAD) / h);
+      const offX = (VB - w * scale) / 2;
+      const offY = (VB - h * scale) / 2;
+      const project = (lng, lat) => [
+        (offX + (lng - minLng) * scale).toFixed(2),
+        (offY + (maxLat - lat) * scale).toFixed(2),  // flip Y (lat is north-up)
+      ];
+
+      const featureToPath = f => {
+        let d = '';
+        eachRing(f, ring => {
+          ring.forEach(([lng, lat], i) => {
+            const [x, y] = project(lng, lat);
+            d += (i === 0 ? 'M' : 'L') + x + ',' + y;
+          });
+          d += 'Z';
+        });
+        return d;
+      };
+
+      // Bucket features
+      const otherFeats = [], producingFeats = [];
+      let tuscarawas = null;
+      geo.features.forEach(f => {
+        const name = f.properties.name;
+        if (name === 'Tuscarawas') tuscarawas = f;
+        else if (PRODUCING.has(name)) producingFeats.push(f);
+        else otherFeats.push(f);
+      });
+
+      const NS = 'http://www.w3.org/2000/svg';
+      const create = (tag, attrs, parent) => {
+        const el = document.createElementNS(NS, tag);
+        Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+        parent.appendChild(el);
+        return el;
+      };
+
+      svg.innerHTML = '';
+
+      // 1) Non-producing counties — faint base outlines (the rest of Ohio)
+      const otherG = create('g', { class: 'ohm-other' }, svg);
+      otherFeats.forEach(f => create('path', { d: featureToPath(f) }, otherG));
+
+      // 2) Producing fairway — Utica producing counties shaded
+      const fairG = create('g', { class: 'ohm-fairway' }, svg);
+      producingFeats.forEach(f => create('path', { d: featureToPath(f) }, fairG));
+
+      // 3) Tuscarawas — project county, drawn last so its border sits on top
+      if (tuscarawas) {
+        create('path', { d: featureToPath(tuscarawas), class: 'ohm-project' }, svg);
+        const T = window.OhioCounties?.COUNTIES?.find(c => c.name === 'Tuscarawas');
+        if (T) {
+          const [px, py] = project(T.lng, T.lat);
+          create('circle', { class: 'ohm-pin-halo', cx: px, cy: py, r: 11 }, svg);
+          create('circle', { class: 'ohm-pin-ring', cx: px, cy: py, r: 6.5 }, svg);
+          create('circle', { class: 'ohm-pin-dot',  cx: px, cy: py, r: 3 }, svg);
+          const label = create('text', {
+            class: 'ohm-label',
+            x: px,
+            y: (parseFloat(py) + 22).toFixed(2),
+          }, svg);
+          label.textContent = 'PROJECT SITE';
+        }
+      }
+
+      svg.dataset.rendered = '1';
+    })
+    .catch(err => console.warn('Overview map: geojson load failed', err));
+}
+
+// ===== Project Overview tab — live headline metrics =====
+function renderProjectOverview() {
+  const titleEl = document.getElementById('ovRecTitle');
+  const descEl = document.getElementById('ovRecDesc');
+  const metricsEl = document.getElementById('ovRecMetrics');
+  if (!titleEl || !metricsEl) return;
+
+  const { recommended } = rankScenarios();
+  const moneyM = v => v == null ? '—' : '$' + (v / 1e6).toFixed(1) + 'M';
+  const pct = v => v == null ? '—' : (v * 100).toFixed(1) + '%';
+  const yrs = v => v == null ? '—' : v.toFixed(1) + ' yr';
+
+  if (!recommended) {
+    titleEl.textContent = 'No clear winner';
+    if (descEl) descEl.textContent = 'No scenario clears positive Owner NPV at current inputs. Try raising WTI, the lease rate, or the land sale price — or lower WACC.';
+    metricsEl.innerHTML = '';
+    document.getElementById('ovHeadline')?.classList.add('ov-headline--empty');
+    return;
+  }
+
+  document.getElementById('ovHeadline')?.classList.remove('ov-headline--empty');
+  titleEl.innerHTML =
+    `<span class="ov-rec-letter ov-rec-letter--${recommended.scenario}">${recommended.scenario}</span>` +
+    `<span class="ov-rec-name">${recommended.label}</span>`;
+  if (descEl) descEl.textContent = recommended.desc;
+
+  const cards = [
+    { label: 'Owner NPV',         value: moneyM(recommended.ownerNpv), accent: true },
+    { label: 'Owner Equity IRR',  value: recommended.isLandSale ? 'N/A' : pct(recommended.ownerIrr) },
+    { label: 'Owner Check-Write', value: moneyM(recommended.ownerEquity) },
+    { label: 'Owner Payback',     value: yrs(recommended.ownerPayback) },
+    { label: 'Total CapEx',       value: moneyM(recommended.capex) },
+  ];
+  metricsEl.innerHTML = cards.map(c =>
+    `<div class="ov-kpi${c.accent ? ' ov-kpi--accent' : ''}">` +
+      `<div class="ov-kpi-label">${c.label}</div>` +
+      `<div class="ov-kpi-value">${c.value}</div>` +
+    `</div>`
+  ).join('');
+}
+
 function renderRealizedChips() {
   const r = M.realizedPrices(state);
   const oilEl = document.getElementById('oilRealized');
@@ -1205,6 +1368,7 @@ function render() {
   renderPnlTable(model);
   renderDistribTable(model);
   renderScenarioAnalysis();
+  renderProjectOverview();
 }
 
 // ===========================================================
@@ -1275,6 +1439,7 @@ function boot() {
     bindInputs();
     bindScenarioToggle();
     bindNav();
+    bindJumpLinks();
     bindMobileMenu();
     bindReset();
     bindSidebarAccordion();
@@ -1285,6 +1450,7 @@ function boot() {
     applyScenarioVisibility();
     syncScenarioButtons();
     render();
+    renderOverviewMap();
   } catch (e) {
     console.error('Boot failed:', e);
   }
