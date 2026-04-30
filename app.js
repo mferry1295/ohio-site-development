@@ -980,47 +980,6 @@ function renderOverviewMap() {
     .catch(err => console.warn('Overview map: geojson load failed', err));
 }
 
-// ===== Project Overview tab — live headline metrics =====
-function renderProjectOverview() {
-  const titleEl = document.getElementById('ovRecTitle');
-  const descEl = document.getElementById('ovRecDesc');
-  const metricsEl = document.getElementById('ovRecMetrics');
-  if (!titleEl || !metricsEl) return;
-
-  const { recommended } = rankScenarios();
-  const moneyM = v => v == null ? '—' : '$' + (v / 1e6).toFixed(1) + 'M';
-  const pct = v => v == null ? '—' : (v * 100).toFixed(1) + '%';
-  const yrs = v => v == null ? '—' : v.toFixed(1) + ' yr';
-
-  if (!recommended) {
-    titleEl.textContent = 'No clear winner';
-    if (descEl) descEl.textContent = 'No scenario clears positive Owner NPV at current inputs. Try raising WTI, the lease rate, or the land sale price — or lower WACC.';
-    metricsEl.innerHTML = '';
-    document.getElementById('ovHeadline')?.classList.add('ov-headline--empty');
-    return;
-  }
-
-  document.getElementById('ovHeadline')?.classList.remove('ov-headline--empty');
-  titleEl.innerHTML =
-    `<span class="ov-rec-letter ov-rec-letter--${recommended.scenario}">${recommended.scenario}</span>` +
-    `<span class="ov-rec-name">${recommended.label}</span>`;
-  if (descEl) descEl.textContent = recommended.desc;
-
-  const cards = [
-    { label: 'Owner NPV',         value: moneyM(recommended.ownerNpv), accent: true },
-    { label: 'Owner Equity IRR',  value: recommended.isLandSale ? 'N/A' : pct(recommended.ownerIrr) },
-    { label: 'Owner Check-Write', value: moneyM(recommended.ownerEquity) },
-    { label: 'Owner Payback',     value: yrs(recommended.ownerPayback) },
-    { label: 'Total CapEx',       value: moneyM(recommended.capex) },
-  ];
-  metricsEl.innerHTML = cards.map(c =>
-    `<div class="ov-kpi${c.accent ? ' ov-kpi--accent' : ''}">` +
-      `<div class="ov-kpi-label">${c.label}</div>` +
-      `<div class="ov-kpi-value">${c.value}</div>` +
-    `</div>`
-  ).join('');
-}
-
 function renderRealizedChips() {
   const r = M.realizedPrices(state);
   const oilEl = document.getElementById('oilRealized');
@@ -1368,7 +1327,6 @@ function render() {
   renderPnlTable(model);
   renderDistribTable(model);
   renderScenarioAnalysis();
-  renderProjectOverview();
 }
 
 // ===========================================================
