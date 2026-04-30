@@ -26,7 +26,7 @@ if (typeof Chart !== 'undefined') {
 }
 
 // ===== State =====
-const state = { ...M.DEFAULTS, scenario: 'A' };
+const state = { ...M.DEFAULTS, scenario: 'B' };
 
 // ===== Number formatters =====
 const fmt = {
@@ -71,30 +71,34 @@ function bindInputs() {
   });
 }
 
+// Toggle sidebar / chart visibility based on which sections each scenario needs.
+// Class semantics:
+//   .scenarioA   — visible only on A (Land Sale inputs)
+//   .scenarioBCD — visible on B/C/D (wells & drilling — every operating path)
+//   .scenarioCD  — visible on C/D (power plant)
+//   .scenarioD   — visible on D (data center / hyperscaler)
+function applyScenarioVisibility() {
+  const s = state.scenario;
+  document.querySelectorAll('.scenarioA').forEach(el => el.classList.toggle('hidden', s !== 'A'));
+  document.querySelectorAll('.scenarioBCD').forEach(el => el.classList.toggle('hidden', s === 'A'));
+  document.querySelectorAll('.scenarioCD').forEach(el => el.classList.toggle('hidden', s !== 'C' && s !== 'D'));
+  document.querySelectorAll('.scenarioD').forEach(el => el.classList.toggle('hidden', s !== 'D'));
+}
+
+function syncScenarioButtons() {
+  document.querySelectorAll('.scenario-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.scenario === state.scenario));
+}
+
 function bindScenarioToggle() {
   document.querySelectorAll('.scenario-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
       state.scenario = btn.dataset.scenario;
-      // toggle visibility of plant/dc input groups
-      document.querySelectorAll('.scenarioBC').forEach(el => {
-        el.classList.toggle('hidden', state.scenario === 'A');
-      });
-      document.querySelectorAll('.scenarioC').forEach(el => {
-        el.classList.toggle('hidden', state.scenario !== 'C');
-      });
+      syncScenarioButtons();
+      applyScenarioVisibility();
       render();
     });
   });
-}
-
-// Tabs where the A/B/C scenario toggle is meaningful
-const SCENARIO_TABS = new Set(['dashboard', 'model', 'compare']);
-
-function setScenarioBarVisible(target) {
-  const bar = document.querySelector('.scenario-bar');
-  if (bar) bar.classList.toggle('hidden', !SCENARIO_TABS.has(target));
 }
 
 function bindNav() {
@@ -106,7 +110,6 @@ function bindNav() {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       a.classList.add('active');
       document.getElementById(target).classList.add('active');
-      setScenarioBarVisible(target);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // re-render charts (canvas needs to be visible to size correctly)
       render();
@@ -187,119 +190,6 @@ function makeOrUpdate(id, cfg) {
     charts[id].update();
   } else {
     charts[id] = new Chart(ctx, cfg);
-  }
-}
-
-function renderKPIs(model) {
-  const t = model.totals;
-  const revLabel = document.getElementById('kpi-rev-label');
-  if (revLabel) revLabel.textContent = `${state.years}-Year Revenue`;
-  const ebitLabel = document.getElementById('kpi-ebitda-label');
-  if (ebitLabel) ebitLabel.textContent = `${state.years}-Year EBITDA`;
-  document.getElementById('kpi-rev').textContent = fmt.money0(t.totalRev);
-  document.getElementById('kpi-rev-sub').textContent = `Avg ${fmt.money0(t.totalRev / state.years)}/yr`;
-  document.getElementById('kpi-ebitda').textContent = fmt.money0(t.totalEbitda);
-  const margin = t.totalRev > 0 ? (t.totalEbitda / t.totalRev) : 0;
-  document.getElementById('kpi-ebitda-sub').textContent = `${fmt.pct0(margin * 100)} margin`;
-  document.getElementById('kpi-capex').textContent = fmt.money0(t.totalCapex);
-  document.getElementById('kpi-capex-sub').textContent = `Across ${state.years} yrs`;
-
-  const npvEl = document.getElementById('kpi-npv');
-  npvEl.textContent = fmt.money0(model.npv);
-  npvEl.classList.toggle('pos', model.npv > 0);
-  npvEl.classList.toggle('neg', model.npv < 0);
-  document.getElementById('kpi-npv-sub').textContent = `WACC ${state.wacc}%`;
-
-  const irrEl = document.getElementById('kpi-irr');
-  irrEl.textContent = model.irr == null ? '—' : fmt.pct(model.irr);
-  irrEl.classList.toggle('pos', model.irr != null && model.irr > state.wacc / 100);
-  irrEl.classList.toggle('neg', model.irr != null && model.irr < 0);
-  document.getElementById('kpi-irr-sub').textContent = `vs ${state.wacc}% hurdle`;
-
-  document.getElementById('kpi-payback').textContent = fmt.yrs(model.payback);
-  document.getElementById('kpi-payback-sub').textContent = `Undiscounted`;
-
-  // ===== Owner Economics =====
-  const f = model.financing;
-  document.getElementById('kpi-ownerEquity').textContent = fmt.money0(f.ownerEquity);
-  document.getElementById('kpi-ownerEquity-sub').textContent =
-    `${state.ownerEquityPct}% of equity · Y1`;
-
-  const ownerIrrEl = document.getElementById('kpi-ownerIrr');
-  ownerIrrEl.textContent = f.ownerIrr == null ? '—' : fmt.pct(f.ownerIrr);
-  ownerIrrEl.classList.toggle('pos', f.ownerIrr != null && f.ownerIrr > state.wacc / 100);
-  ownerIrrEl.classList.toggle('neg', f.ownerIrr != null && f.ownerIrr < 0);
-  let irrSpread = 'levered after debt';
-  if (f.ownerIrr != null && model.irr != null) {
-    const diff = (f.ownerIrr - model.irr) * 100;
-    const sign = diff >= 0 ? '+' : '';
-    irrSpread = `${sign}${diff.toFixed(1)} pts vs project IRR`;
-  }
-  document.getElementById('kpi-ownerIrr-sub').textContent = irrSpread;
-
-  const moicEl = document.getElementById('kpi-ownerMoic');
-  moicEl.textContent = f.ownerMoic == null ? '—' : f.ownerMoic.toFixed(2) + 'x';
-  moicEl.classList.toggle('pos', f.ownerMoic != null && f.ownerMoic > 1);
-  moicEl.classList.toggle('neg', f.ownerMoic != null && f.ownerMoic < 1);
-  document.getElementById('kpi-ownerMoic-sub').textContent = 'Total cash / invested';
-
-  document.getElementById('kpi-ownerPayback').textContent = fmt.yrs(f.ownerPayback);
-  document.getElementById('kpi-ownerPayback-sub').textContent = 'Year owner is whole';
-
-  document.getElementById('kpi-debt').textContent = fmt.money0(f.debtAmount);
-  document.getElementById('kpi-debt-sub').textContent =
-    `${state.debtPct}% @ ${state.debtRate}% · ${f.loanTerm}-yr · ${fmt.money0(f.annualDebtService)}/yr`;
-
-  document.getElementById('kpi-extEquity').textContent = fmt.money0(f.externalEquity);
-  const extPct = 100 - state.ownerEquityPct;
-  let extSub;
-  if (f.externalEquity <= 0 || extPct === 0) extSub = 'No external partners';
-  else if (f.externalIrr == null) extSub = `${extPct}% of equity`;
-  else extSub = `${extPct}% · IRR ${fmt.pct(f.externalIrr)}`;
-  document.getElementById('kpi-extEquity-sub').textContent = extSub;
-
-  // ===== Advisor Economics =====
-  const a = model.advisor;
-  document.getElementById('kpi-advCap').textContent = fmt.money0(a.capitalPlacementFee);
-  document.getElementById('kpi-advCap-sub').textContent =
-    `${state.capPlacementPct}% × ${fmt.money0(a.capitalRaised)} raised`;
-
-  document.getElementById('kpi-advSite').textContent = fmt.money0(a.siteAdvisoryFee);
-  document.getElementById('kpi-advSite-sub').textContent =
-    `$${state.siteAdvisoryMonthly.toFixed(2)}M/mo × ${a.siteAdvisoryMonths} mo`;
-
-  document.getElementById('kpi-advPromote').textContent = fmt.money0(a.promote);
-  document.getElementById('kpi-advPromote-sub').textContent = a.abovePref > 0
-    ? `${state.promotePct}% of ${fmt.money0(a.abovePref)} above ${state.promotePref}% pref`
-    : `Pref ${state.promotePref}% not cleared`;
-
-  document.getElementById('kpi-advSale').textContent = fmt.money0(a.saleSuccessFee);
-  document.getElementById('kpi-advSale-sub').textContent = state.saleSuccessPct > 0
-    ? `${state.saleSuccessPct}% of NPV (sale exit)`
-    : 'Land Sale only — set above 0%';
-
-  document.getElementById('kpi-advTotal').textContent = fmt.money0(a.total);
-  const totalParts = [];
-  if (a.capitalPlacementFee > 0) totalParts.push('placement');
-  if (a.siteAdvisoryFee > 0) totalParts.push('retainer');
-  if (a.promote > 0) totalParts.push('promote');
-  if (a.saleSuccessFee > 0) totalParts.push('success');
-  document.getElementById('kpi-advTotal-sub').textContent = totalParts.length
-    ? totalParts.join(' + ')
-    : 'No fees triggered';
-
-  const ratioEl = document.getElementById('kpi-advRatio');
-  if (model.npv > 0 && a.total > 0) {
-    const ratio = a.total / model.npv;
-    ratioEl.textContent = fmt.pct(ratio);
-    ratioEl.classList.toggle('neg', ratio > 0.25);
-    document.getElementById('kpi-advRatio-sub').textContent =
-      `Advisor take vs project NPV`;
-  } else {
-    ratioEl.textContent = '—';
-    ratioEl.classList.remove('neg');
-    document.getElementById('kpi-advRatio-sub').textContent =
-      model.npv <= 0 ? 'NPV ≤ 0' : 'No fees triggered';
   }
 }
 
@@ -389,9 +279,9 @@ function renderRevStackChart(model) {
     { label: 'NGLs', data: ngl, backgroundColor: COLORS.ngl, stack: 'rev' },
     { label: 'Pipeline gas', data: gas, backgroundColor: COLORS.gas, stack: 'rev' },
   ];
-  if (state.scenario !== 'A') {
+  if (state.scenario === 'C' || state.scenario === 'D') {
     datasets.push({
-      label: state.scenario === 'B' ? 'Wholesale power' : 'Hyperscaler lease',
+      label: state.scenario === 'C' ? 'Wholesale power' : 'Hyperscaler lease',
       data: pwr, backgroundColor: COLORS.derrick, stack: 'rev',
     });
   }
@@ -450,7 +340,8 @@ function renderDeclineChart() {
 function renderGasSupplyChart(model) {
   const labels = model.rows.map(r => 'Y' + r.year);
   const supply = model.rows.map(r => (r.gasToPlantMcf + r.gasToMarketMcf) / 365 / 1000); // MMcf/d
-  const demand = (state.scenario === 'A') ? null : labels.map(() => model.plantDailyGasMcf / 1000);
+  const hasPlant = state.scenario === 'C' || state.scenario === 'D';
+  const demand = hasPlant ? labels.map(() => model.plantDailyGasMcf / 1000) : null;
   const datasets = [{
     label: 'Total well gas (MMcf/d)',
     data: supply,
@@ -566,44 +457,148 @@ function bindDashboardViews() {
   });
 }
 
-// ===== P&L Forecast table =====
+// ===== P&L Forecast table (years across top, metrics down) =====
+// Structure (top to bottom):
+//   Total Revenue            ← bold parent, click to collapse/expand sub-streams
+//     Crude Oil              ← sub-row (only if not Land Sale)
+//     Natural Gas (pipeline)
+//     NGLs
+//     Power Sold to Grid     ← scenario C only
+//     Hyperscaler Lease      ← scenario D only
+//   Cost of Sales
+//   Gross Profit             ← subtotal, divider above, bold
+//   Operating Expenses
+//   Income Tax
+//   Net Income               ← subtotal, divider above, bold (levered: deducts interest, smaller tax)
+//   ┄ Add-backs to EBITDA ┄
+//     + Interest Expense
+//     + Depreciation & Amortization
+//     + Income Tax
+//   EBITDA                   ← final total (bold, derrick row, reconciles cleanly)
+const uiState = { pnlRevExpanded: true };
+
 function renderPnlTable(model) {
   const fmtM = v => (v / 1e6).toFixed(1);
-  const headers = ['Year', 'Revenue', 'Cash Op Cost', 'EBITDA', 'DD&A', 'G&A', 'EBIT', 'Taxes', 'Net Income'];
-  let html = '<thead><tr>' + headers.map(h => `<th class="num">${h}</th>`).join('') + '</tr></thead><tbody>';
-  let tRev = 0, tCC = 0, tE = 0, tDDA = 0, tGA = 0, tEBIT = 0, tTax = 0, tNI = 0;
-  model.rows.forEach(r => {
-    tRev += r.totalRev; tCC += r.totalCashCost; tE += r.ebitda;
-    tDDA += r.dda; tGA += r.ga; tEBIT += r.ebit; tTax += r.taxes; tNI += r.netIncome;
-    html += '<tr>' +
-      `<td class="num">${r.year}</td>` +
-      `<td class="num">${fmtM(r.totalRev)}</td>` +
-      `<td class="num">${fmtM(r.totalCashCost)}</td>` +
-      `<td class="num ${r.ebitda < 0 ? 'neg' : ''}">${fmtM(r.ebitda)}</td>` +
-      `<td class="num">${fmtM(r.dda)}</td>` +
-      `<td class="num">${fmtM(r.ga)}</td>` +
-      `<td class="num ${r.ebit < 0 ? 'neg' : ''}">${fmtM(r.ebit)}</td>` +
-      `<td class="num">${fmtM(r.taxes)}</td>` +
-      `<td class="num ${r.netIncome < 0 ? 'neg' : 'pos'}">${fmtM(r.netIncome)}</td>` +
-      '</tr>';
+  const rows = model.rows;
+  const sched = model.financing.debtSchedule;
+  const taxRate = (state.tax || 0) / 100;
+  const sign = v => v < 0 ? 'neg' : '';
+  const signed = v => v < 0 ? 'neg' : 'pos';
+
+  const scenario = state.scenario;
+  const isLandSale = scenario === 'A';
+  const showPower = scenario === 'C';   // wholesale to PJM
+  const showLease = scenario === 'D';   // hyperscaler lease
+
+  // Build per-period bridge that reconciles to model.ebitda (now G&A-inclusive).
+  // EBITDA = Revenue − COGS − OpEx; OpEx = G&A + dcOpex (both are cash).
+  // Bridge from NI: NI + Tax + Interest + D&A = EBITDA (G&A is already in OpEx, no add-back).
+  const periods = rows.map((r, i) => {
+    const interest = sched[i]?.interestPaid || 0;
+    const cogs = r.fieldOpCost + r.plantOM;
+    const grossProfit = r.totalRev - cogs;
+    const opex = r.ga + r.dcOpex;
+    const ebit = grossProfit - opex - r.dda;       // operating income after D&A
+    const pretax = ebit - interest;
+    const cashTax = Math.max(0, pretax) * taxRate; // levered cash tax (interest is deductible)
+    const netIncome = pretax - cashTax;
+    return {
+      year: r.year,
+      oilRev: r.oilRev, gasRev: r.gasMarketRev, nglRev: r.nglRev, powerRev: r.powerRev,
+      totalRev: r.totalRev,
+      cogs, grossProfit, opex, dda: r.dda, interest, cashTax, netIncome,
+      ebitda: r.ebitda,                            // model.ebitda — same as Distributions
+    };
   });
-  html += `<tr class="total">
-    <td class="num">Total</td>
-    <td class="num">${fmtM(tRev)}</td>
-    <td class="num">${fmtM(tCC)}</td>
-    <td class="num">${fmtM(tE)}</td>
-    <td class="num">${fmtM(tDDA)}</td>
-    <td class="num">${fmtM(tGA)}</td>
-    <td class="num">${fmtM(tEBIT)}</td>
-    <td class="num">${fmtM(tTax)}</td>
-    <td class="num">${fmtM(tNI)}</td>
-  </tr></tbody>`;
-  document.getElementById('pnlTable').innerHTML = html;
+
+  const expanded = uiState.pnlRevExpanded;
+  const subHidden = expanded ? '' : ' style="display:none"';
+  const chevron = expanded ? '▼' : '▶';
+
+  const html = [];
+  html.push('<thead><tr><th class="rowhead">Metric</th>');
+  periods.forEach(p => html.push(`<th class="num">Y${p.year}</th>`));
+  html.push('<th class="num total-col">Total</th></tr></thead><tbody>');
+
+  // Helper: render one metric row across all year columns + Total
+  const row = (label, getCell, opts = {}) => {
+    const { rowClass = '', cellMod = '', cls = () => '', extraAttr = '' } = opts;
+    let total = 0;
+    let s = `<tr${rowClass ? ` class="${rowClass}"` : ''}${extraAttr}>` +
+      `<td class="rowhead${cellMod.includes('bold') ? ' bold' : ''}${cellMod.includes('sub') ? ' sub' : ''}">${label}</td>`;
+    periods.forEach(p => {
+      const v = getCell(p);
+      total += v;
+      s += `<td class="num ${cls(v)}${cellMod.includes('bold') ? ' bold' : ''}${cellMod.includes('sub') ? ' sub' : ''}">${fmtM(v)}</td>`;
+    });
+    s += `<td class="num ${cls(total)}${cellMod.includes('bold') ? ' bold' : ''}${cellMod.includes('sub') ? ' sub' : ''} total-col">${fmtM(total)}</td></tr>`;
+    return s;
+  };
+
+  // Total Revenue (bold parent — click chevron to collapse sub-streams)
+  html.push(row(
+    `<button class="pnl-toggle" data-toggle="rev" type="button">${chevron}</button> Total Revenue`,
+    p => p.totalRev,
+    { rowClass: 'pnl-parent', cellMod: 'bold' }
+  ));
+
+  // Sub-streams (skip for Land Sale — single sale event, no breakdown)
+  if (!isLandSale) {
+    html.push(row('Crude Oil', p => p.oilRev,
+      { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
+    html.push(row('Natural Gas (pipeline)', p => p.gasRev,
+      { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
+    html.push(row('NGLs', p => p.nglRev,
+      { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
+    if (showPower) {
+      html.push(row('Power Sold to Grid', p => p.powerRev,
+        { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
+    }
+    if (showLease) {
+      html.push(row('Hyperscaler Lease', p => p.powerRev,
+        { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
+    }
+  }
+
+  // Cost of Sales → Gross Profit → OpEx → Tax → Net Income
+  html.push(row('Cost of Sales', p => p.cogs));
+  html.push(row('Gross Profit', p => p.grossProfit,
+    { rowClass: 'pnl-subtotal divider', cellMod: 'bold', cls: sign }));
+  html.push(row('Operating Expenses', p => p.opex));
+  html.push(row('Income Tax', p => p.cashTax));
+  html.push(row('Net Income', p => p.netIncome,
+    { rowClass: 'pnl-subtotal divider', cellMod: 'bold', cls: signed }));
+
+  // Add-backs section header (full-width separator)
+  html.push(`<tr class="pnl-section-header"><td class="rowhead" colspan="${periods.length + 2}">Add-backs to EBITDA</td></tr>`);
+  html.push(row('+ Interest Expense', p => p.interest, { rowClass: 'pnl-addback', cellMod: 'sub' }));
+  html.push(row('+ Depreciation & Amortization', p => p.dda, { rowClass: 'pnl-addback', cellMod: 'sub' }));
+  html.push(row('+ Income Tax', p => p.cashTax, { rowClass: 'pnl-addback', cellMod: 'sub' }));
+
+  // EBITDA (final total — derrick-bordered)
+  html.push(row('EBITDA', p => p.ebitda,
+    { rowClass: 'total', cellMod: 'bold', cls: sign }));
+
+  html.push('</tbody>');
+  document.getElementById('pnlTable').innerHTML = html.join('');
   const yEl = document.getElementById('pnlYears');
   if (yEl) yEl.textContent = state.years;
 }
 
-// ===== Annual Distribution Waterfall table =====
+// Toggle revenue sub-streams. Persists state across re-renders via uiState.
+function bindPnlToggle() {
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.pnl-toggle');
+    if (!btn) return;
+    e.preventDefault();
+    if (btn.dataset.toggle === 'rev') {
+      uiState.pnlRevExpanded = !uiState.pnlRevExpanded;
+      render();
+    }
+  });
+}
+
+// ===== Annual Distribution Waterfall table (years across top, metrics down) =====
 // Bridge: EBITDA − CapEx + Debt Drawn − Interest − Principal − Cash Tax = Cash to Equity
 //   • Debt Drawn is the Y1 financing inflow (zero thereafter).
 //   • Cash Tax = unlevered tax minus interest tax shield, so the row reconciles to leveredCF.
@@ -613,56 +608,225 @@ function renderDistribTable(model) {
   const ownerPct = (state.ownerEquityPct || 0) / 100;
   const extPct = 1 - ownerPct;
   const taxRate = (state.tax || 0) / 100;
-  const headers = [
-    'Year', 'EBITDA', '− CapEx', '+ Debt Drawn', '− Interest', '− Principal', '− Cash Tax',
-    '= Cash to Equity', `Owner (${state.ownerEquityPct}%)`, `External (${(100 - state.ownerEquityPct)}%)`,
-  ];
-  let html = '<thead><tr>' + headers.map(h => `<th class="num">${h}</th>`).join('') + '</tr></thead><tbody>';
-  let tE = 0, tCx = 0, tDD = 0, tI = 0, tPr = 0, tCT = 0, tCfe = 0, tOwn = 0, tExt = 0;
-  model.rows.forEach((r, i) => {
+  const sign = v => v < 0 ? 'neg' : '';
+  const signed = v => v < 0 ? 'neg' : 'pos';
+
+  // Pre-compute per-year derived series
+  const series = model.rows.map((r, i) => {
     const sched = f.debtSchedule[i] || { interestPaid: 0, principalPaid: 0 };
     const debtDrawn = i === 0 ? f.debtAmount : 0;
-    const cashTax = r.taxes - sched.interestPaid * taxRate; // unlevered tax minus interest shield
+    const cashTax = r.taxes - sched.interestPaid * taxRate;
     const cfe = f.leveredCF[i + 1] ?? 0;
-    const ownerCash = cfe * ownerPct;
-    const extCash = cfe * extPct;
-    tE += r.ebitda; tCx += r.capex; tDD += debtDrawn;
-    tI += sched.interestPaid; tPr += sched.principalPaid;
-    tCT += cashTax; tCfe += cfe; tOwn += ownerCash; tExt += extCash;
-    html += '<tr>' +
-      `<td class="num">${r.year}</td>` +
-      `<td class="num ${r.ebitda < 0 ? 'neg' : ''}">${fmtM(r.ebitda)}</td>` +
-      `<td class="num">${fmtM(r.capex)}</td>` +
-      `<td class="num">${fmtM(debtDrawn)}</td>` +
-      `<td class="num">${fmtM(sched.interestPaid)}</td>` +
-      `<td class="num">${fmtM(sched.principalPaid)}</td>` +
-      `<td class="num">${fmtM(cashTax)}</td>` +
-      `<td class="num ${cfe < 0 ? 'neg' : 'pos'}">${fmtM(cfe)}</td>` +
-      `<td class="num ${ownerCash < 0 ? 'neg' : ''}">${fmtM(ownerCash)}</td>` +
-      `<td class="num ${extCash < 0 ? 'neg' : ''}">${fmtM(extCash)}</td>` +
-      '</tr>';
+    return {
+      year: r.year,
+      ebitda: r.ebitda, capex: r.capex, debtDrawn,
+      interest: sched.interestPaid, principal: sched.principalPaid,
+      cashTax, cfe,
+      ownerCash: cfe * ownerPct, extCash: cfe * extPct,
+    };
   });
-  html += `<tr class="total">
-    <td class="num">Total</td>
-    <td class="num">${fmtM(tE)}</td>
-    <td class="num">${fmtM(tCx)}</td>
-    <td class="num">${fmtM(tDD)}</td>
-    <td class="num">${fmtM(tI)}</td>
-    <td class="num">${fmtM(tPr)}</td>
-    <td class="num">${fmtM(tCT)}</td>
-    <td class="num ${tCfe < 0 ? 'neg' : 'pos'}">${fmtM(tCfe)}</td>
-    <td class="num ${tOwn < 0 ? 'neg' : ''}">${fmtM(tOwn)}</td>
-    <td class="num ${tExt < 0 ? 'neg' : ''}">${fmtM(tExt)}</td>
-  </tr>`;
+
+  const metrics = [
+    { label: 'EBITDA',         get: s => s.ebitda,    cls: sign,   bold: true },
+    { label: '− CapEx',        get: s => s.capex },
+    { label: '+ Debt Drawn',   get: s => s.debtDrawn },
+    { label: '− Interest',     get: s => s.interest },
+    { label: '− Principal',    get: s => s.principal },
+    { label: '− Cash Tax',     get: s => s.cashTax },
+    { label: '= Cash to Equity', get: s => s.cfe, cls: signed, bold: true, divider: true },
+    { label: `Owner (${state.ownerEquityPct}%)`, get: s => s.ownerCash, cls: sign },
+    { label: `External (${100 - state.ownerEquityPct}%)`, get: s => s.extCash, cls: sign },
+  ];
+
+  let html = '<thead><tr><th class="rowhead">Metric</th>';
+  series.forEach(s => { html += `<th class="num">Y${s.year}</th>`; });
+  html += '<th class="num total-col">Total</th></tr></thead><tbody>';
+
+  metrics.forEach(m => {
+    let total = 0;
+    const cls = m.cls || (() => '');
+    const cellClass = v => `num ${cls(v)}${m.bold ? ' bold' : ''}`;
+    const rowClass = m.divider ? ' class="divider"' : '';
+    html += `<tr${rowClass}><td class="rowhead${m.bold ? ' bold' : ''}">${m.label}</td>`;
+    series.forEach(s => {
+      const v = m.get(s);
+      total += v;
+      html += `<td class="${cellClass(v)}">${fmtM(v)}</td>`;
+    });
+    html += `<td class="${cellClass(total)} total-col">${fmtM(total)}</td></tr>`;
+  });
+
+  // Equity IRR row at the very bottom — only fills the Total column
   const ownerIrrTxt = f.ownerIrr == null ? '—' : fmt.pct(f.ownerIrr);
   const extIrrTxt = f.externalIrr == null ? '—' : fmt.pct(f.externalIrr);
-  html += `<tr class="total">
-    <td class="num"><strong>Equity IRR</strong></td>
-    <td colspan="7"></td>
-    <td class="num"><strong>${ownerIrrTxt}</strong></td>
-    <td class="num"><strong>${extIrrTxt}</strong></td>
-  </tr></tbody>`;
+  html += `<tr class="total"><td class="rowhead bold">Equity IRR (Owner / External)</td>` +
+    `<td class="num" colspan="${series.length}"></td>` +
+    `<td class="num total-col bold">${ownerIrrTxt} / ${extIrrTxt}</td></tr></tbody>`;
+
   document.getElementById('distribTable').innerHTML = html;
+}
+
+// ===== Scenario Analysis (decision support) =====
+// Runs all 4 scenarios through the model with current inputs and recommends one
+// based on owner economics, gated by a positive-NPV requirement.
+const SCEN_META = {
+  A: { label: 'Land Sale', desc: 'Sell the asset outright; no development, no operations.' },
+  B: { label: 'Wells Only', desc: 'Drill, produce, sell oil/gas/NGLs at market prices.' },
+  C: { label: 'Wells + Power Plant', desc: 'Burn gas on-site; sell electricity to PJM grid.' },
+  D: { label: 'Full Integration', desc: 'Wells + 150 MW CCGT + 100 MW data center on a hyperscaler lease.' },
+};
+
+function rankScenarios() {
+  const results = ['A','B','C','D'].map(s => {
+    const m = M.runModel(state, s);
+    return {
+      scenario: s,
+      ...SCEN_META[s],
+      npv: m.npv,
+      irr: m.irr,
+      payback: m.payback,
+      capex: m.totals.totalCapex,
+      ebitda: m.totals.totalEbitda,
+      ownerEquity: m.financing.ownerEquity,
+      ownerNpv: m.financing.ownerNpv,
+      ownerIrr: m.financing.ownerIrr,
+      ownerMoic: m.financing.ownerMoic,
+      ownerPayback: m.financing.ownerPayback,
+      advisorTotal: m.advisor.total,
+      isLandSale: !!m.isLandSale,
+    };
+  });
+  // Recommendation: highest Owner NPV (works for Land Sale and operating scenarios alike).
+  // Tiebreaker: higher Owner Equity IRR; then shorter Owner Payback.
+  const viable = results.filter(r => (r.ownerNpv || 0) > 0);
+  let recommended = null;
+  if (viable.length === 1) recommended = viable[0];
+  else if (viable.length > 1) {
+    recommended = viable.slice().sort((a, b) => {
+      const npvDiff = (b.ownerNpv || 0) - (a.ownerNpv || 0);
+      if (Math.abs(npvDiff) > 1) return npvDiff;
+      return (b.ownerIrr || 0) - (a.ownerIrr || 0);
+    })[0];
+  }
+  return { results, recommended };
+}
+
+function renderScenarioAnalysis() {
+  const { results, recommended } = rankScenarios();
+  renderRecBanner(results, recommended);
+  renderScoreTable(results, recommended);
+  renderDecisionGrid(results, recommended);
+}
+
+function renderRecBanner(results, rec) {
+  const el = document.getElementById('recBanner');
+  if (!el) return;
+  if (!rec) {
+    el.className = 'rec-banner none';
+    el.innerHTML = `
+      <div class="rec-tag">No clear winner</div>
+      <div class="rec-headline">No scenario clears a positive Owner NPV at current inputs.</div>
+      <div class="rec-why">Even Land Sale comes up short — try raising the land sale price, WTI, or lease rate, or lower WACC.</div>
+    `;
+    return;
+  }
+  const ownerIrrPct = (v) => v == null ? '—' : (v * 100).toFixed(1) + '%';
+  const moneyM = (v) => v == null ? '—' : '$' + (v / 1e6).toFixed(1) + 'M';
+  const others = results.filter(r => r.scenario !== rec.scenario && (r.ownerNpv || 0) > 0);
+  let why;
+  if (others.length === 0) {
+    why = `Only Scenario ${rec.scenario} produces a positive Owner NPV (${moneyM(rec.ownerNpv)}) at the current price deck.`;
+  } else {
+    const next = others.slice().sort((a, b) => (b.ownerNpv || 0) - (a.ownerNpv || 0))[0];
+    const npvSpread = (rec.ownerNpv || 0) - (next.ownerNpv || 0);
+    why = `Scenario ${rec.scenario} maximizes Owner NPV (${moneyM(rec.ownerNpv)}) — ` +
+          `${moneyM(npvSpread)} above Scenario ${next.scenario} (${moneyM(next.ownerNpv)}). ` +
+          (rec.isLandSale
+            ? `Operating returns don't beat what you'd clear by selling outright at the current price.`
+            : `Owner check-write: ${moneyM(rec.ownerEquity)}; Owner IRR ${ownerIrrPct(rec.ownerIrr)}.`);
+  }
+  el.className = 'rec-banner';
+  el.innerHTML = `
+    <div class="rec-tag">Recommended</div>
+    <div class="rec-headline">Scenario ${rec.scenario} · ${rec.label}</div>
+    <div class="rec-desc">${rec.desc}</div>
+    <div class="rec-why">${why}</div>
+    <div class="rec-stats">
+      <div class="rec-stat"><span class="rec-stat-label">Owner NPV</span><span class="rec-stat-value">${moneyM(rec.ownerNpv)}</span></div>
+      <div class="rec-stat"><span class="rec-stat-label">Owner IRR</span><span class="rec-stat-value">${rec.isLandSale ? 'N/A' : ownerIrrPct(rec.ownerIrr)}</span></div>
+      <div class="rec-stat"><span class="rec-stat-label">Owner Cash Multiple</span><span class="rec-stat-value">${rec.ownerMoic == null ? '—' : rec.ownerMoic.toFixed(2) + 'x'}</span></div>
+      <div class="rec-stat"><span class="rec-stat-label">Owner Payback</span><span class="rec-stat-value">${fmt.yrs(rec.ownerPayback)}</span></div>
+    </div>
+  `;
+}
+
+function renderScoreTable(results, rec) {
+  // Metric rows. `direction: 'high'` = bigger is better; 'low' = smaller is better.
+  const metrics = [
+    { key: 'capex',         label: 'Total CapEx',          direction: 'low',  fmt: v => fmt.money0(v) },
+    { key: 'ownerEquity',   label: 'Owner Check-Write',    direction: 'low',  fmt: v => fmt.money0(v) },
+    { key: 'ownerNpv',      label: 'Owner NPV',            direction: 'high', fmt: v => fmt.money0(v) },
+    { key: 'npv',           label: 'Project NPV',          direction: 'high', fmt: v => fmt.money0(v) },
+    { key: 'irr',           label: 'Project IRR',          direction: 'high', fmt: v => v == null ? '—' : fmt.pct(v) },
+    { key: 'payback',       label: 'Project Payback',      direction: 'low',  fmt: v => fmt.yrs(v) },
+    { key: 'ownerIrr',      label: 'Owner Equity IRR',     direction: 'high', fmt: v => v == null ? '—' : fmt.pct(v) },
+    { key: 'ownerMoic',     label: 'Owner Cash Multiple',  direction: 'high', fmt: v => v == null ? '—' : v.toFixed(2) + 'x' },
+    { key: 'ownerPayback',  label: 'Owner Payback',        direction: 'low',  fmt: v => fmt.yrs(v) },
+    { key: 'ebitda',        label: `${state.years}-Yr EBITDA`, direction: 'high', fmt: v => fmt.money0(v) },
+    { key: 'advisorTotal',  label: 'Total Advisor Fees',   direction: 'low',  fmt: v => fmt.money0(v) },
+  ];
+  const headers = ['Metric', ...results.map(r => `${r.scenario} · ${r.label}`)];
+  let html = '<thead><tr>' + headers.map((h, i) => {
+    const isRec = i > 0 && rec && results[i - 1].scenario === rec.scenario;
+    return `<th class="${i === 0 ? '' : 'num'}${isRec ? ' rec-col' : ''}">${h}</th>`;
+  }).join('') + '</tr></thead><tbody>';
+  metrics.forEach(m => {
+    const vals = results.map(r => r[m.key]);
+    // Pick "leader" — best valid value in the desired direction, ignoring nulls
+    const valid = vals.map((v, i) => ({ v, i })).filter(x => x.v != null && Number.isFinite(x.v));
+    let leaderIdx = -1;
+    if (valid.length) {
+      const sorted = valid.slice().sort((a, b) => m.direction === 'high' ? b.v - a.v : a.v - b.v);
+      leaderIdx = sorted[0].i;
+    }
+    html += `<tr><td>${m.label}</td>` + vals.map((v, i) => {
+      const isLeader = i === leaderIdx;
+      const isRec = rec && results[i].scenario === rec.scenario;
+      return `<td class="num${isLeader ? ' leader' : ''}${isRec ? ' rec-col' : ''}">${m.fmt(v)}</td>`;
+    }).join('') + '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('scenarioScoreTable').innerHTML = html;
+}
+
+function renderDecisionGrid(results) {
+  // Quick-read framing cards covering land sale vs. each operating tier.
+  const [a, b, c, d] = results; // A=Land Sale, B=Wells Only, C=Wells+Plant, D=Full Integration
+  const moneyM = v => '$' + (v / 1e6).toFixed(0) + 'M';
+  const cards = [
+    {
+      title: 'Sell or develop',
+      body: `Scenario A clears ${moneyM(a.ownerNpv)} for the owner at the current land sale price (${moneyM(a.npv)} NPV after tax + advisor fee). Drilling wells only (B) puts ${moneyM(b.ownerNpv)} of Owner NPV on the table for a ${moneyM(b.ownerEquity)} check-write — develop only if you believe in that spread holding up.`,
+    },
+    {
+      title: 'Capital intensity',
+      body: `Land Sale needs zero capital. Wells Only requires ${moneyM(b.capex)} of CapEx (~half debt). Full Integration takes total CapEx to ${moneyM(d.capex)} — roughly ${(d.capex / Math.max(b.capex, 1)).toFixed(1)}× the wells-only path. The owner check-write swings ${moneyM(a.ownerEquity)} → ${moneyM(d.ownerEquity)} across the four paths.`,
+    },
+    {
+      title: 'Time to cash',
+      body: `Land Sale is immediate — proceeds in Y1. Wells Only starts producing in Y1 with payback ${fmt.yrs(b.payback)}. Scenarios C and D add a 36–60 month build before lease revenue clears; paybacks ${fmt.yrs(c.payback)} and ${fmt.yrs(d.payback)} respectively.`,
+    },
+    {
+      title: 'Operational complexity',
+      body: `A is one transaction and you're done. B is a pure E&P operation — known playbook, rigs, midstream gas takeaway. C layers in CCGT operations and a PJM interconnect. D adds a behind-the-meter data center and long-dated lease to a single hyperscaler — concentrated counterparty risk in exchange for the 4× pricing premium on methane.`,
+    },
+  ];
+  document.getElementById('decisionGrid').innerHTML = cards.map(c => `
+    <div class="decision-card">
+      <div class="decision-title">${c.title}</div>
+      <div class="decision-body">${c.body}</div>
+    </div>
+  `).join('');
 }
 
 // ===== Financial-model table =====
@@ -705,138 +869,6 @@ function renderModelTable(model) {
     </tr>`;
   html += '</tbody>';
   document.getElementById('modelTable').innerHTML = html;
-}
-
-// ===== Scenario comparison =====
-function renderCompare() {
-  const scenarios = ['A', 'B', 'C'];
-  const labels = { A: 'A · Wells Only', B: 'B · Wells + Power', C: 'C · Full Integration' };
-  const results = scenarios.map(s => ({ s, m: M.runModel(state, s) }));
-
-  // KPI strip — cumulative side-by-side
-  const kpiHtml = results.map(({ s, m }) => `
-    <div class="kpi" style="border-top-color:${s==='A'?COLORS.iron:s==='B'?COLORS.signal:COLORS.derrick}">
-      <div class="kpi-label">${labels[s]}</div>
-      <div class="kpi-value">${fmt.money0(m.npv)}</div>
-      <div class="kpi-sub">NPV · IRR ${m.irr==null?'—':fmt.pct(m.irr)} · Payback ${fmt.yrs(m.payback)}</div>
-    </div>
-  `).join('');
-  document.getElementById('compareKpis').innerHTML = kpiHtml;
-
-  // Cumulative FCF chart
-  const yrLabels = ['Y0', ...results[0].m.rows.map(r => 'Y' + r.year)];
-  const cumSeries = results.map(({ s, m }) => {
-    let cum = 0;
-    const series = [0];
-    m.rows.forEach(r => { cum += r.fcf / 1e6; series.push(cum); });
-    return {
-      label: labels[s],
-      data: series,
-      borderColor: s==='A'?COLORS.iron:s==='B'?COLORS.signal:COLORS.derrick,
-      backgroundColor: 'transparent',
-      tension: 0.25,
-      pointRadius: 0,
-      borderWidth: 2.5,
-    };
-  });
-  makeOrUpdate('cumChart', {
-    type: 'line',
-    data: { labels: yrLabels, datasets: cumSeries },
-    options: {
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top', align: 'end' },
-        tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmt.moneyM(c.parsed.y * 1e6) } }
-      },
-      scales: {
-        y: { ticks: { callback: v => '$' + v + 'M' }, grid: { color: '#eee' } },
-        x: { grid: { display: false } }
-      }
-    }
-  });
-
-  // NPV vs WACC sensitivity
-  const waccs = [4, 6, 8, 10, 12, 14, 16, 18, 20];
-  const npvDatasets = results.map(({ s, m }) => {
-    const fcfs = [0, ...m.rows.map(r => r.fcf)];
-    return {
-      label: labels[s],
-      data: waccs.map(w => window.OhioModel.npv(w/100, fcfs) / 1e6),
-      borderColor: s==='A'?COLORS.iron:s==='B'?COLORS.signal:COLORS.derrick,
-      backgroundColor: 'transparent',
-      pointRadius: 3,
-      pointBackgroundColor: s==='A'?COLORS.iron:s==='B'?COLORS.signal:COLORS.derrick,
-      tension: 0.2,
-      borderWidth: 2,
-    };
-  });
-  makeOrUpdate('npvSensChart', {
-    type: 'line',
-    data: { labels: waccs.map(w => w + '%'), datasets: npvDatasets },
-    options: {
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top', align: 'end' },
-        tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmt.moneyM(c.parsed.y * 1e6) } }
-      },
-      scales: {
-        y: { ticks: { callback: v => '$' + v + 'M' }, grid: { color: '#eee' } },
-        x: {
-          title: { display: true, text: 'Discount rate (WACC)', font: { size: 10 } },
-          grid: { display: false }
-        }
-      }
-    }
-  });
-
-  // Sensitivity heat-map: WTI × leaseRate (or × HH for scenario A)
-  renderSensTable();
-}
-
-function renderSensTable() {
-  const wtis = [60, 70, 80, 90, 100, 110, 120, 130];
-  const colsLabel = state.scenario === 'A' ? 'Henry Hub ($/MMBtu)' : (state.scenario === 'B' ? 'Power Price ($/MWh)' : 'Lease Rate ($/MWh)');
-  const colVals = state.scenario === 'A' ? [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5]
-    : state.scenario === 'B' ? [40, 50, 60, 70, 80, 90, 100]
-    : [50, 60, 70, 80, 90, 100, 110];
-  let grid = wtis.map(wti => colVals.map(cv => {
-    const p = { ...state, wti };
-    if (state.scenario === 'A') p.hh = cv;
-    else if (state.scenario === 'B') p.powerPrice = cv;
-    else p.leaseRate = cv;
-    const m = M.runModel(p, state.scenario);
-    return m.npv / 1e6;
-  }));
-  // Find min/max to color
-  const flat = grid.flat();
-  const min = Math.min(...flat), max = Math.max(...flat);
-  function color(v) {
-    if (max === min) return '#fff';
-    const t = (v - min) / (max - min);
-    if (v >= 0) {
-      // ramp: blush → derrick
-      const r = Math.round(246 + (139 - 246) * t);
-      const g = Math.round(225 + (26 - 225) * t);
-      const b = Math.round(225 + (26 - 225) * t);
-      return `rgb(${r},${g},${b})`;
-    } else {
-      // negative: white → grey
-      const t2 = Math.min(1, Math.abs(v) / Math.max(1, Math.abs(min)));
-      const r = Math.round(255 - 50 * t2);
-      const g = Math.round(255 - 50 * t2);
-      const b = Math.round(255 - 50 * t2);
-      return `rgb(${r},${g},${b})`;
-    }
-  }
-  function textColor(v) { return v > (min + (max-min)*0.55) ? '#fff' : '#1a1a1a'; }
-  let html = `<thead><tr><th>WTI ↓ \\ ${colsLabel} →</th>` + colVals.map(cv => `<th class="num">${cv}</th>`).join('') + '</tr></thead><tbody>';
-  wtis.forEach((wti, i) => {
-    html += `<tr><td><strong>$${wti}</strong></td>` + grid[i].map(v => {
-      return `<td class="heat" style="background:${color(v)};color:${textColor(v)}">${v >= 0 ? '$' : '−$'}${Math.abs(v).toFixed(0)}M</td>`;
-    }).join('') + '</tr>';
-  });
-  html += '</tbody>';
-  document.getElementById('sensTable').innerHTML = html;
 }
 
 function renderRealizedChips() {
@@ -1221,7 +1253,6 @@ function renderFieldMap() {
 function render() {
   const model = M.runModel(state, state.scenario);
   renderRealizedChips();
-  renderKPIs(model);
   renderFcfChart(model);
   renderRevStackChart(model);
   renderDeclineChart();
@@ -1230,7 +1261,7 @@ function render() {
   renderModelTable(model);
   renderPnlTable(model);
   renderDistribTable(model);
-  renderCompare();
+  renderScenarioAnalysis();
 }
 
 // ===========================================================
@@ -1305,10 +1336,11 @@ function boot() {
     bindReset();
     bindSidebarAccordion();
     bindDashboardViews();
+    bindPnlToggle();
     initTooltips();
-    // initial visibility for Scenario A (hide BC/C panels)
-    document.querySelectorAll('.scenarioBC').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.scenarioC').forEach(el => el.classList.add('hidden'));
+    // initial visibility — sidebar/chart sections gated to active scenario
+    applyScenarioVisibility();
+    syncScenarioButtons();
     render();
   } catch (e) {
     console.error('Boot failed:', e);

@@ -28,29 +28,10 @@
   <nav class="topnav" id="topnav">
     <a href="#dashboard" class="navlink active" data-target="dashboard">Dashboard</a>
     <a href="#model" class="navlink" data-target="model">Financial Model</a>
-    <a href="#compare" class="navlink" data-target="compare">Scenarios</a>
     <a href="#fieldmap" class="navlink" data-target="fieldmap">Field Map</a>
-    <a href="#research" class="navlink" data-target="research">Industry Research</a>
+    <a href="#research" class="navlink" data-target="research">Oil and Gas Primer</a>
   </nav>
 </header>
-
-<section class="scenario-bar">
-  <div class="scenario-label">DEVELOPMENT SCENARIO</div>
-  <div class="scenario-toggle" role="tablist">
-    <button class="scenario-btn active" data-scenario="A">
-      <div class="sc-title">A · Wells Only</div>
-      <div class="sc-desc">Drill, produce, sell oil/gas/NGLs at market</div>
-    </button>
-    <button class="scenario-btn" data-scenario="B">
-      <div class="sc-title">B · Wells + Power Plant</div>
-      <div class="sc-desc">Burn gas on-site, sell electricity to grid/PPA</div>
-    </button>
-    <button class="scenario-btn" data-scenario="C">
-      <div class="sc-title">C · Full Integration</div>
-      <div class="sc-desc">Wells + 150 MW CCGT + 100 MW data center, hyperscaler lease</div>
-    </button>
-  </div>
-</section>
 
 <main>
 
@@ -94,7 +75,16 @@
         </div>
       </details>
 
-      <details open>
+      <details class="scenarioA">
+        <summary>Land Sale</summary>
+        <div class="input-grp">
+          <label>Land sale price <button class="info" type="button" data-tip="One-time sale price for selling the asset outright (Scenario A). Tuscarawas County mineral + surface rights with proven Utica acreage trade in the $5–25K/acre range; for a ~5,000-acre tract that's $25–125M. Set this input to whatever you'd realistically clear in a single transaction.">i</button> <span class="unit">$M</span></label>
+          <input type="range" min="0" max="500" step="1" data-input="landSalePrice" />
+          <input type="number" data-input="landSalePrice" />
+        </div>
+      </details>
+
+      <details open class="scenarioBCD">
         <summary>Wells &amp; Drilling</summary>
         <div class="input-grp">
           <label>Initial well count <button class="info" type="button" data-tip="Number of wells drilled in Year 1. EOG-style pads bundle 3–6 wells; this defaults to 7 (~2 pads).">i</button> <span class="unit">wells</span></label>
@@ -141,7 +131,7 @@
         </div>
       </details>
 
-      <details class="scenarioBC">
+      <details class="scenarioCD">
         <summary>Power Plant (CCGT)</summary>
         <div class="input-grp">
           <label>Plant capacity <button class="info" type="button" data-tip="Nameplate (max) electrical output of the gas-fired plant in megawatts. Sized at 150 MW to deliver 120 MW continuously to a 100 MW IT-load data center (PUE 1.2) at ~80% availability.">i</button> <span class="unit">MW</span></label>
@@ -175,7 +165,7 @@
         </div>
       </details>
 
-      <details class="scenarioC">
+      <details class="scenarioD">
         <summary>Data Center &amp; Hyperscaler Lease</summary>
         <div class="input-grp">
           <label>IT load <button class="info" type="button" data-tip="Power drawn by the actual IT equipment (servers, storage, networking) — the &quot;productive&quot; load. A standard hyperscaler campus module is 100 MW IT. Total facility power (including cooling, UPS, lighting) = IT load × PUE.">i</button> <span class="unit">MW</span></label>
@@ -310,47 +300,26 @@
     </aside>
 
     <div class="content">
-      <div class="view-toggle" role="tablist">
-        <button class="view-btn active" data-view="kpis">KPI Metrics</button>
-        <button class="view-btn" data-view="charts">Charts &amp; Graphs</button>
-        <button class="view-btn" data-view="pnl">P&amp;L Forecast</button>
-        <button class="view-btn" data-view="distrib">Distributions</button>
+      <div class="bar-with-label">
+        <div class="bar-label">Scenario</div>
+        <div class="scenario-toggle-bar" role="tablist" aria-label="Development scenario">
+          <button class="scenario-btn" data-scenario="A">A · Land Sale</button>
+          <button class="scenario-btn active" data-scenario="B">B · Wells Only</button>
+          <button class="scenario-btn" data-scenario="C">C · Wells + Power Plant</button>
+          <button class="scenario-btn" data-scenario="D">D · Full Integration</button>
+        </div>
       </div>
-
-      <!-- View 1 — KPI Metrics -->
-      <div class="dash-view" data-view="kpis">
-        <div class="kpi-section-label">Project (unlevered)</div>
-        <div class="kpi-row">
-          <div class="kpi"><div class="kpi-label" id="kpi-rev-label">20-Year Revenue</div><div class="kpi-value" id="kpi-rev">—</div><div class="kpi-sub" id="kpi-rev-sub"></div></div>
-          <div class="kpi"><div class="kpi-label" id="kpi-ebitda-label">20-Year EBITDA</div><div class="kpi-value" id="kpi-ebitda">—</div><div class="kpi-sub" id="kpi-ebitda-sub"></div></div>
-          <div class="kpi"><div class="kpi-label">Total CapEx</div><div class="kpi-value" id="kpi-capex">—</div><div class="kpi-sub" id="kpi-capex-sub"></div></div>
-          <div class="kpi"><div class="kpi-label">NPV @ WACC</div><div class="kpi-value" id="kpi-npv">—</div><div class="kpi-sub" id="kpi-npv-sub"></div></div>
-          <div class="kpi"><div class="kpi-label">Project IRR</div><div class="kpi-value" id="kpi-irr">—</div><div class="kpi-sub" id="kpi-irr-sub"></div></div>
-          <div class="kpi"><div class="kpi-label">Payback</div><div class="kpi-value" id="kpi-payback">—</div><div class="kpi-sub" id="kpi-payback-sub"></div></div>
-        </div>
-
-        <div class="kpi-section-label">Owner Economics (levered)</div>
-        <div class="kpi-row owner-kpis">
-          <div class="kpi owner"><div class="kpi-label">Owner Check-Write</div><div class="kpi-value" id="kpi-ownerEquity">—</div><div class="kpi-sub" id="kpi-ownerEquity-sub"></div></div>
-          <div class="kpi owner"><div class="kpi-label">Owner Equity IRR</div><div class="kpi-value" id="kpi-ownerIrr">—</div><div class="kpi-sub" id="kpi-ownerIrr-sub"></div></div>
-          <div class="kpi owner"><div class="kpi-label">Owner Cash Multiple</div><div class="kpi-value" id="kpi-ownerMoic">—</div><div class="kpi-sub" id="kpi-ownerMoic-sub"></div></div>
-          <div class="kpi owner"><div class="kpi-label">Owner Payback</div><div class="kpi-value" id="kpi-ownerPayback">—</div><div class="kpi-sub" id="kpi-ownerPayback-sub"></div></div>
-          <div class="kpi owner"><div class="kpi-label">Debt Raised</div><div class="kpi-value" id="kpi-debt">—</div><div class="kpi-sub" id="kpi-debt-sub"></div></div>
-          <div class="kpi owner"><div class="kpi-label">External Equity</div><div class="kpi-value" id="kpi-extEquity">—</div><div class="kpi-sub" id="kpi-extEquity-sub"></div></div>
-        </div>
-
-        <div class="kpi-section-label">Advisor Economics</div>
-        <div class="kpi-row advisor-kpis">
-          <div class="kpi advisor"><div class="kpi-label">Capital Placement</div><div class="kpi-value" id="kpi-advCap">—</div><div class="kpi-sub" id="kpi-advCap-sub"></div></div>
-          <div class="kpi advisor"><div class="kpi-label">Site Dev Retainer</div><div class="kpi-value" id="kpi-advSite">—</div><div class="kpi-sub" id="kpi-advSite-sub"></div></div>
-          <div class="kpi advisor"><div class="kpi-label">Tiered Promote</div><div class="kpi-value" id="kpi-advPromote">—</div><div class="kpi-sub" id="kpi-advPromote-sub"></div></div>
-          <div class="kpi advisor"><div class="kpi-label">Sale Success Fee</div><div class="kpi-value" id="kpi-advSale">—</div><div class="kpi-sub" id="kpi-advSale-sub"></div></div>
-          <div class="kpi advisor"><div class="kpi-label">Total Advisor Fees</div><div class="kpi-value" id="kpi-advTotal">—</div><div class="kpi-sub" id="kpi-advTotal-sub"></div></div>
-          <div class="kpi advisor"><div class="kpi-label">Fees / Project NPV</div><div class="kpi-value" id="kpi-advRatio">—</div><div class="kpi-sub" id="kpi-advRatio-sub"></div></div>
+      <div class="bar-with-label">
+        <div class="bar-label">View</div>
+        <div class="view-toggle" role="tablist">
+          <button class="view-btn active" data-view="analysis">Scenario Analysis</button>
+          <button class="view-btn" data-view="pnl">P&amp;L Forecast</button>
+          <button class="view-btn" data-view="distrib">Distributions</button>
+          <button class="view-btn" data-view="charts">Charts &amp; Graphs</button>
         </div>
       </div>
 
-      <!-- View 2 — Charts and Graphs -->
+      <!-- Charts and Graphs -->
       <div class="dash-view" data-view="charts" hidden>
         <div class="chart-grid">
           <div class="card">
@@ -365,7 +334,7 @@
             <div class="card-head"><h3>Production Decline (per well, gas)</h3><div class="card-sub">Mcf/d — IP30 to year-20 trickle</div></div>
             <div class="chart-wrap"><canvas id="declineChart"></canvas></div>
           </div>
-          <div class="card scenarioBC">
+          <div class="card scenarioCD">
             <div class="card-head"><h3>Total Daily Gas Output vs. Plant Demand</h3><div class="card-sub">All producing wells, scaled</div></div>
             <div class="chart-wrap"><canvas id="gasSupplyChart"></canvas></div>
           </div>
@@ -398,6 +367,21 @@
           <div class="table-scroll"><table id="distribTable" class="data-table"></table></div>
         </div>
       </div>
+
+      <!-- Scenario Analysis (default) -->
+      <div class="dash-view" data-view="analysis">
+        <div class="rec-banner" id="recBanner"></div>
+
+        <div class="card wide">
+          <div class="card-head">
+            <h3>Scenario Scoreboard</h3>
+            <div class="card-sub">All three paths run through the model with the current inputs. Each metric's leader is highlighted.</div>
+          </div>
+          <div class="table-scroll"><table id="scenarioScoreTable" class="data-table"></table></div>
+        </div>
+
+        <div class="decision-grid" id="decisionGrid"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -405,6 +389,15 @@
 <!-- =========== FINANCIAL MODEL =========== -->
 <section id="model" class="page">
   <div class="content full">
+    <div class="bar-with-label">
+      <div class="bar-label">Scenario</div>
+      <div class="scenario-toggle-bar" role="tablist" aria-label="Development scenario">
+        <button class="scenario-btn" data-scenario="A">A · Land Sale</button>
+        <button class="scenario-btn active" data-scenario="B">B · Wells Only</button>
+        <button class="scenario-btn" data-scenario="C">C · Wells + Power Plant</button>
+        <button class="scenario-btn" data-scenario="D">D · Full Integration</button>
+      </div>
+    </div>
     <h2 class="page-title">20-Year Financial Model</h2>
     <p class="page-lead">Annualized P&amp;L roll-up for the active scenario. All figures in $M unless labeled. Production declines applied per-well using a multi-segment hyperbolic curve calibrated to EOG-comparable Utica wells.</p>
     <div class="table-scroll">
@@ -413,31 +406,6 @@
   </div>
 </section>
 
-<!-- =========== SCENARIO COMPARISON =========== -->
-<section id="compare" class="page">
-  <div class="content full">
-    <h2 class="page-title">Scenario Comparison</h2>
-    <p class="page-lead">Same inputs run through all three development paths. The integrated build trades a much larger capital stack for a 4× uplift on the price realized per Mcf of methane.</p>
-
-    <div class="kpi-row" id="compareKpis"></div>
-
-    <div class="chart-grid">
-      <div class="card">
-        <div class="card-head"><h3>Cumulative Free Cash Flow</h3><div class="card-sub">Undiscounted, $M</div></div>
-        <div class="chart-wrap"><canvas id="cumChart"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h3>NPV vs. WACC Sensitivity</h3><div class="card-sub">$M</div></div>
-        <div class="chart-wrap"><canvas id="npvSensChart"></canvas></div>
-      </div>
-    </div>
-
-    <div class="card wide">
-      <div class="card-head"><h3>WTI &amp; Lease-Rate Sensitivity (NPV, $M)</h3><div class="card-sub">Current scenario only — heat-map style</div></div>
-      <div class="table-scroll"><table id="sensTable" class="data-table"></table></div>
-    </div>
-  </div>
-</section>
 
 <!-- =========== FIELD MAP =========== -->
 <section id="fieldmap" class="page">
@@ -499,7 +467,7 @@
 <!-- =========== INDUSTRY RESEARCH =========== -->
 <section id="research" class="page">
   <div class="content full">
-    <h2 class="page-title">Industry Research</h2>
+    <h2 class="page-title">Oil and Gas Primer</h2>
     <p class="page-lead">A working primer on the unit economics behind every assumption in this model — drawn from the Tuscarawas/Carroll/Harrison Utica volatile-oil window and EOG-comparable wells.</p>
 
     <div class="research-grid">
@@ -539,11 +507,114 @@
       <div class="r-tag">01 · The Three Streams</div>
       <h3>One wellbore, three supply chains</h3>
       <p>A modern Utica well produces crude oil <strong>and</strong> natural gas <strong>and</strong> NGLs simultaneously through the same wellbore. Above ground a separator splits them by density, and from that point each stream lives in its own world.</p>
-      <ul>
-        <li><strong>Crude oil</strong> — liquid C5+ molecules. Cannot be used directly; goes by truck or pipeline to a refinery (Toledo, Detroit, Gulf Coast). Priced off WTI at Cushing; Utica condensate is light (60+ API) and trades $5–10/bbl below WTI.</li>
-        <li><strong>Natural gas</strong> — pure methane. Compressed into a transmission pipeline (NEXUS, Rover, REX) and on to power plants, home furnaces, factories, or LNG export. Priced off Henry Hub; Ohio basis −$0.30 to −$0.40/Mcf.</li>
-        <li><strong>NGLs</strong> — ethane, propane, butane, isobutane, natural gasoline. Vapor at wellhead, liquid after a cryogenic chill to −120 °F. Trades as a basket at ~30–35% of WTI; ethane is the cheapest component, natural gasoline the most valuable.</li>
-      </ul>
+
+      <div class="three-streams-diagram">
+        <div class="stream-origin">
+          <div class="stream-origin-tag">Shared origin</div>
+          <div class="stream-origin-title">Utica Wellbore → Wellhead Separator</div>
+          <div class="stream-origin-sub">~15,500 ft horizontal lateral. A pressure / gravity separator at the surface splits the produced fluid into the three phases below.</div>
+        </div>
+
+        <div class="streams-grid">
+          <!-- Crude Oil -->
+          <div class="stream-column">
+            <div class="stream-arrow">▼</div>
+            <div class="stream-card stream-card--oil">
+              <div class="stream-card-tag">Crude Oil</div>
+              <div class="stream-card-title">Liquid C5+ molecules</div>
+              <div class="stream-card-meta">~922 bbl/d · 60° API · light condensate</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-step">
+              <div class="stream-step-tag">Transport</div>
+              <div class="stream-step-body">Truck or gathering pipeline to a Midwest refinery — Toledo, Detroit, or down to the Gulf Coast.</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-step">
+              <div class="stream-step-tag">Refining</div>
+              <div class="stream-step-body">Distillation column splits the crude into fractions by boiling point.</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-end">
+              <div class="stream-end-tag">End Products</div>
+              <div class="stream-end-table">
+                <div class="stream-end-row stream-end-header"><span>Refined product</span><span>% per bbl</span></div>
+                <div class="stream-end-row"><span>Gasoline</span><span>~46%</span></div>
+                <div class="stream-end-row"><span>Diesel &amp; heating oil</span><span>~28%</span></div>
+                <div class="stream-end-row"><span>Jet fuel / kerosene</span><span>~9%</span></div>
+                <div class="stream-end-row"><span>LPG (propane / butane)</span><span>~5%</span></div>
+                <div class="stream-end-row"><span>Petrochem feedstocks</span><span>~5%</span></div>
+                <div class="stream-end-row"><span>Heavy / residual fuel oil</span><span>~3%</span></div>
+                <div class="stream-end-row"><span>Asphalt / lubricants / coke</span><span>~4%</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Natural Gas -->
+          <div class="stream-column">
+            <div class="stream-arrow">▼</div>
+            <div class="stream-card stream-card--gas">
+              <div class="stream-card-tag">Natural Gas</div>
+              <div class="stream-card-title">~Pure methane (CH₄)</div>
+              <div class="stream-card-meta">~3,799 Mcf/d · gaseous at wellhead</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-step">
+              <div class="stream-step-tag">Compression</div>
+              <div class="stream-step-body">Gathering line into a transmission pipeline — NEXUS, Rover, or REX.</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-step">
+              <div class="stream-step-tag">Distribution</div>
+              <div class="stream-step-body">Hub trading at Henry Hub / Dominion South; long-haul to power plants, utilities, LNG terminals.</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-end">
+              <div class="stream-end-tag">End Products</div>
+              <div class="stream-end-table">
+                <div class="stream-end-row stream-end-header"><span>End use</span><span>% of US gas</span></div>
+                <div class="stream-end-row"><span>Electric power generation</span><span>~40%</span></div>
+                <div class="stream-end-row"><span>Industrial use &amp; heating</span><span>~30%</span></div>
+                <div class="stream-end-row"><span>Residential / commercial heat</span><span>~20%</span></div>
+                <div class="stream-end-row"><span>LNG export <em>(rising fast)</em></span><span>~10%</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NGLs -->
+          <div class="stream-column">
+            <div class="stream-arrow">▼</div>
+            <div class="stream-card stream-card--ngl">
+              <div class="stream-card-tag">NGLs</div>
+              <div class="stream-card-title">Mixed C2–C5 liquids</div>
+              <div class="stream-card-meta">~190 bbl/d · vapor at wellhead, liquid after chill</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-step">
+              <div class="stream-step-tag">Cryogenic Plant</div>
+              <div class="stream-step-body">Midstream plant chills the gas stream to −120 °F to liquefy NGLs out of the methane.</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-step">
+              <div class="stream-step-tag">Fractionator</div>
+              <div class="stream-step-body">Splits the basket into individual purity products — ethane, propane, butane, iso-butane, natural gasoline.</div>
+            </div>
+            <div class="stream-arrow">↓</div>
+            <div class="stream-end">
+              <div class="stream-end-tag">End Products</div>
+              <div class="stream-end-table">
+                <div class="stream-end-row stream-end-header"><span>NGL component</span><span>% of NGL bbl</span></div>
+                <div class="stream-end-row"><span>Ethane (C2)</span><span>~45%</span></div>
+                <div class="stream-end-row"><span>Propane (C3)</span><span>~28%</span></div>
+                <div class="stream-end-row"><span>Natural gasoline (C5+)</span><span>~11%</span></div>
+                <div class="stream-end-row"><span>Normal butane (n-C4)</span><span>~9%</span></div>
+                <div class="stream-end-row"><span>Iso-butane (i-C4)</span><span>~7%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <p class="callout">Mental model: BOE is an <em>energy</em> conversion (6 Mcf gas = 1 boe), but at today's prices 1 boe of gas is worth ~18% of 1 boe of oil. A "1,000 boe/d at 50% gas" well has revenue 90% tilted to oil.</p>
     </article>
 

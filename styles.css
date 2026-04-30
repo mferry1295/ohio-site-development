@@ -124,59 +124,62 @@ html, body {
   background: var(--pure);
 }
 
-/* ===== Scenario bar ===== */
-.scenario-bar {
-  background: linear-gradient(to bottom, #fafafa, #f5f5f5);
-  border-bottom: 1px solid var(--line);
-  padding: 16px 28px;
+/* ===== Scenario picker (compact pill bar — sits above each tab's content) ===== */
+/* Row that pairs a left-side label with a pill bar on the right. */
+.bar-with-label {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
+  margin: 0 0 10px;
 }
-.scenario-label {
-  font-size: 11px;
+.bar-with-label .scenario-toggle-bar,
+.bar-with-label .view-toggle { flex: 1; margin: 0; }
+.bar-label {
+  font-size: 10px;
   letter-spacing: 0.18em;
+  font-weight: 700;
   color: var(--muted);
-  font-weight: 600;
+  text-transform: uppercase;
   white-space: nowrap;
+  min-width: 78px;
 }
-.scenario-toggle {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  flex: 1;
+
+.scenario-toggle-bar {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 4px;
+  background: #f4f4f4;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  flex-wrap: wrap;
 }
 .scenario-btn {
-  text-align: left;
-  background: var(--pure);
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-  padding: 12px 14px;
-  cursor: pointer;
-  transition: all .15s ease;
+  flex: 1 1 auto;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 8px 12px;
   font-family: inherit;
-}
-.scenario-btn:hover { border-color: var(--clay); }
-.scenario-btn.active {
-  border-color: var(--derrick);
-  background: linear-gradient(to bottom, #fff, #fdf3f3);
-  box-shadow: var(--shadow);
-}
-.scenario-btn .sc-title {
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--ink);
-  margin-bottom: 2px;
-}
-.scenario-btn.active .sc-title { color: var(--derrick); }
-.scenario-btn .sc-desc {
   font-size: 11px;
-  color: var(--muted);
-  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.scenario-btn:hover { color: var(--derrick); background: var(--blush); }
+.scenario-btn.active {
+  background: var(--derrick);
+  color: var(--pure);
+  border-color: var(--derrick);
+  box-shadow: var(--shadow);
 }
 
 /* ===== Pages ===== */
-main { min-height: calc(100vh - 200px); }
+main { min-height: calc(100vh - 70px); }
 .page { display: none; }
 .page.active { display: block; }
 .page-title {
@@ -199,14 +202,16 @@ main { min-height: calc(100vh - 200px); }
 }
 
 /* ===== Sidebar (inputs) ===== */
+/* Sticks just under the topbar (~70px). Top padding matches .content padding-top
+   so the "Inputs" header aligns horizontally with the Scenario / View pill bars. */
 .sidebar {
   background: #fafafa;
   border-right: 1px solid var(--line);
-  padding: 18px 18px 60px;
-  height: calc(100vh - 200px);
+  padding: 24px 18px 60px;
+  height: calc(100vh - 70px);
   overflow-y: auto;
   position: sticky;
-  top: 200px;
+  top: 70px;
 }
 .sidebar-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -359,8 +364,7 @@ details[open] > summary::after { content: "−"; }
   font-variant-numeric: tabular-nums;
 }
 
-.scenarioBC.hidden, .scenarioC.hidden { display: none; }
-.scenario-bar.hidden { display: none; }
+.scenarioA.hidden, .scenarioBCD.hidden, .scenarioCD.hidden, .scenarioD.hidden { display: none; }
 
 /* ===== Info icon + tooltip ===== */
 .info {
@@ -437,6 +441,9 @@ details[open] > summary::after { content: "−"; }
 .content {
   padding: 24px 28px;
   max-width: 100%;
+  /* Grid items default to min-content sizing — without min-width: 0, a wide
+     table inside .content will blow out the 1fr column and break the layout. */
+  min-width: 0;
 }
 .content.full {
   padding: 32px 36px;
@@ -479,6 +486,116 @@ details[open] > summary::after { content: "−"; }
   box-shadow: var(--shadow);
 }
 .dash-view[hidden] { display: none !important; }
+
+/* ===== Scenario Analysis (decision support) ===== */
+.rec-banner {
+  background: linear-gradient(135deg, #fffaf7 0%, #fff 100%);
+  border: 1px solid var(--clay);
+  border-left: 4px solid var(--derrick);
+  border-radius: 6px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.rec-banner.none {
+  border-color: var(--line);
+  border-left-color: var(--muted);
+  background: #fafafa;
+}
+.rec-tag {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  color: var(--derrick);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.rec-banner.none .rec-tag { color: var(--muted); }
+.rec-headline {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.rec-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.rec-why {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.5;
+  margin-bottom: 12px;
+  max-width: 800px;
+}
+.rec-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 32px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.rec-stat { display: flex; flex-direction: column; gap: 2px; }
+.rec-stat-label {
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.rec-stat-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scoreboard table — highlight column-leaders and the recommended scenario */
+#scenarioScoreTable td.leader {
+  background: var(--blush);
+  color: var(--derrick);
+  font-weight: 700;
+}
+#scenarioScoreTable th.rec-col,
+#scenarioScoreTable td.rec-col {
+  border-left: 2px solid var(--derrick);
+  border-right: 2px solid var(--derrick);
+}
+#scenarioScoreTable th.rec-col {
+  background: var(--derrick);
+  color: var(--pure);
+}
+
+/* Decision cards */
+.decision-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.decision-card {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--clay);
+  border-radius: 6px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.decision-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--derrick);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.decision-body {
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.55;
+}
 
 /* ===== KPIs ===== */
 .kpi-section-label {
@@ -615,13 +732,70 @@ details[open] > summary::after { content: "−"; }
   border-bottom: 2px solid var(--derrick);
 }
 
-/* ===== Sensitivity heat-map ===== */
-#sensTable td.heat {
-  font-weight: 700;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
+/* Transposed P&L / Distributions: size to content so year columns stay readable;
+   the .table-scroll wrapper overflows horizontally when the viewport is narrower. */
+#pnlTable, #distribTable { width: auto; min-width: 100%; }
+#pnlTable thead th.num, #pnlTable tbody td.num,
+#distribTable thead th.num, #distribTable tbody td.num { min-width: 84px; }
+
+/* Transposed tables (years across top, metrics down): sticky first-column metric labels,
+   bold subtotal rows, divider above Cash-to-Equity, emphasized rightmost Total column */
+.data-table th.rowhead,
+.data-table td.rowhead {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--pure);
+  border-right: 2px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 600;
+  min-width: 160px;
 }
+.data-table thead th.rowhead { background: var(--blush); }
+.data-table tbody tr:nth-child(even) td.rowhead { background: var(--row-b); }
+.data-table tbody tr.total td.rowhead { background: #fdf3f3 !important; }
+.data-table td.bold,
+.data-table th.bold,
+.data-table .bold { font-weight: 700; }
+.data-table tbody tr.divider td { border-top: 1.5px solid var(--clay); }
+.data-table th.total-col,
+.data-table td.total-col {
+  background: #fcf6f6;
+  border-left: 2px solid var(--clay);
+  font-weight: 700;
+}
+.data-table tbody tr:nth-child(even) td.total-col { background: #f9eded; }
+.data-table tbody tr.total td.total-col { background: #fdf3f3 !important; }
+
+/* P&L row variants */
+.data-table .sub { font-size: 11px; color: var(--muted); font-weight: 500; }
+.data-table td.rowhead.sub { padding-left: 28px; }   /* indent sub-rows */
+.data-table tr.pnl-parent td.rowhead { color: var(--ink); }
+.pnl-toggle {
+  border: none;
+  background: transparent;
+  color: var(--derrick);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 0 4px 0 0;
+  margin-right: 2px;
+}
+.pnl-toggle:hover { color: var(--signal); }
+.data-table tr.pnl-subtotal td { border-top: 1.5px solid var(--clay); }
+.data-table tr.pnl-section-header td {
+  background: #fafafa !important;
+  border-top: 1px dashed var(--clay);
+  border-bottom: 1px dashed var(--line);
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  padding: 6px 12px;
+}
+.data-table tr.pnl-addback td.sub { color: var(--iron); }
 
 /* ===== Research ===== */
 .research-grid {
@@ -698,6 +872,172 @@ details[open] > summary::after { content: "−"; }
   font-style: italic;
 }
 .research-article table { margin: 14px 0; }
+
+/* ===== Three-streams flow diagram (Research §01) ===== */
+.three-streams-diagram {
+  margin: 22px 0 24px;
+  padding: 22px;
+  background: linear-gradient(to bottom, #fafafa, #f1f1f1);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.stream-origin {
+  background: var(--ink);
+  color: var(--pure);
+  padding: 16px 22px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  max-width: 640px;
+  margin: 0 auto 4px;
+}
+.stream-origin-tag {
+  font-size: 9px;
+  letter-spacing: 0.20em;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.stream-origin-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.stream-origin-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.streams-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 0;
+}
+.stream-column {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.stream-arrow {
+  text-align: center;
+  color: var(--clay);
+  font-size: 12px;
+  line-height: 1;
+  margin: 4px 0;
+  user-select: none;
+}
+.stream-card {
+  background: var(--pure);
+  border-top: 4px solid var(--clay);
+  border-radius: 6px;
+  padding: 12px 14px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.stream-card--oil { border-top-color: var(--iron); }
+.stream-card--gas { border-top-color: var(--derrick); }
+.stream-card--ngl { border-top-color: var(--clay); }
+.stream-card-tag {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.stream-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.stream-card-meta {
+  font-size: 10px;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+.stream-step {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.stream-step-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--derrick);
+  margin-bottom: 4px;
+}
+.stream-step-body {
+  font-size: 11px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.stream-end {
+  background: linear-gradient(to bottom, var(--blush), #ffffff);
+  border: 1px solid var(--clay);
+  border-radius: 6px;
+  padding: 12px 12px 10px;
+  text-align: center;
+}
+.stream-end-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--derrick);
+  margin-bottom: 8px;
+}
+.stream-end-table {
+  display: flex;
+  flex-direction: column;
+  background: var(--pure);
+  border: 1px solid rgba(212, 106, 106, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.stream-end-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--ink);
+  border-bottom: 1px solid #f0e0e0;
+  text-align: left;
+}
+.stream-end-row:last-child { border-bottom: none; }
+.stream-end-row > span:last-child {
+  font-weight: 700;
+  color: var(--derrick);
+  font-variant-numeric: tabular-nums;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+.stream-end-row.stream-end-header {
+  background: var(--blush);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--derrick);
+  padding: 5px 10px;
+}
+.stream-end-row.stream-end-header > span:last-child {
+  color: var(--derrick);
+}
+.stream-end-row em { font-style: italic; color: var(--muted); font-size: 10px; }
+@media (max-width: 800px) {
+  .three-streams-diagram { padding: 12px; }
+  .streams-grid { grid-template-columns: 1fr; gap: 4px; }
+}
 
 /* ===== Field Map ===== */
 .map-kpis {
@@ -1084,22 +1424,9 @@ footer .muted { color: rgba(255,255,255,0.55); }
   .card-sub { font-size: 9px; }
   .chart-wrap { height: 200px; }
   .card.wide .chart-wrap { height: 220px; }
-  /* Scenario bar: stack label on top, cards stay in a 3-column row below */
-  .scenario-bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px 10px;
-  }
-  .scenario-label { font-size: 9px; }
-  .scenario-toggle {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-    width: 100%;
-  }
-  .scenario-btn { padding: 6px 6px; }
-  .scenario-btn .sc-title { font-size: 10px; line-height: 1.2; margin-bottom: 2px; }
-  .scenario-btn .sc-desc { font-size: 8px; line-height: 1.3; }
+  /* Compact scenario picker on mobile: smaller text, allow wrapping */
+  .scenario-toggle-bar { padding: 3px; gap: 3px; margin-bottom: 6px; }
+  .scenario-btn { font-size: 9px; padding: 5px 6px; letter-spacing: 0.04em; }
   .research-grid { grid-template-columns: 1fr; }
   /* Mobile nav: 3-dots toggle visible, nav becomes a dropdown panel */
   .mobile-menu-toggle { display: inline-flex; }

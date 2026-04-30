@@ -36,6 +36,8 @@ const DEFAULTS = {
   // 43% reproduces the primer's $30.28 / $70.39 cost stack
   // (royalty 20% of rev + LOE $4 + GP&T $8 + severance $4.20 per boe).
   opCostPct: 43,
+  // Land Sale (Scenario A) — one-time sale of the asset; no ongoing operations
+  landSalePrice: 50,     // $M sale price (proxy: ~$10K/acre × 5K acres)
   // Plant
   plantMW: 150, heatRate: 7000, plantCapex: 175, plantOM: 15, avail: 95, powerPrice: 65,
   // DC
@@ -104,11 +106,13 @@ function npv(rate, cashflows) {
 }
 
 function irr(cashflows) {
-  // Bisect on [-0.99, 5]
-  let lo = -0.99, hi = 5.0;
+  // Bisect on [-0.99, 50] — upper bound of 5000% covers single-well-style
+  // "throw $80M of capex into a 20-yr cash gusher" cases (Scenario A IRRs
+  // routinely top 1000% on default inputs).
+  let lo = -0.99, hi = 50.0;
   const f = r => npv(r, cashflows);
   if (f(lo) * f(hi) > 0) return null;
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 100; i++) {
     const mid = (lo + hi) / 2;
     if (f(mid) > 0) lo = mid; else hi = mid;
   }
@@ -131,9 +135,12 @@ function paybackYear(cashflows) {
 
 /* =============================================================
  *  Core scenario runner
- *  scenario: 'A' wells only, 'B' wells+plant, 'C' wells+plant+DC
+ *  scenario: 'A' land sale, 'B' wells only, 'C' wells+plant, 'D' wells+plant+DC
  * ============================================================= */
-function runModel(p, scenario = 'A') {
+function runModel(p, scenario = 'B') {
+  // Scenario A — Land Sale. Asset is sold outright; no production, no build.
+  if (scenario === 'A') return runLandSale(p);
+
   const Y = p.years;
   const cohorts = buildWellCohorts(p.initWells, p.replWells, Y);
 
@@ -146,12 +153,12 @@ function runModel(p, scenario = 'A') {
 
   // Power-plant gas demand (constant): plantMW * avail * 24 * heatRate
   // = MW × 1000 kW × 24 h × Btu/kWh = Btu/day  → ÷ 1.024e6 = Mcf/day (since 1 Mcf ≈ 1.024 MMBtu)
-  const plantMW = (scenario === 'A') ? 0 : p.plantMW;
+  const plantMW = (scenario === 'B') ? 0 : p.plantMW;
   const plantDailyMWh = plantMW * 24 * (p.avail / 100);             // MWh/day at availability
   const plantDailyGasMcf = plantDailyMWh * 1000 * p.heatRate / 1_024_000; // Mcf/day
 
-  // Hyperscaler revenue path (only Scenario C uses lease; Scenario B uses wholesale grid PPA)
-  const dcDailyMWh = (scenario === 'C') ? p.itLoad * p.pue * 24 : 0; // 100 MW IT × 1.2 PUE × 24h = 2880 MWh/d demand
+  // Hyperscaler revenue path (only Scenario D uses lease; Scenario C uses wholesale grid PPA)
+  const dcDailyMWh = (scenario === 'D') ? p.itLoad * p.pue * 24 : 0; // 100 MW IT × 1.2 PUE × 24h = 2880 MWh/d demand
 
   // Build year-by-year roll-up
   const rows = [];
@@ -185,9 +192,9 @@ function runModel(p, scenario = 'A') {
     const gasMarketRev = gasToMarketMcf * gasPriceMcf;
 
     let powerRev = 0;
-    if (scenario === 'B') {
+    if (scenario === 'C') {
       powerRev = powerMWh * p.powerPrice;
-    } else if (scenario === 'C') {
+    } else if (scenario === 'D') {
       // Hyperscaler pays for IT-load MWh leased; capped by what plant actually produced.
       const dcAnnualMWh = Math.min(powerMWh, dcDailyMWh * 365);
       const escMult = Math.pow(1 + p.esc / 100, y - 1);
@@ -203,11 +210,14 @@ function runModel(p, scenario = 'A') {
     const fieldOpCost = upstreamRev * (p.opCostPct / 100);
 
     // Plant non-fuel O&M
-    const plantOM = (scenario === 'A') ? 0 : powerMWh * p.plantOM;
-    // DC fixed opex (only in scenario C)
-    const dcOpex = (scenario === 'C') ? p.dcOpex * 1_000_000 : 0;
+    const plantOM = (scenario === 'B') ? 0 : powerMWh * p.plantOM;
+    // DC fixed opex (only in scenario D)
+    const dcOpex = (scenario === 'D') ? p.dcOpex * 1_000_000 : 0;
 
-    const totalCashCost = fieldOpCost + plantOM + dcOpex;
+    // G&A — corporate overhead allocated per boe. Treated as a CASH expense
+    // (executive salaries, accounting, legal, HQ, IT) — deducted from EBITDA.
+    const ga = boeAnnual * p.ga;
+    const totalCashCost = fieldOpCost + plantOM + dcOpex + ga;
     const ebitda = totalRev - totalCashCost;
 
     // CapEx schedule
@@ -215,18 +225,18 @@ function runModel(p, scenario = 'A') {
     // Drilling capex this year
     if (y === 1) capex += p.initWells * p.dnc * 1_000_000;
     if (y >= 2 && p.replWells > 0) capex += p.replWells * p.dnc * 1_000_000;
-    // Power plant (built year 1) — for scenarios B/C
-    if ((scenario === 'B' || scenario === 'C') && y === 1) capex += p.plantCapex * 1_000_000;
-    // Data center (built year 1) — scenario C
-    if (scenario === 'C' && y === 1) capex += p.dcCapex * 1_000_000;
+    // Power plant (built year 1) — for scenarios C/D
+    if ((scenario === 'C' || scenario === 'D') && y === 1) capex += p.plantCapex * 1_000_000;
+    // Data center (built year 1) — scenario D
+    if (scenario === 'D' && y === 1) capex += p.dcCapex * 1_000_000;
 
-    // DD&A and G&A (book-only — used for tax shield and reported income)
+    // DD&A — non-cash book charge spreading capitalized cost over produced barrels.
     const dda = boeAnnual * p.dda;
-    const ga = boeAnnual * p.ga;
-    const ebit = ebitda - dda - ga;
+    const ebit = ebitda - dda;
     const taxes = Math.max(0, ebit) * (p.tax / 100);
     const netIncome = ebit - taxes;
-    // Unlevered free cash flow (after-tax EBITDA minus capex)
+    // Unlevered free cash flow (after-tax EBITDA minus capex). G&A is already
+    // baked into EBITDA via totalCashCost, so no separate G&A subtraction here.
     const fcf = ebitda - taxes - capex;
 
     rows.push({
@@ -332,6 +342,90 @@ function runModel(p, scenario = 'A') {
       debtSchedule,
     },
     advisor,
+  };
+}
+
+/* =============================================================
+ *  Land Sale runner (Scenario A)
+ *  No production, no build. Owner sells the asset outright in Y1
+ *  for landSalePrice and pays an advisor success fee on the gross
+ *  proceeds. Returned shape mirrors runModel so dashboards still render.
+ * ============================================================= */
+function runLandSale(p) {
+  const Y = p.years;
+  const salePrice = (p.landSalePrice || 0) * 1_000_000;
+  const advisorFee = salePrice * (p.saleSuccessPct || 0) / 100;
+  const netBeforeTax = salePrice - advisorFee;
+  // Treat the sale as an asset disposition: capital-gains-equivalent tax on the net.
+  const tax = Math.max(0, netBeforeTax) * (p.tax / 100);
+  const netToOwner = netBeforeTax - tax;
+
+  const rows = [];
+  for (let y = 1; y <= Y; y++) {
+    const isSaleYear = (y === 1);
+    rows.push({
+      year: y, wells: 0, oilDaily: 0, gasDaily: 0, nglDaily: 0, boeAnnual: 0,
+      gasToPlantMcf: 0, gasToMarketMcf: 0, gasShortMcf: 0, powerMWh: 0,
+      oilRev: 0, nglRev: 0, gasMarketRev: 0, powerRev: 0,
+      totalRev: isSaleYear ? salePrice : 0,
+      fieldOpCost: 0, plantOM: 0,
+      dcOpex: isSaleYear ? advisorFee : 0,    // park advisor fee here for table totals
+      totalCashCost: isSaleYear ? advisorFee : 0,
+      ebitda: isSaleYear ? netBeforeTax : 0,
+      dda: 0, ga: 0,
+      ebit: isSaleYear ? netBeforeTax : 0,
+      taxes: isSaleYear ? tax : 0,
+      netIncome: isSaleYear ? netToOwner : 0,
+      capex: 0,
+      fcf: isSaleYear ? netToOwner : 0,
+    });
+  }
+
+  const totals = { totalRev: salePrice, totalEbitda: netBeforeTax, totalCapex: 0 };
+  const fcfSeries = [0, ...rows.map(r => r.fcf)];
+  const projNpv = npv(p.wacc / 100, fcfSeries);
+  const projIrr = null;       // no investment leg → IRR undefined
+  const projPayback = netToOwner > 0 ? 0 : null; // immediate
+
+  // No financing — owner receives 100% of net proceeds at Y1
+  const ownerCF = [0, netToOwner, ...Array(Y - 1).fill(0)];
+  const externalCF = [0, ...Array(Y).fill(0)];
+  const leveredCF = [0, netToOwner, ...Array(Y - 1).fill(0)];
+  const debtSchedule = [];
+  for (let y = 1; y <= Y; y++) {
+    debtSchedule.push({ year: y, interestPaid: 0, principalPaid: 0, debtService: 0, principalRemaining: 0, cashToAllEquity: y === 1 ? netToOwner : 0 });
+  }
+
+  const advisor = {
+    capitalRaised: 0, capitalPlacementFee: 0,
+    siteAdvisoryFee: 0, siteAdvisoryMonths: 0,
+    promote: 0, abovePref: 0,
+    saleSuccessFee: advisorFee,
+    total: advisorFee,
+  };
+
+  return {
+    rows, totals,
+    npv: projNpv, irr: projIrr, payback: projPayback,
+    realized: {
+      oilPrice: Math.max(0, p.wti - OIL_BASIS),
+      gasPriceMcf: Math.max(0, p.hh / 6 - GAS_BASIS),
+      nglPrice: Math.max(0, p.wti * (p.nglPct / 100)),
+    },
+    plantDailyGasMcf: 0, dcDailyMWh: 0,
+    financing: {
+      initialCapex: 0, debtAmount: 0, equityAmount: 0,
+      ownerEquity: 0, externalEquity: 0,
+      annualDebtService: 0, loanTerm: 0,
+      ownerIrr: null, ownerNpv: projNpv,
+      ownerPayback: projPayback, ownerMoic: null,
+      externalIrr: null,
+      ownerCF, leveredCF, externalCF,
+      debtSchedule,
+    },
+    advisor,
+    isLandSale: true,
+    landSale: { salePrice, advisorFee, tax, netToOwner },
   };
 }
 
