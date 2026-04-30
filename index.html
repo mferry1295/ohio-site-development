@@ -139,27 +139,12 @@
           <input type="number" data-input="plantMW" />
         </div>
         <div class="input-grp">
-          <label>Heat rate <button class="info" type="button" data-tip="Fuel efficiency of the turbine — Btu of natural gas required to produce 1 kWh of electricity. Modern combined-cycle gas turbines (CCGT) run ~7,000 Btu/kWh, equivalent to ~50% thermal efficiency. Lower = more efficient.">i</button> <span class="unit">Btu/kWh</span></label>
-          <input type="range" min="6200" max="9500" step="50" data-input="heatRate" />
-          <input type="number" data-input="heatRate" />
-        </div>
-        <div class="input-grp">
           <label>Plant capex <button class="info" type="button" data-tip="One-time capital cost to build the gas-fired generation facility. Recent Ohio combined-cycle plants run ~$1M–1.3M/MW installed; a 150 MW plant lands at ~$150–200M.">i</button> <span class="unit">$M</span></label>
           <input type="range" min="80" max="400" step="5" data-input="plantCapex" />
           <input type="number" data-input="plantCapex" />
         </div>
         <div class="input-grp">
-          <label>Non-fuel O&amp;M <button class="info" type="button" data-tip="Operations &amp; Maintenance excluding fuel — covers maintenance, labor, water, parts, and overhead. Expressed per megawatt-hour generated. Industry rule of thumb: ~$15/MWh for modern CCGT plants.">i</button> <span class="unit">$/MWh</span></label>
-          <input type="range" min="5" max="30" step="0.5" data-input="plantOM" />
-          <input type="number" data-input="plantOM" />
-        </div>
-        <div class="input-grp">
-          <label>Plant availability <button class="info" type="button" data-tip="Fraction of time the plant is actually generating power — accounts for scheduled maintenance, forced outages, and seasonal de-rates. Best-in-class CCGT plants achieve 92–95%.">i</button> <span class="unit">%</span></label>
-          <input type="range" min="80" max="98" step="0.5" data-input="avail" />
-          <input type="number" data-input="avail" />
-        </div>
-        <div class="input-grp">
-          <label>Wholesale power (B only) <button class="info" type="button" data-tip="Price received for selling electricity into the PJM grid (Scenario B only — applies when there's no on-site data center buying the power directly). Ohio AEP zone real-time prices have averaged ~$50–70/MWh recently. Scenario C uses the hyperscaler lease rate instead.">i</button> <span class="unit">$/MWh</span></label>
+          <label>Grid sale price <button class="info" type="button" data-tip="Wholesale price received for selling electricity back into the PJM grid — applies in Scenario C, where the on-site plant generates power but there's no data center buying it directly. Ohio AEP zone real-time prices have averaged ~$50–70/MWh recently. Scenario D uses the hyperscaler lease rate instead.">i</button> <span class="unit">$/MWh</span></label>
           <input type="range" min="30" max="120" step="1" data-input="powerPrice" />
           <input type="number" data-input="powerPrice" />
         </div>
@@ -168,14 +153,9 @@
       <details class="scenarioD">
         <summary>Data Center &amp; Hyperscaler Lease</summary>
         <div class="input-grp">
-          <label>IT load <button class="info" type="button" data-tip="Power drawn by the actual IT equipment (servers, storage, networking) — the &quot;productive&quot; load. A standard hyperscaler campus module is 100 MW IT. Total facility power (including cooling, UPS, lighting) = IT load × PUE.">i</button> <span class="unit">MW</span></label>
-          <input type="range" min="20" max="300" step="10" data-input="itLoad" />
-          <input type="number" data-input="itLoad" />
-        </div>
-        <div class="input-grp">
-          <label>PUE <button class="info" type="button" data-tip="Power Usage Effectiveness — ratio of total facility power to IT load. PUE of 1.2 means for every 1 MW of computing power, 0.2 MW goes to cooling, UPS, and lighting overhead. Best-in-class new-build = 1.2; older facilities often exceed 1.5.">i</button></label>
-          <input type="range" min="1.05" max="1.6" step="0.01" data-input="pue" />
-          <input type="number" data-input="pue" />
+          <label>Facility power <button class="info" type="button" data-tip="Total power the data center pulls off the plant — IT equipment plus cooling, UPS, and lighting overhead. A 100 MW IT-load campus at PUE 1.2 draws 120 MW total facility power. This is what the CCGT actually has to deliver.">i</button> <span class="unit">MW</span></label>
+          <input type="range" min="50" max="350" step="5" data-input="facilityMW" />
+          <input type="number" data-input="facilityMW" />
         </div>
         <div class="input-grp">
           <label>Data center capex <button class="info" type="button" data-tip="One-time build cost for a 100 MW IT-load data center: ~400,000 sq ft of whitespace, redundant power, fiber backhaul, cooling. Industry rule of thumb: $8–12M per IT-MW. A 100 MW campus runs ~$800M–1.2B.">i</button> <span class="unit">$M</span></label>

@@ -41,7 +41,7 @@ const DEFAULTS = {
   // Plant
   plantMW: 150, heatRate: 7000, plantCapex: 175, plantOM: 15, avail: 95, powerPrice: 65,
   // DC
-  itLoad: 100, pue: 1.2, dcCapex: 1000, dcOpex: 30, leaseRate: 80, esc: 2.0,
+  facilityMW: 120, dcCapex: 1000, dcOpex: 30, leaseRate: 80, esc: 2.0,
   // Project
   years: 20, dda: 12, ga: 1.5,
   // Financing
@@ -158,7 +158,7 @@ function runModel(p, scenario = 'B') {
   const plantDailyGasMcf = plantDailyMWh * 1000 * p.heatRate / 1_024_000; // Mcf/day
 
   // Hyperscaler revenue path (only Scenario D uses lease; Scenario C uses wholesale grid PPA)
-  const dcDailyMWh = (scenario === 'D') ? p.itLoad * p.pue * 24 : 0; // 100 MW IT × 1.2 PUE × 24h = 2880 MWh/d demand
+  const dcDailyMWh = (scenario === 'D') ? p.facilityMW * 24 : 0; // 120 MW total facility × 24h = 2880 MWh/d demand
 
   // Build year-by-year roll-up
   const rows = [];
