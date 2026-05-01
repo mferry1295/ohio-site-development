@@ -8,7 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="styles.css?v=2026-04-30f" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<link rel="stylesheet" href="styles.css?v=2026-05-01l" />
 </head>
 <body>
 
@@ -612,6 +614,14 @@
       </div>
     </div>
 
+    <div class="map-controls map-controls--wells" id="wellsControls" hidden>
+      <div class="wells-summary">
+        <span id="wellsLegendCount" class="wells-summary-count">Wells:</span>
+        <span class="wells-summary-source">Each pin is a horizontal well that filed 2025 production · matched by API number to ODNR all-wells coordinates.</span>
+      </div>
+      <div class="wells-loading" id="wellsLoading" hidden>Loading wells…</div>
+    </div>
+
     <div class="map-layout">
       <div id="ohioMap" class="map-canvas"></div>
       <aside class="map-detail" id="mapDetail">
@@ -824,11 +834,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-05-01d"></script>
-<script src="counties.js?v=2026-04-30f"></script>
-<script src="operators.js?v=2026-04-30f"></script>
-<script src="model.js?v=2026-04-30f"></script>
-<script src="app.js?v=2026-05-01d"></script>
+<script src="supabase-config.js?v=2026-05-01l"></script>
+<script src="counties.js?v=2026-05-01l"></script>
+<script src="operators.js?v=2026-05-01l"></script>
+<script src="model.js?v=2026-05-01l"></script>
+<script src="app.js?v=2026-05-01l"></script>
 </body>
 </html>

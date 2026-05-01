@@ -1245,7 +1245,15 @@ const MAP_STATE = {
   metric: 'gasMcfe',
   metricLabel: 'Gas-equivalent production (Mcfe)',
   selectedCounty: null,
+  wellsLayer: null,
+  wellsLoading: false,
+  wellsData: null,
 };
+
+// Single fill color for every pin. All wells in this dataset are 2025
+// horizontal-well producers, so there's nothing meaningful to differentiate
+// by color — we let cluster size do that work.
+const WELL_PIN_COLOR = '#8B1A1A';
 
 // metric configuration
 const MAP_METRICS = {
@@ -1347,6 +1355,146 @@ function initMap() {
       restylePolygons();
     });
   });
+
+}
+
+// ===== Wells layer (per-county) =====
+// Wells are the 3,798 horizontal wells that filed 2025 quarterly production
+// reports with ODNR, cross-referenced by API number to the ODNR all-wells
+// ArcGIS layer for coordinates. Schema:
+//   data.c[]  county name lookup
+//   data.o[]  operator name lookup (most-recent quarter's owner)
+//   data.t[]  township name lookup
+//   data.r[]  rows of [lat*1e5, lon*1e5, cIdx, oIdx, tIdx, api, name, oilBbl, gasMcf, daysProd]
+async function ensureWellsLoaded() {
+  if (MAP_STATE.wellsData || MAP_STATE.wellsLoading) return;
+  if (typeof L === 'undefined' || typeof L.markerClusterGroup !== 'function') {
+    console.error('Leaflet.markercluster not loaded');
+    return;
+  }
+  MAP_STATE.wellsLoading = true;
+  const loadingEl = document.getElementById('wellsLoading');
+  if (loadingEl) loadingEl.hidden = false;
+  try {
+    const resp = await fetch('wells.json?v=2026-05-01h');
+    const data = await resp.json();
+    // Pre-bucket rows by county uppercase name for fast filtering on selection.
+    const byCounty = {};
+    const counties = data.c || [];
+    for (const r of (data.r || [])) {
+      const co = counties[r[2]] || '';
+      if (!byCounty[co]) byCounty[co] = [];
+      byCounty[co].push(r);
+    }
+    MAP_STATE.wellsData = { ...data, byCounty };
+  } catch (e) {
+    console.error('Failed to load wells:', e);
+  } finally {
+    MAP_STATE.wellsLoading = false;
+    if (loadingEl) loadingEl.hidden = true;
+  }
+}
+
+async function showWellsForCounty(name) {
+  if (!name) { hideWells(); return; }
+  await ensureWellsLoaded();
+  const data = MAP_STATE.wellsData;
+  if (!data || !MAP_STATE.map) return;
+  const rows = data.byCounty[name.toUpperCase()] || [];
+  document.getElementById('wellsControls').hidden = false;
+  // One cluster group is reused across all rebuilds (filter changes, county
+  // switches). clearLayers + addLayers keeps the layer count in sync with
+  // the visible filter set, with no leftover markers from prior states.
+  if (!MAP_STATE.wellsLayer) {
+    MAP_STATE.wellsLayer = L.markerClusterGroup({
+      maxClusterRadius: 40,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      disableClusteringAtZoom: 14,
+    });
+    MAP_STATE.map.addLayer(MAP_STATE.wellsLayer);
+  } else {
+    MAP_STATE.wellsLayer.clearLayers();
+    if (!MAP_STATE.map.hasLayer(MAP_STATE.wellsLayer)) {
+      MAP_STATE.map.addLayer(MAP_STATE.wellsLayer);
+    }
+  }
+  if (rows.length === 0) {
+    setWellsCountLabel(0, 0);
+    return;
+  }
+  const visibleCount = populateWellsLayer(MAP_STATE.wellsLayer, rows, data);
+  setWellsCountLabel(visibleCount, rows.length);
+}
+
+function hideWells() {
+  if (MAP_STATE.wellsLayer) {
+    // L.markerClusterGroup.clearLayers() only works while the cluster is
+    // still attached to the map; clearing a detached cluster is a no-op.
+    // So clear first, then remove.
+    MAP_STATE.wellsLayer.clearLayers();
+    if (MAP_STATE.map && MAP_STATE.map.hasLayer(MAP_STATE.wellsLayer)) {
+      MAP_STATE.map.removeLayer(MAP_STATE.wellsLayer);
+    }
+  }
+  const ctrl = document.getElementById('wellsControls');
+  if (ctrl) ctrl.hidden = true;
+}
+
+function setWellsCountLabel(visible, total) {
+  const el = document.getElementById('wellsLegendCount');
+  if (!el) return;
+  if (total === 0) {
+    el.textContent = 'No 2025 horizontal wells filed in this county.';
+  } else {
+    el.textContent = `${total.toLocaleString()} wells filed 2025 production`;
+  }
+}
+
+function populateWellsLayer(cluster, rows, data) {
+  const counties = data.c || [];
+  const operators = data.o || [];
+  const townships = data.t || [];
+  const fmtNum = v => Number(v || 0).toLocaleString();
+  const titleCase = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const markers = [];
+  for (const r of rows) {
+    const lat = r[0] / 1e5;
+    const lon = r[1] / 1e5;
+    const county = counties[r[2]] || '';
+    const operator = operators[r[3]] || '';
+    const township = townships[r[4]] || '';
+    const api = r[5] || '';
+    const name = r[6] || '';
+    const oil = r[7] || 0;
+    const gas = r[8] || 0;
+    const days = r[9] || 0;
+    const m = L.circleMarker([lat, lon], {
+      radius: 6,
+      color: '#fff',
+      weight: 1.5,
+      fillColor: WELL_PIN_COLOR,
+      fillOpacity: 1,
+    });
+    const popup = `<div class="well-popup">
+      <div class="well-popup-name">${escapeHtmlSimple(name) || '—'}</div>
+      <div class="well-popup-row"><span>Operator</span><strong>${escapeHtmlSimple(operator) || '—'}</strong></div>
+      <div class="well-popup-row"><span>County</span><strong>${escapeHtmlSimple(titleCase(county))}${township ? ' · ' + escapeHtmlSimple(titleCase(township)) : ''}</strong></div>
+      <div class="well-popup-row"><span>API</span><strong>${escapeHtmlSimple(api)}</strong></div>
+      <div class="well-popup-section">2025 production</div>
+      <div class="well-popup-row"><span>Oil</span><strong>${fmtNum(oil)} bbl</strong></div>
+      <div class="well-popup-row"><span>Gas</span><strong>${fmtNum(gas)} Mcf</strong></div>
+      <div class="well-popup-row"><span>Days</span><strong>${fmtNum(days)}</strong></div>
+    </div>`;
+    m.bindPopup(popup);
+    markers.push(m);
+  }
+  cluster.addLayers(markers);
+  return rows.length;
+}
+
+function escapeHtmlSimple(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
 function stylePolygon(feat) {
@@ -1368,12 +1516,14 @@ function stylePolygon(feat) {
     };
   }
   if (sel && name === sel) {
+    // Clear fill so the basemap (and well pins) read through; strong red border
+    // marks the selected county.
     return {
-      fillColor: colorForMetric(v, maxV),
+      fillColor: '#ffffff',
       weight: 3,
-      color: '#3D3D3D',
+      color: '#8B1A1A',
       opacity: 1,
-      fillOpacity: 0.9,
+      fillOpacity: 0,
     };
   }
   return {
@@ -1392,6 +1542,15 @@ function restylePolygons() {
   });
 }
 
+function zoomToCounty(name) {
+  if (!MAP_STATE.geoLayer || !MAP_STATE.map) return;
+  let bounds = null;
+  MAP_STATE.geoLayer.eachLayer(layer => {
+    if (layer.feature?.properties?.name === name) bounds = layer.getBounds();
+  });
+  if (bounds) MAP_STATE.map.flyToBounds(bounds, { padding: [24, 24], duration: 0.7, maxZoom: 12 });
+}
+
 function populateCountyDropdown() {
   const sel = document.getElementById('countySelect');
   if (!sel || sel.dataset.bound === '1') return;
@@ -1404,7 +1563,6 @@ function populateCountyDropdown() {
     if (!name) return;
     const c = COUNTIES.find(x => x.name === name);
     if (c && MAP_STATE.map) {
-      MAP_STATE.map.flyTo([c.lat, c.lng], 10, { duration: 0.7 });
       showCountyDetail(c);
     }
   });
@@ -1417,6 +1575,7 @@ function populateCountyDropdown() {
       MAP_STATE.selectedCounty = null;
       MAP_STATE.map.flyTo([40.20, -81.30], 8, { duration: 0.7 });
       restylePolygons();
+      hideWells();
       showEmptyDetail();
     });
     reset.dataset.bound = '1';
@@ -1449,6 +1608,10 @@ function showCountyDetail(c) {
   if (sel && sel.value !== c.name) sel.value = c.name;
   // Grey out other counties on the map
   restylePolygons();
+  // Zoom + center on the selected county's polygon bounds
+  zoomToCounty(c.name);
+  // Show wells for this county (lazy-load on first selection, then per-county filtered)
+  showWellsForCounty(c.name);
   const det = document.getElementById('mapDetail');
   if (!det) return;
   // True per-well-per-day average uses total well-days as the denominator
@@ -1519,6 +1682,7 @@ function renderFieldMap() {
   initMap();
   // Leaflet sometimes mis-sizes when initialized in a hidden tab; nudge it
   setTimeout(() => MAP_STATE.map && MAP_STATE.map.invalidateSize(), 50);
+  window.MAP_STATE = MAP_STATE;
 }
 
 // ===== Master render =====

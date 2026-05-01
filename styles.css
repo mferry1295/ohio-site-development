@@ -1285,6 +1285,96 @@ details[open] > summary::after { content: "−"; }
 }
 .map-legend-text { color: var(--muted); margin-right: 6px; }
 
+/* Wells layer toggle + legend (Field Map) */
+.map-controls--wells {
+  margin-top: -4px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #fafafa;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  justify-content: flex-start;
+}
+.wells-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--iron);
+  cursor: pointer;
+  user-select: none;
+}
+.wells-toggle input { cursor: pointer; }
+.wells-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+.wells-summary-count {
+  font-weight: 700;
+  color: var(--derrick);
+  letter-spacing: 0.02em;
+}
+.wells-summary-source {
+  color: var(--muted);
+  font-style: italic;
+}
+.wells-loading {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+/* Override Leaflet.markercluster's default green/yellow/orange palette so
+   every cluster — regardless of size — uses the site's red. The ring/dot
+   palette is keyed by cluster size class but we paint them all the same
+   so users don't read meaning into the color. */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-color: rgba(196, 64, 64, 0.30); /* --signal at 30% */
+}
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background-color: rgba(139, 26, 26, 0.92); /* --derrick at 92% */
+  color: #fff;
+  font-weight: 700;
+}
+
+.well-popup { font-family: 'Montserrat', sans-serif; min-width: 200px; }
+.well-popup-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+.well-popup-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 2px 0;
+  gap: 12px;
+}
+.well-popup-row span { color: var(--muted); }
+.well-popup-row strong { color: var(--iron); font-weight: 600; text-align: right; }
+.well-popup-section {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
 .map-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
