@@ -88,8 +88,8 @@ function applyScenarioVisibility() {
 function syncScenarioButtons() {
   document.querySelectorAll('.scenario-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.scenario === state.scenario));
-  // Don't overwrite the "Evaluates all scenarios" placeholder when the picker
-  // is disabled (Scenario Analysis view).
+  // Don't overwrite the "Evaluates all paths" placeholder when the picker
+  // is disabled (Path Analysis view).
   document.querySelectorAll('.scenario-select').forEach(sel => {
     if (sel.disabled) return;
     if (sel.value !== state.scenario) sel.value = state.scenario;
@@ -269,7 +269,7 @@ const scenarioStore = (() => {
       return;
     }
     const current = loadedId;
-    select.innerHTML = '<option value="">— Saved scenarios —</option>'
+    select.innerHTML = '<option value="">Select existing scenario…</option>'
       + data.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
     if (current && data.some(r => r.id === current)) {
       select.value = current;
@@ -1010,7 +1010,7 @@ function renderRecBanner(results, rec) {
     el.className = 'rec-banner none';
     el.innerHTML = `
       <div class="rec-tag">No clear winner</div>
-      <div class="rec-headline">No scenario clears a positive Owner NPV at current inputs.</div>
+      <div class="rec-headline">No path clears a positive Owner NPV at current inputs.</div>
       <div class="rec-why">Even Land Sale comes up short — try raising the land sale price, WTI, or lease rate, or lower WACC.</div>
     `;
     return;
@@ -1020,12 +1020,12 @@ function renderRecBanner(results, rec) {
   const others = results.filter(r => r.scenario !== rec.scenario && (r.ownerNpv || 0) > 0);
   let why;
   if (others.length === 0) {
-    why = `Only Scenario ${rec.scenario} produces a positive Owner NPV (${moneyM(rec.ownerNpv)}) at the current price deck.`;
+    why = `Only Path ${rec.scenario} produces a positive Owner NPV (${moneyM(rec.ownerNpv)}) at the current price deck.`;
   } else {
     const next = others.slice().sort((a, b) => (b.ownerNpv || 0) - (a.ownerNpv || 0))[0];
     const npvSpread = (rec.ownerNpv || 0) - (next.ownerNpv || 0);
-    why = `Scenario ${rec.scenario} maximizes Owner NPV (${moneyM(rec.ownerNpv)}) — ` +
-          `${moneyM(npvSpread)} above Scenario ${next.scenario} (${moneyM(next.ownerNpv)}). ` +
+    why = `Path ${rec.scenario} maximizes Owner NPV (${moneyM(rec.ownerNpv)}) — ` +
+          `${moneyM(npvSpread)} above Path ${next.scenario} (${moneyM(next.ownerNpv)}). ` +
           (rec.isLandSale
             ? `Operating returns don't beat what you'd clear by selling outright at the current price.`
             : `Owner check-write: ${moneyM(rec.ownerEquity)}; Owner IRR ${ownerIrrPct(rec.ownerIrr)}.`);
@@ -1033,7 +1033,7 @@ function renderRecBanner(results, rec) {
   el.className = 'rec-banner';
   el.innerHTML = `
     <div class="rec-tag">Recommended</div>
-    <div class="rec-headline">Scenario ${rec.scenario} · ${rec.label}</div>
+    <div class="rec-headline">Path ${rec.scenario} · ${rec.label}</div>
     <div class="rec-desc">${rec.desc}</div>
     <div class="rec-why">${why}</div>
     <div class="rec-stats">
@@ -1091,7 +1091,7 @@ function renderDecisionGrid(results) {
   const cards = [
     {
       title: 'Sell or develop',
-      body: `Scenario A clears ${moneyM(a.ownerNpv)} for the owner at the current land sale price (${moneyM(a.npv)} NPV after tax + advisor fee). Drilling wells only (B) puts ${moneyM(b.ownerNpv)} of Owner NPV on the table for a ${moneyM(b.ownerEquity)} check-write — develop only if you believe in that spread holding up.`,
+      body: `Path A clears ${moneyM(a.ownerNpv)} for the owner at the current land sale price (${moneyM(a.npv)} NPV after tax + advisor fee). Drilling wells only (B) puts ${moneyM(b.ownerNpv)} of Owner NPV on the table for a ${moneyM(b.ownerEquity)} check-write — develop only if you believe in that spread holding up.`,
     },
     {
       title: 'Capital intensity',
@@ -1099,7 +1099,7 @@ function renderDecisionGrid(results) {
     },
     {
       title: 'Time to cash',
-      body: `Land Sale is immediate — proceeds in Y1. Wells Only starts producing in Y1 with payback ${fmt.yrs(b.payback)}. Scenarios C and D add a 36–60 month build before lease revenue clears; paybacks ${fmt.yrs(c.payback)} and ${fmt.yrs(d.payback)} respectively.`,
+      body: `Land Sale is immediate — proceeds in Y1. Wells Only starts producing in Y1 with payback ${fmt.yrs(b.payback)}. Paths C and D add a 36–60 month build before lease revenue clears; paybacks ${fmt.yrs(c.payback)} and ${fmt.yrs(d.payback)} respectively.`,
     },
     {
       title: 'Operational complexity',

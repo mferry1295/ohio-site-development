@@ -245,14 +245,17 @@
       </div>
 
       <div class="scenario-store" id="scenarioStore">
+        <div class="scenario-store-head">Scenarios</div>
         <div class="scenario-store-row">
-          <select id="scenarioStoreSelect" class="scenario-store-select" aria-label="Saved scenarios">
-            <option value="">— Saved scenarios —</option>
+          <select id="scenarioStoreSelect" class="scenario-store-select" aria-label="Select existing scenario">
+            <option value="">Select existing scenario…</option>
           </select>
         </div>
+        <div class="scenario-store-row">
+          <button type="button" id="scenarioSaveBtn" class="ghost-btn scenario-store-create" title="Save the current set of inputs as a new named scenario">+ Create new scenario</button>
+        </div>
         <div class="scenario-store-row scenario-store-actions">
-          <button type="button" id="scenarioSaveBtn" class="ghost-btn" title="Save current inputs as a new named scenario">Save as…</button>
-          <button type="button" id="scenarioUpdateBtn" class="ghost-btn" title="Overwrite the loaded scenario with current inputs" disabled>Update</button>
+          <button type="button" id="scenarioUpdateBtn" class="ghost-btn" title="Overwrite the loaded scenario with the current inputs" disabled>Update</button>
           <button type="button" id="scenarioDeleteBtn" class="ghost-btn ghost-btn--danger" title="Delete the loaded scenario" disabled>Delete</button>
         </div>
         <div class="scenario-store-status" id="scenarioStoreStatus" aria-live="polite"></div>
@@ -292,7 +295,7 @@
       <details class="scenarioA">
         <summary>Land Sale</summary>
         <div class="input-grp">
-          <label>Land sale price <button class="info" type="button" data-tip="One-time sale price for selling the asset outright (Scenario A). Tuscarawas County mineral + surface rights with proven Utica acreage trade in the $5–25K/acre range; for a ~5,000-acre tract that's $25–125M. Set this input to whatever you'd realistically clear in a single transaction.">i</button> <span class="unit">$M</span></label>
+          <label>Land sale price <button class="info" type="button" data-tip="One-time sale price for selling the asset outright (Path A). Tuscarawas County mineral + surface rights with proven Utica acreage trade in the $5–25K/acre range; for a ~5,000-acre tract that's $25–125M. Set this input to whatever you'd realistically clear in a single transaction.">i</button> <span class="unit">$M</span></label>
           <input type="range" min="0" max="500" step="1" data-input="landSalePrice" />
           <input type="number" data-input="landSalePrice" />
         </div>
@@ -358,7 +361,7 @@
           <input type="number" data-input="plantCapex" />
         </div>
         <div class="input-grp">
-          <label>Grid sale price <button class="info" type="button" data-tip="Wholesale price received for selling electricity back into the PJM grid — applies in Scenario C, where the on-site plant generates power but there's no data center buying it directly. Ohio AEP zone real-time prices have averaged ~$50–70/MWh recently. Scenario D uses the hyperscaler lease rate instead.">i</button> <span class="unit">$/MWh</span></label>
+          <label>Grid sale price <button class="info" type="button" data-tip="Wholesale price received for selling electricity back into the PJM grid — applies in Path C, where the on-site plant generates power but there's no data center buying it directly. Ohio AEP zone real-time prices have averaged ~$50–70/MWh recently. Path D uses the hyperscaler lease rate instead.">i</button> <span class="unit">$/MWh</span></label>
           <input type="range" min="30" max="120" step="1" data-input="powerPrice" />
           <input type="number" data-input="powerPrice" />
         </div>
@@ -483,28 +486,28 @@
       <div class="bar-with-label bar-with-label--view">
         <div class="bar-label">View</div>
         <div class="view-toggle" role="tablist">
-          <button class="view-btn active" data-view="analysis">Scenario Analysis</button>
+          <button class="view-btn active" data-view="analysis">Path Analysis</button>
           <button class="view-btn" data-view="pnl">P&amp;L Forecast</button>
           <button class="view-btn" data-view="distrib">Distributions</button>
           <button class="view-btn" data-view="charts">Charts &amp; Graphs</button>
         </div>
         <select class="view-select" aria-label="Dashboard view">
-          <option value="analysis" selected>Scenario Analysis</option>
+          <option value="analysis" selected>Path Analysis</option>
           <option value="pnl">P&amp;L Forecast</option>
           <option value="distrib">Distributions</option>
           <option value="charts">Charts &amp; Graphs</option>
         </select>
       </div>
       <div class="bar-with-label bar-with-label--scenario">
-        <div class="bar-label">Scenario</div>
-        <div class="scenario-toggle-bar" role="tablist" aria-label="Development scenario">
+        <div class="bar-label">Path</div>
+        <div class="scenario-toggle-bar" role="tablist" aria-label="Development path">
           <button class="scenario-btn" data-scenario="A">A · Land Sale</button>
           <button class="scenario-btn active" data-scenario="B">B · Wells Only</button>
           <button class="scenario-btn" data-scenario="C">C · Wells + Power Plant</button>
           <button class="scenario-btn" data-scenario="D">D · Full Integration</button>
         </div>
-        <select class="scenario-select" aria-label="Development scenario">
-          <option value="all" data-all-scenarios>Evaluates all scenarios</option>
+        <select class="scenario-select" aria-label="Development path">
+          <option value="all" data-all-scenarios>Evaluates all paths</option>
           <option value="A">A · Land Sale</option>
           <option value="B" selected>B · Wells Only</option>
           <option value="C">C · Wells + Power Plant</option>
@@ -561,13 +564,13 @@
         </div>
       </div>
 
-      <!-- Scenario Analysis (default) -->
+      <!-- Path Analysis (default) -->
       <div class="dash-view" data-view="analysis">
         <div class="rec-banner" id="recBanner"></div>
 
         <div class="card wide">
           <div class="card-head">
-            <h3>Scenario Scoreboard</h3>
+            <h3>Path Scoreboard</h3>
             <div class="card-sub">All three paths run through the model with the current inputs. Each metric's leader is highlighted.</div>
           </div>
           <div class="table-scroll"><table id="scenarioScoreTable" class="data-table"></table></div>
@@ -822,10 +825,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-05-01a"></script>
+<script src="supabase-config.js?v=2026-05-01d"></script>
 <script src="counties.js?v=2026-04-30f"></script>
 <script src="operators.js?v=2026-04-30f"></script>
 <script src="model.js?v=2026-04-30f"></script>
-<script src="app.js?v=2026-05-01a"></script>
+<script src="app.js?v=2026-05-01d"></script>
 </body>
 </html>
