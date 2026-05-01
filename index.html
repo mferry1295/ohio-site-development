@@ -244,6 +244,20 @@
         <button id="resetBtn" class="ghost-btn" title="Reset to defaults">Reset</button>
       </div>
 
+      <div class="scenario-store" id="scenarioStore">
+        <div class="scenario-store-row">
+          <select id="scenarioStoreSelect" class="scenario-store-select" aria-label="Saved scenarios">
+            <option value="">— Saved scenarios —</option>
+          </select>
+        </div>
+        <div class="scenario-store-row scenario-store-actions">
+          <button type="button" id="scenarioSaveBtn" class="ghost-btn" title="Save current inputs as a new named scenario">Save as…</button>
+          <button type="button" id="scenarioUpdateBtn" class="ghost-btn" title="Overwrite the loaded scenario with current inputs" disabled>Update</button>
+          <button type="button" id="scenarioDeleteBtn" class="ghost-btn ghost-btn--danger" title="Delete the loaded scenario" disabled>Delete</button>
+        </div>
+        <div class="scenario-store-status" id="scenarioStoreStatus" aria-live="polite"></div>
+      </div>
+
       <details open>
         <summary>Commodity Pricing</summary>
         <div class="input-grp with-derived">
@@ -807,9 +821,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=2026-05-01a"></script>
 <script src="counties.js?v=2026-04-30f"></script>
 <script src="operators.js?v=2026-04-30f"></script>
 <script src="model.js?v=2026-04-30f"></script>
-<script src="app.js?v=2026-04-30f"></script>
+<script src="app.js?v=2026-05-01a"></script>
 </body>
 </html>

@@ -187,9 +187,209 @@ function bindReset() {
   document.getElementById('resetBtn').addEventListener('click', () => {
     Object.assign(state, M.DEFAULTS);
     syncInputs();
+    scenarioStore.setLoaded(null);
     render();
   });
 }
+
+// ===== Saved scenarios (Supabase-backed) =====
+// Stores a named snapshot of every Dashboard input + the active scenario letter
+// in a public `scenarios` table. Anyone visiting the site sees the same list.
+const scenarioStore = (() => {
+  const INPUT_KEYS = Object.keys(M.DEFAULTS || {});
+  let client = null;
+  let loadedId = null;
+  let loadedName = null;
+
+  const els = () => ({
+    wrap: document.getElementById('scenarioStore'),
+    select: document.getElementById('scenarioStoreSelect'),
+    saveBtn: document.getElementById('scenarioSaveBtn'),
+    updateBtn: document.getElementById('scenarioUpdateBtn'),
+    deleteBtn: document.getElementById('scenarioDeleteBtn'),
+    status: document.getElementById('scenarioStoreStatus'),
+  });
+
+  function setStatus(msg, tone) {
+    const { status } = els();
+    if (!status) return;
+    status.textContent = msg || '';
+    status.dataset.tone = tone || '';
+  }
+
+  function snapshot() {
+    const inputs = {};
+    INPUT_KEYS.forEach(k => { inputs[k] = state[k]; });
+    inputs.scenario = state.scenario;
+    return inputs;
+  }
+
+  function applySnapshot(inputs) {
+    if (!inputs || typeof inputs !== 'object') return;
+    INPUT_KEYS.forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(inputs, k)) state[k] = inputs[k];
+    });
+    if (typeof inputs.scenario === 'string') state.scenario = inputs.scenario;
+    syncInputs();
+    syncScenarioButtons();
+    applyScenarioVisibility();
+    render();
+  }
+
+  function setLoaded(row) {
+    loadedId = row ? row.id : null;
+    loadedName = row ? row.name : null;
+    const { select, updateBtn, deleteBtn } = els();
+    if (select) select.value = loadedId || '';
+    if (updateBtn) updateBtn.disabled = !loadedId;
+    if (deleteBtn) deleteBtn.disabled = !loadedId;
+  }
+
+  function disableAll(disabled) {
+    const { saveBtn, updateBtn, deleteBtn, select } = els();
+    [saveBtn, updateBtn, deleteBtn, select].forEach(el => { if (el) el.disabled = !!disabled; });
+    if (!disabled) {
+      // re-derive update/delete from loaded state
+      if (updateBtn) updateBtn.disabled = !loadedId;
+      if (deleteBtn) deleteBtn.disabled = !loadedId;
+    }
+  }
+
+  async function refreshList() {
+    if (!client) return;
+    const { select } = els();
+    if (!select) return;
+    const { data, error } = await client
+      .from('scenarios')
+      .select('id, name, updated_at')
+      .order('name', { ascending: true });
+    if (error) {
+      setStatus('Could not load scenarios', 'error');
+      console.error('scenarios list:', error);
+      return;
+    }
+    const current = loadedId;
+    select.innerHTML = '<option value="">— Saved scenarios —</option>'
+      + data.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+    if (current && data.some(r => r.id === current)) {
+      select.value = current;
+    }
+  }
+
+  async function loadById(id) {
+    if (!client || !id) return;
+    disableAll(true);
+    setStatus('Loading…');
+    const { data, error } = await client
+      .from('scenarios')
+      .select('id, name, inputs')
+      .eq('id', id)
+      .single();
+    disableAll(false);
+    if (error) {
+      setStatus('Could not load scenario', 'error');
+      console.error('scenario load:', error);
+      return;
+    }
+    applySnapshot(data.inputs);
+    setLoaded(data);
+    setStatus(`Loaded "${data.name}"`, 'ok');
+  }
+
+  async function saveAs() {
+    if (!client) return;
+    const name = (window.prompt('Name this scenario:', loadedName || '') || '').trim();
+    if (!name) return;
+    disableAll(true);
+    setStatus('Saving…');
+    const { data, error } = await client
+      .from('scenarios')
+      .insert({ name, inputs: snapshot() })
+      .select('id, name')
+      .single();
+    disableAll(false);
+    if (error) {
+      if (error.code === '23505') {
+        setStatus(`A scenario named "${name}" already exists`, 'error');
+      } else {
+        setStatus('Save failed', 'error');
+        console.error('scenario save:', error);
+      }
+      return;
+    }
+    await refreshList();
+    setLoaded(data);
+    setStatus(`Saved "${data.name}"`, 'ok');
+  }
+
+  async function update() {
+    if (!client || !loadedId) return;
+    disableAll(true);
+    setStatus('Updating…');
+    const { data, error } = await client
+      .from('scenarios')
+      .update({ inputs: snapshot(), updated_at: new Date().toISOString() })
+      .eq('id', loadedId)
+      .select('id, name')
+      .single();
+    disableAll(false);
+    if (error) {
+      setStatus('Update failed', 'error');
+      console.error('scenario update:', error);
+      return;
+    }
+    setStatus(`Updated "${data.name}"`, 'ok');
+  }
+
+  async function remove() {
+    if (!client || !loadedId) return;
+    if (!window.confirm(`Delete scenario "${loadedName}"? This cannot be undone.`)) return;
+    disableAll(true);
+    setStatus('Deleting…');
+    const { error } = await client
+      .from('scenarios')
+      .delete()
+      .eq('id', loadedId);
+    disableAll(false);
+    if (error) {
+      setStatus('Delete failed', 'error');
+      console.error('scenario delete:', error);
+      return;
+    }
+    const removedName = loadedName;
+    setLoaded(null);
+    await refreshList();
+    setStatus(`Deleted "${removedName}"`, 'ok');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function init() {
+    const { wrap, select, saveBtn, updateBtn, deleteBtn } = els();
+    if (!wrap) return;
+    if (!window.supabase || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+      setStatus('Saved scenarios unavailable (no backend config)', 'error');
+      [saveBtn, updateBtn, deleteBtn, select].forEach(el => { if (el) el.disabled = true; });
+      return;
+    }
+    client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    select.addEventListener('change', () => {
+      const id = select.value;
+      if (id) loadById(id);
+      else setLoaded(null);
+    });
+    saveBtn.addEventListener('click', saveAs);
+    updateBtn.addEventListener('click', update);
+    deleteBtn.addEventListener('click', remove);
+    refreshList();
+  }
+
+  return { init, setLoaded };
+})();
 
 // Accordion: opening one sidebar section collapses the others.
 // `toggle` doesn't bubble, so listen on each <details> directly.
@@ -1406,6 +1606,7 @@ function boot() {
     bindJumpLinks();
     bindMobileMenu();
     bindReset();
+    scenarioStore.init();
     bindSidebarAccordion();
     bindDashboardViews();
     bindPnlToggle();
