@@ -1289,11 +1289,17 @@ details[open] > summary::after { content: "−"; }
 .map-controls--wells {
   margin-top: -4px;
   margin-bottom: 12px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   background: #fafafa;
   border: 1px solid var(--line);
   border-radius: 4px;
+  /* Override .map-controls' row layout — stack summary, filter, and loading
+     vertically so the filter doesn't shift left/right when the summary
+     line's width changes. */
+  flex-direction: column;
+  align-items: stretch;
   justify-content: flex-start;
+  gap: 10px;
 }
 .wells-toggle {
   display: inline-flex;
@@ -1328,6 +1334,176 @@ details[open] > summary::after { content: "−"; }
   font-size: 11px;
   color: var(--muted);
   font-style: italic;
+}
+/* First-production-year filter (dual-thumb range) */
+.wells-filter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 11px;
+  color: var(--iron);
+  flex-wrap: nowrap;
+}
+.wells-filter[hidden] { display: none; }
+.wells-filter-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--derrick);
+  white-space: nowrap;
+}
+.wells-filter-range {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 200px;
+  height: 22px;
+}
+/* Stack the two range inputs on top of each other so both thumbs share one
+   track. Track is hidden on the inputs themselves; we draw it via ::before. */
+.wells-filter-range::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  background: var(--line);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.wells-filter-slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.wells-filter-slider::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 22px;
+}
+.wells-filter-slider::-moz-range-track {
+  background: transparent;
+  height: 22px;
+}
+.wells-filter-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--derrick);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--derrick);
+  cursor: pointer;
+  pointer-events: auto;
+  margin-top: 3px;
+}
+.wells-filter-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--derrick);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--derrick);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.wells-filter-readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--derrick);
+  white-space: nowrap;
+}
+.wells-filter-reset {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.wells-filter-reset:hover:not(:disabled) {
+  color: var(--derrick);
+  border-color: var(--derrick);
+}
+.wells-filter-reset:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Per-county wells table (Field Map) */
+.wells-table-section {
+  margin-top: 24px;
+}
+.wells-table-section[hidden] { display: none; }
+.wells-table-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.wells-table-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--derrick);
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+.wells-table-meta {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Sortable header affordance */
+.sortable-table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 22px;
+}
+.sortable-table thead th.sortable:hover {
+  background: #f4dadb; /* slightly deeper blush on hover */
+}
+.sortable-table thead th .sort-ind {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  letter-spacing: 0;
+  color: var(--muted);
+  opacity: 0.4;
+}
+.sortable-table thead th.sort-active .sort-ind {
+  opacity: 1;
+  color: var(--derrick);
+}
+.sortable-table thead th .sort-ind::before { content: '↕'; }
+.sortable-table thead th.sort-asc .sort-ind::before { content: '↑'; }
+.sortable-table thead th.sort-desc .sort-ind::before { content: '↓'; }
+/* Cap the table at a reasonable height; rows above scroll */
+.wells-table-section .table-scroll {
+  max-height: 480px;
+}
+.wells-table-section .data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 /* Override Leaflet.markercluster's default green/yellow/orange palette so
    every cluster — regardless of size — uses the site's red. The ring/dot

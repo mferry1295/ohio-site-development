@@ -619,6 +619,17 @@
         <span id="wellsLegendCount" class="wells-summary-count">Wells:</span>
         <span class="wells-summary-source">Each pin is a horizontal well that filed 2025 production · matched by API number to ODNR all-wells coordinates.</span>
       </div>
+      <div class="wells-filter" id="wellsYearFilter">
+        <label class="wells-filter-label">First production year</label>
+        <div class="wells-filter-range">
+          <input type="range" id="wellsYearMin" class="wells-filter-slider" autocomplete="off" aria-label="Earliest first-production year">
+          <input type="range" id="wellsYearMax" class="wells-filter-slider" autocomplete="off" aria-label="Latest first-production year">
+        </div>
+        <div class="wells-filter-readout">
+          <span id="wellsYearReadout">—</span>
+          <button type="button" id="wellsYearReset" class="wells-filter-reset" title="Reset year filter">Reset</button>
+        </div>
+      </div>
       <div class="wells-loading" id="wellsLoading" hidden>Loading wells…</div>
     </div>
 
@@ -638,6 +649,28 @@
         </div>
       </aside>
     </div>
+
+    <section class="wells-table-section" id="wellsTableSection" hidden>
+      <div class="wells-table-header">
+        <h3 class="wells-table-title"><span id="wellsTableCounty">—</span> · Wells</h3>
+        <div class="wells-table-meta" id="wellsTableMeta">—</div>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table sortable-table" id="wellsTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="name" scope="col">Well Name <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="operator" scope="col">Owner <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="county" scope="col">County <span class="sort-ind"></span></th>
+              <th class="sortable num" data-sort="firstProdYear" scope="col">First Production <span class="sort-ind"></span></th>
+              <th class="sortable num" data-sort="oilPerDay" scope="col">Oil bbl/d <span class="sort-ind"></span></th>
+              <th class="sortable num" data-sort="gasBoePerDay" scope="col">Gas bbl/d <span class="sort-ind"></span></th>
+            </tr>
+          </thead>
+          <tbody id="wellsTableBody"></tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </section>
 
