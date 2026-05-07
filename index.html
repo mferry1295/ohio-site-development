@@ -488,15 +488,15 @@
       <div class="bar-with-label bar-with-label--view">
         <div class="bar-label">View</div>
         <div class="view-toggle" role="tablist">
-          <button class="view-btn" data-view="pnl">P&amp;L Forecast</button>
+          <button class="view-btn active" data-view="pnl">P&amp;L Forecast</button>
           <button class="view-btn" data-view="distrib">Distributions</button>
-          <button class="view-btn active" data-view="analysis">Path Analysis</button>
+          <button class="view-btn" data-view="analysis">Path Analysis</button>
           <button class="view-btn" data-view="charts">Charts &amp; Graphs</button>
         </div>
         <select class="view-select" aria-label="Dashboard view">
-          <option value="pnl">P&amp;L Forecast</option>
+          <option value="pnl" selected>P&amp;L Forecast</option>
           <option value="distrib">Distributions</option>
-          <option value="analysis" selected>Path Analysis</option>
+          <option value="analysis">Path Analysis</option>
           <option value="charts">Charts &amp; Graphs</option>
         </select>
       </div>
@@ -544,8 +544,8 @@
         </div>
       </div>
 
-      <!-- View 3 — P&L Forecast -->
-      <div class="dash-view" data-view="pnl" hidden>
+      <!-- View 3 — P&L Forecast (default) -->
+      <div class="dash-view" data-view="pnl">
         <div class="card wide">
           <div class="card-head">
             <h3>P&amp;L Forecast over <span id="pnlYears">—</span> years</h3>
@@ -566,8 +566,8 @@
         </div>
       </div>
 
-      <!-- Path Analysis (default) -->
-      <div class="dash-view" data-view="analysis">
+      <!-- Path Analysis -->
+      <div class="dash-view" data-view="analysis" hidden>
         <div class="rec-banner" id="recBanner"></div>
 
         <div class="card wide">

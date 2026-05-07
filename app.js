@@ -707,9 +707,10 @@ function bindDashboardViews() {
       if (target) target.click();
     });
   });
-  // Initial pass: default view is "analysis", so the scenario picker should
-  // start disabled until the user switches to a per-scenario view.
-  const initial = document.querySelector('.view-btn.active')?.dataset.view || 'analysis';
+  // Initial pass: default view is "pnl", which is a per-scenario view, so the
+  // scenario picker starts enabled. (Path Analysis is the only view that
+  // forces the picker disabled, since it shows all four paths simultaneously.)
+  const initial = document.querySelector('.view-btn.active')?.dataset.view || 'pnl';
   applyScenarioPickerDisabled(initial);
 }
 
