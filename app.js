@@ -296,10 +296,35 @@ const scenarioStore = (() => {
     setStatus(`Loaded "${data.name}"`, 'ok');
   }
 
-  async function saveAs() {
+  // Show / hide the inline name input. We can't use window.prompt because
+  // the preview pane (and any other iframe-embedded view) silently blocks it.
+  function showCreateForm() {
+    const btn = document.getElementById('scenarioSaveBtn');
+    const inline = document.getElementById('scenarioCreateInline');
+    const input = document.getElementById('scenarioCreateName');
+    if (!btn || !inline || !input) return;
+    btn.hidden = true;
+    inline.hidden = false;
+    input.value = loadedName || '';
+    input.focus();
+    input.select();
+  }
+  function hideCreateForm() {
+    const btn = document.getElementById('scenarioSaveBtn');
+    const inline = document.getElementById('scenarioCreateInline');
+    if (btn) btn.hidden = false;
+    if (inline) inline.hidden = true;
+  }
+  async function commitCreate() {
     if (!client) return;
-    const name = (window.prompt('Name this scenario:', loadedName || '') || '').trim();
-    if (!name) return;
+    const input = document.getElementById('scenarioCreateName');
+    const name = (input?.value || '').trim();
+    if (!name) {
+      setStatus('Please enter a name', 'error');
+      input?.focus();
+      return;
+    }
+    hideCreateForm();
     disableAll(true);
     setStatus('Saving…');
     const { data, error } = await client
@@ -321,6 +346,7 @@ const scenarioStore = (() => {
     setLoaded(data);
     setStatus(`Saved "${data.name}"`, 'ok');
   }
+  async function saveAs() { showCreateForm(); }
 
   async function update() {
     if (!client || !loadedId) return;
@@ -341,9 +367,34 @@ const scenarioStore = (() => {
     setStatus(`Updated "${data.name}"`, 'ok');
   }
 
+  // Two-click confirm: first click arms the button (label flips to "Confirm
+   // delete?"), second click within 4s actually deletes. Avoids window.confirm
+   // which is blocked in iframed/embedded contexts.
+  let deleteArmed = false;
+  let deleteArmTimer = null;
+  function disarmDelete() {
+    deleteArmed = false;
+    if (deleteArmTimer) { clearTimeout(deleteArmTimer); deleteArmTimer = null; }
+    const btn = els().deleteBtn;
+    if (btn) {
+      btn.textContent = 'Delete';
+      btn.classList.remove('ghost-btn--armed');
+    }
+  }
   async function remove() {
     if (!client || !loadedId) return;
-    if (!window.confirm(`Delete scenario "${loadedName}"? This cannot be undone.`)) return;
+    const btn = els().deleteBtn;
+    if (!deleteArmed) {
+      deleteArmed = true;
+      if (btn) {
+        btn.textContent = 'Confirm delete?';
+        btn.classList.add('ghost-btn--armed');
+      }
+      setStatus(`Click again to delete "${loadedName}"`, 'warn');
+      deleteArmTimer = setTimeout(() => { disarmDelete(); setStatus('', ''); }, 4000);
+      return;
+    }
+    disarmDelete();
     disableAll(true);
     setStatus('Deleting…');
     const { error } = await client
@@ -385,6 +436,19 @@ const scenarioStore = (() => {
     saveBtn.addEventListener('click', saveAs);
     updateBtn.addEventListener('click', update);
     deleteBtn.addEventListener('click', remove);
+    // Inline create form
+    const createConfirm = document.getElementById('scenarioCreateConfirm');
+    const createCancel = document.getElementById('scenarioCreateCancel');
+    const createName = document.getElementById('scenarioCreateName');
+    if (createConfirm) createConfirm.addEventListener('click', commitCreate);
+    if (createCancel) createCancel.addEventListener('click', () => {
+      hideCreateForm();
+      setStatus('', '');
+    });
+    if (createName) createName.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commitCreate(); }
+      else if (e.key === 'Escape') { e.preventDefault(); hideCreateForm(); setStatus('', ''); }
+    });
     refreshList();
   }
 

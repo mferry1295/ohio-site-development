@@ -345,7 +345,63 @@ main { min-height: calc(100vh - 70px); }
   letter-spacing: 0.02em;
 }
 .scenario-store-status[data-tone="ok"] { color: var(--pos); }
+.scenario-store-status[data-tone="warn"] { color: var(--derrick); }
 .scenario-store-status[data-tone="error"] { color: var(--neg); }
+
+/* Inline name-input form (replaces window.prompt for Create) */
+.scenario-inline-form {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.scenario-inline-form[hidden] { display: none; }
+.scenario-inline-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--derrick);
+  border-radius: 4px;
+  background: var(--pure);
+  color: var(--iron);
+}
+.scenario-inline-input:focus {
+  outline: 2px solid var(--derrick);
+  outline-offset: 1px;
+}
+.scenario-inline-ok {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  background: var(--derrick);
+  border-color: var(--derrick);
+  color: var(--pure);
+}
+.scenario-inline-ok:hover:not(:disabled) {
+  background: var(--signal);
+  border-color: var(--signal);
+}
+.scenario-inline-cancel {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Armed-delete state (Confirm delete? — shown after first click) */
+.ghost-btn--armed {
+  background: var(--neg);
+  border-color: var(--neg);
+  color: var(--pure);
+}
+.ghost-btn--armed:hover:not(:disabled) {
+  background: var(--neg);
+  border-color: var(--neg);
+  color: var(--pure);
+  filter: brightness(1.1);
+}
 
 details {
   border: 1px solid var(--line);

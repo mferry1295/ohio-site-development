@@ -255,6 +255,11 @@
         </div>
         <div class="scenario-store-row">
           <button type="button" id="scenarioSaveBtn" class="ghost-btn scenario-store-create" title="Save the current set of inputs as a new named scenario">+ Create new scenario</button>
+          <div class="scenario-inline-form" id="scenarioCreateInline" hidden>
+            <input type="text" id="scenarioCreateName" class="scenario-inline-input" placeholder="Scenario name…" maxlength="80" autocomplete="off">
+            <button type="button" id="scenarioCreateConfirm" class="ghost-btn scenario-inline-ok">Save</button>
+            <button type="button" id="scenarioCreateCancel" class="ghost-btn scenario-inline-cancel" aria-label="Cancel">×</button>
+          </div>
         </div>
         <div class="scenario-store-row scenario-store-actions">
           <button type="button" id="scenarioUpdateBtn" class="ghost-btn" title="Overwrite the loaded scenario with the current inputs" disabled>Update</button>
