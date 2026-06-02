@@ -1284,6 +1284,116 @@ details[open] > summary::after { content: "−"; }
   border-color: var(--derrick);
 }
 
+/* ===== Field Map filter bar ===== */
+.field-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+  background: var(--blush);
+  border-left: 3px solid var(--derrick);
+  border-radius: 0 4px 4px 0;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.field-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.field-filter > label,
+.field-filter-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--derrick);
+}
+.field-filter select,
+.field-filter input[type="number"] {
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  background: var(--pure);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 6px 9px;
+}
+.field-filter select:focus,
+.field-filter input[type="number"]:focus {
+  outline: none;
+  border-color: var(--derrick);
+}
+.field-filter select {
+  cursor: pointer;
+  appearance: none;
+  min-width: 160px;
+  max-width: 230px;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238B1A1A' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+}
+.ff-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ff-range span { color: var(--muted); font-size: 12px; }
+.ff-range input[type="number"] {
+  width: 72px;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+.ff-range input[type="number"]::-webkit-inner-spin-button,
+.ff-range input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.field-filter--check { justify-content: flex-end; }
+.ff-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.ff-check input { accent-color: var(--derrick); cursor: pointer; }
+.field-filter--actions { justify-content: flex-end; }
+.field-filter-count {
+  margin-left: auto;
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--iron);
+  white-space: nowrap;
+}
+.field-filter-count strong {
+  color: var(--derrick);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* Slim source/loading caption under the map controls */
+.wells-caption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -2px 0 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.wells-caption .wells-loading {
+  font-weight: 700;
+  color: var(--derrick);
+}
+
 .map-controls {
   display: flex;
   justify-content: space-between;

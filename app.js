@@ -1748,12 +1748,22 @@ const MAP_STATE = {
   wellsLayer: null,
   wellsLoading: false,
   wellsData: null,
-  wellsYearMin: null,    // current min on the first-prod-year filter (inclusive)
-  wellsYearMax: null,    // current max (inclusive)
   wellsYearBounds: null, // [minYear, maxYear] across loaded data
-  // Sort for the wells detail table. Default to highest oil-rate first —
-  // the most economically interesting wells surface at the top.
-  wellsTableSort: { col: 'oilPerDay', dir: 'desc' },
+  // Threshold filters that drive both the pins and the detail table. Empty /
+  // null fields mean "no constraint". County is stored uppercase to match the
+  // raw names in wells.json.
+  filters: {
+    county: '', operator: '',
+    yearMin: null, yearMax: null,
+    gasMin: null, gasMax: null,   // MMcf/d
+    oilMin: null, oilMax: null,   // bbl/d
+    includeUnknownYear: true,
+  },
+  filteredItems: [],     // projected wells passing the current filters (cache for sort)
+  filtersBound: false,
+  // Sort for the wells detail table. Default to highest gas rate first —
+  // the gas-richest wells surface at the top for the behind-the-meter thesis.
+  wellsTableSort: { col: 'gasPerDayMMcf', dir: 'desc' },
   wellsTableBound: false, // header click handler attached only once
 };
 
@@ -1850,8 +1860,6 @@ function initMap() {
       MAP_STATE.map.fitBounds(MAP_STATE.geoLayer.getBounds(), { padding: [10, 10] });
     });
 
-  populateCountyDropdown();
-
   // Bind metric toggle
   document.querySelectorAll('.map-metric-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1904,9 +1912,6 @@ async function ensureWellsLoaded() {
     }
     if (yMin !== Infinity) {
       MAP_STATE.wellsYearBounds = [yMin, yMax];
-      MAP_STATE.wellsYearMin = yMin;
-      MAP_STATE.wellsYearMax = yMax;
-      initWellsYearFilter();
     }
   } catch (e) {
     console.error('Failed to load wells:', e);
@@ -1916,176 +1921,229 @@ async function ensureWellsLoaded() {
   }
 }
 
-function initWellsYearFilter() {
-  const minEl = document.getElementById('wellsYearMin');
-  const maxEl = document.getElementById('wellsYearMax');
-  const resetBtn = document.getElementById('wellsYearReset');
-  if (!minEl || !maxEl || !MAP_STATE.wellsYearBounds) return;
-  const [lo, hi] = MAP_STATE.wellsYearBounds;
-  // Idempotent — only attach handlers once
-  if (minEl.dataset.bound === '1') return;
-  minEl.dataset.bound = '1';
-  minEl.min = lo; minEl.max = hi; minEl.value = lo; minEl.step = 1;
-  maxEl.min = lo; maxEl.max = hi; maxEl.value = hi; maxEl.step = 1;
-  updateWellsYearReadout();
-  const onChange = (ev) => {
-    let lv = Number(minEl.value), hv = Number(maxEl.value);
-    if (lv > hv) { // keep the two thumbs from crossing — the moving thumb wins
-      if (ev && ev.target === minEl) hv = lv; else lv = hv;
-      minEl.value = lv; maxEl.value = hv;
-    }
-    MAP_STATE.wellsYearMin = lv;
-    MAP_STATE.wellsYearMax = hv;
-    updateWellsYearReadout();
-    rebuildWellsLayer();
+// ===== Field Map filters =====
+// One global filter set drives both the pins and the detail table. Every well
+// is projected once, tested against the active thresholds, then rendered.
+const mapTitleCase = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
+function fieldDebounce(fn, ms = 160) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+function parseFilterNum(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const v = el.value.trim();
+  if (v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function readFieldFilters() {
+  const f = MAP_STATE.filters;
+  f.county = (document.getElementById('ffCounty')?.value || '').toUpperCase();
+  f.operator = document.getElementById('ffOperator')?.value || '';
+  f.yearMin = parseFilterNum('ffYearMin');
+  f.yearMax = parseFilterNum('ffYearMax');
+  f.gasMin = parseFilterNum('ffGasMin');
+  f.gasMax = parseFilterNum('ffGasMax');
+  f.oilMin = parseFilterNum('ffOilMin');
+  f.oilMax = parseFilterNum('ffOilMax');
+  f.includeUnknownYear = document.getElementById('ffUnknownYear')?.checked ?? true;
+}
+
+// Decode one raw wells.json record into a labelled object with derived rates.
+function projectWell(r, data) {
+  const days = r[9] || 0, oil = r[7] || 0, gas = r[8] || 0;
+  return {
+    lat: r[0] / 1e5, lon: r[1] / 1e5,
+    countyRaw: data.c[r[2]] || '',
+    county: mapTitleCase(data.c[r[2]] || ''),
+    operator: data.o[r[3]] || '',
+    township: mapTitleCase(data.t[r[4]] || ''),
+    api: r[5] || '',
+    name: r[6] || '',
+    oilBbl: oil,
+    gasMcf: gas,
+    gasMMcf: gas / 1000,
+    days,
+    firstProdYear: r[10] || 0,
+    oilPerDay: days > 0 ? oil / days : 0,
+    gasPerDayMMcf: days > 0 ? (gas / days) / 1000 : 0,
   };
-  minEl.addEventListener('input', onChange);
-  maxEl.addEventListener('input', onChange);
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      minEl.value = lo; maxEl.value = hi;
-      MAP_STATE.wellsYearMin = lo; MAP_STATE.wellsYearMax = hi;
-      updateWellsYearReadout();
-      rebuildWellsLayer();
-    });
+}
+
+function wellPasses(p, f) {
+  if (f.county && p.countyRaw.toUpperCase() !== f.county) return false;
+  if (f.operator && p.operator !== f.operator) return false;
+  if (p.firstProdYear > 0) {
+    if (f.yearMin != null && p.firstProdYear < f.yearMin) return false;
+    if (f.yearMax != null && p.firstProdYear > f.yearMax) return false;
+  } else if (!f.includeUnknownYear) {
+    return false; // unknown first-prod year, and the user opted them out
   }
+  if (f.gasMin != null && p.gasPerDayMMcf < f.gasMin) return false;
+  if (f.gasMax != null && p.gasPerDayMMcf > f.gasMax) return false;
+  if (f.oilMin != null && p.oilPerDay < f.oilMin) return false;
+  if (f.oilMax != null && p.oilPerDay > f.oilMax) return false;
+  return true;
 }
 
-function updateWellsYearReadout() {
-  const out = document.getElementById('wellsYearReadout');
-  if (!out || !MAP_STATE.wellsYearBounds) return;
-  const [lo, hi] = MAP_STATE.wellsYearBounds;
-  const a = MAP_STATE.wellsYearMin, b = MAP_STATE.wellsYearMax;
-  const isFullRange = a === lo && b === hi;
-  out.textContent = a === b ? `${a}` : `${a} – ${b}`;
-  const reset = document.getElementById('wellsYearReset');
-  if (reset) reset.disabled = isFullRange;
+function buildWellMarker(p) {
+  const fmtNum = v => Number(v || 0).toLocaleString();
+  const m = L.circleMarker([p.lat, p.lon], {
+    radius: 6, color: '#fff', weight: 1.5, fillColor: WELL_PIN_COLOR, fillOpacity: 1,
+  });
+  m.bindPopup(`<div class="well-popup">
+    <div class="well-popup-name">${escapeHtmlSimple(p.name) || '—'}</div>
+    <div class="well-popup-row"><span>Operator</span><strong>${escapeHtmlSimple(p.operator) || '—'}</strong></div>
+    <div class="well-popup-row"><span>County</span><strong>${escapeHtmlSimple(p.county)}${p.township ? ' · ' + escapeHtmlSimple(p.township) : ''}</strong></div>
+    <div class="well-popup-row"><span>API</span><strong>${escapeHtmlSimple(p.api)}</strong></div>
+    <div class="well-popup-row"><span>First prod.</span><strong>${p.firstProdYear ? p.firstProdYear : '—'}</strong></div>
+    <div class="well-popup-section">2025 production</div>
+    <div class="well-popup-row"><span>Oil</span><strong>${fmtNum(p.oilBbl)} bbl</strong></div>
+    <div class="well-popup-row"><span>Gas</span><strong>${fmtNum(p.gasMcf)} Mcf</strong></div>
+    <div class="well-popup-row"><span>Gas / day</span><strong>${p.gasPerDayMMcf.toLocaleString(undefined, { maximumFractionDigits: 2 })} MMcf/d</strong></div>
+    <div class="well-popup-row"><span>Days</span><strong>${fmtNum(p.days)}</strong></div>
+  </div>`);
+  return m;
 }
 
-function rebuildWellsLayer() {
-  if (MAP_STATE.selectedCounty) showWellsForCounty(MAP_STATE.selectedCounty);
-}
-
-async function showWellsForCounty(name) {
-  if (!name) { hideWells(); return; }
-  await ensureWellsLoaded();
-  const data = MAP_STATE.wellsData;
-  if (!data || !MAP_STATE.map) return;
-  const rows = data.byCounty[name.toUpperCase()] || [];
-  document.getElementById('wellsControls').hidden = false;
-  // One cluster group is reused across all rebuilds (filter changes, county
-  // switches). clearLayers + addLayers keeps the layer count in sync with
-  // the visible filter set, with no leftover markers from prior states.
+function renderWellPins(items) {
+  if (!MAP_STATE.map) return;
   if (!MAP_STATE.wellsLayer) {
     MAP_STATE.wellsLayer = L.markerClusterGroup({
-      maxClusterRadius: 40,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
+      maxClusterRadius: 40, spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false, zoomToBoundsOnClick: true,
     });
     MAP_STATE.map.addLayer(MAP_STATE.wellsLayer);
   } else {
     MAP_STATE.wellsLayer.clearLayers();
-    if (!MAP_STATE.map.hasLayer(MAP_STATE.wellsLayer)) {
-      MAP_STATE.map.addLayer(MAP_STATE.wellsLayer);
-    }
+    if (!MAP_STATE.map.hasLayer(MAP_STATE.wellsLayer)) MAP_STATE.map.addLayer(MAP_STATE.wellsLayer);
   }
-  if (rows.length === 0) {
-    setWellsCountLabel(0, 0);
-    renderWellsTable(name, [], data);
-    return;
-  }
-  const visibleCount = populateWellsLayer(MAP_STATE.wellsLayer, rows, data);
-  setWellsCountLabel(visibleCount, rows.length);
-  const filterEl = document.getElementById('wellsYearFilter');
-  if (filterEl) filterEl.hidden = !MAP_STATE.wellsYearBounds;
-  renderWellsTable(name, rows, data);
+  MAP_STATE.wellsLayer.addLayers(items.map(buildWellMarker));
 }
 
-function hideWells() {
-  if (MAP_STATE.wellsLayer) {
-    // L.markerClusterGroup.clearLayers() only works while the cluster is
-    // still attached to the map; clearing a detached cluster is a no-op.
-    // So clear first, then remove.
-    MAP_STATE.wellsLayer.clearLayers();
-    if (MAP_STATE.map && MAP_STATE.map.hasLayer(MAP_STATE.wellsLayer)) {
-      MAP_STATE.map.removeLayer(MAP_STATE.wellsLayer);
-    }
+// Main entry: recompute the matching set and refresh pins, table, and count.
+async function applyFieldFilters() {
+  await ensureWellsLoaded();
+  const data = MAP_STATE.wellsData;
+  if (!data || !MAP_STATE.map) return;
+  readFieldFilters();
+  const f = MAP_STATE.filters;
+  const all = data.r || [];
+  const items = [];
+  for (const r of all) {
+    const p = projectWell(r, data);
+    if (wellPasses(p, f)) items.push(p);
   }
-  const ctrl = document.getElementById('wellsControls');
-  if (ctrl) ctrl.hidden = true;
-  const tbl = document.getElementById('wellsTableSection');
-  if (tbl) tbl.hidden = true;
+  MAP_STATE.filteredItems = items;
+  renderWellPins(items);
+  renderWellsTable();
+  updateFilterCount(items.length, all.length);
+  if (!f.county) renderFilterSummary(items); // county view keeps its own detail aside
 }
 
-function setWellsCountLabel(visible, total) {
-  const el = document.getElementById('wellsLegendCount');
-  if (!el) return;
-  if (total === 0) {
-    el.textContent = 'No 2025 horizontal wells filed in this county.';
-  } else if (visible !== total) {
-    el.textContent = `${visible.toLocaleString()} of ${total.toLocaleString()} wells (filtered)`;
-  } else {
-    el.textContent = `${total.toLocaleString()} wells filed 2025 production`;
+function updateFilterCount(matched, total) {
+  const el = document.getElementById('ffCount');
+  if (el) el.innerHTML = `<strong>${matched.toLocaleString()}</strong> of ${total.toLocaleString()} wells`;
+}
+
+function populateFieldFilterDropdowns() {
+  const data = MAP_STATE.wellsData;
+  if (!data) return;
+  const cSel = document.getElementById('ffCounty');
+  if (cSel && cSel.dataset.bound !== '1') {
+    const counties = [...(data.c || [])]
+      .map(c => ({ raw: c, disp: mapTitleCase(c) }))
+      .sort((a, b) => a.disp.localeCompare(b.disp));
+    cSel.innerHTML = '<option value="">All counties</option>' +
+      counties.map(c => `<option value="${escapeHtmlSimple(c.raw)}">${escapeHtmlSimple(c.disp)}</option>`).join('');
+    cSel.dataset.bound = '1';
+  }
+  const oSel = document.getElementById('ffOperator');
+  if (oSel && oSel.dataset.bound !== '1') {
+    const ops = [...(data.o || [])].sort((a, b) => a.localeCompare(b));
+    oSel.innerHTML = '<option value="">All operators</option>' +
+      ops.map(o => `<option value="${escapeHtmlSimple(o)}">${escapeHtmlSimple(o)}</option>`).join('');
+    oSel.dataset.bound = '1';
+  }
+  const b = MAP_STATE.wellsYearBounds;
+  if (b) {
+    const yMin = document.getElementById('ffYearMin'), yMax = document.getElementById('ffYearMax');
+    if (yMin && !yMin.placeholder) { yMin.placeholder = b[0]; yMin.min = b[0]; yMin.max = b[1]; }
+    if (yMax && !yMax.placeholder) { yMax.placeholder = b[1]; yMax.min = b[0]; yMax.max = b[1]; }
   }
 }
 
-function populateWellsLayer(cluster, rows, data) {
-  const counties = data.c || [];
-  const operators = data.o || [];
-  const townships = data.t || [];
-  const fmtNum = v => Number(v || 0).toLocaleString();
-  const titleCase = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-  // Year filter: when the slider is at the full bounds, show every well
-  // (including those with unknown year=0). When narrowed, show only wells
-  // whose first-prod year falls in [yMin, yMax] — unknown-year wells drop
-  // out so the user gets exactly what the slider says.
-  const yMin = MAP_STATE.wellsYearMin;
-  const yMax = MAP_STATE.wellsYearMax;
-  const bounds = MAP_STATE.wellsYearBounds;
-  const isFullRange = bounds && yMin === bounds[0] && yMax === bounds[1];
-  const markers = [];
-  let visible = 0;
-  for (const r of rows) {
-    const yr = r[10] || 0;
-    if (!isFullRange) {
-      if (yr === 0) continue;
-      if (yr < yMin || yr > yMax) continue;
+function bindFieldFilters() {
+  if (MAP_STATE.filtersBound) return;
+  const apply = fieldDebounce(() => applyFieldFilters(), 160);
+  const onCounty = () => {
+    const v = document.getElementById('ffCounty')?.value || '';
+    if (v) {
+      const c = window.OhioCounties.COUNTIES.find(x => x.name.toUpperCase() === v.toUpperCase());
+      if (c) { showCountyDetail(c); return; } // zooms + applies the county filter
     }
-    visible++;
-    const lat = r[0] / 1e5;
-    const lon = r[1] / 1e5;
-    const county = counties[r[2]] || '';
-    const operator = operators[r[3]] || '';
-    const township = townships[r[4]] || '';
-    const api = r[5] || '';
-    const name = r[6] || '';
-    const oil = r[7] || 0;
-    const gas = r[8] || 0;
-    const days = r[9] || 0;
-    const m = L.circleMarker([lat, lon], {
-      radius: 6,
-      color: '#fff',
-      weight: 1.5,
-      fillColor: WELL_PIN_COLOR,
-      fillOpacity: 1,
+    MAP_STATE.selectedCounty = null;
+    restylePolygons();
+    applyFieldFilters();
+  };
+  document.getElementById('ffCounty')?.addEventListener('change', onCounty);
+  document.getElementById('ffOperator')?.addEventListener('change', () => applyFieldFilters());
+  document.getElementById('ffUnknownYear')?.addEventListener('change', () => applyFieldFilters());
+  ['ffYearMin', 'ffYearMax', 'ffGasMin', 'ffGasMax', 'ffOilMin', 'ffOilMax'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', apply);
+  });
+  document.getElementById('ffReset')?.addEventListener('click', () => {
+    ['ffYearMin', 'ffYearMax', 'ffGasMin', 'ffGasMax', 'ffOilMin', 'ffOilMax'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
     });
-    const popup = `<div class="well-popup">
-      <div class="well-popup-name">${escapeHtmlSimple(name) || '—'}</div>
-      <div class="well-popup-row"><span>Operator</span><strong>${escapeHtmlSimple(operator) || '—'}</strong></div>
-      <div class="well-popup-row"><span>County</span><strong>${escapeHtmlSimple(titleCase(county))}${township ? ' · ' + escapeHtmlSimple(titleCase(township)) : ''}</strong></div>
-      <div class="well-popup-row"><span>API</span><strong>${escapeHtmlSimple(api)}</strong></div>
-      <div class="well-popup-row"><span>First prod.</span><strong>${yr ? yr : '—'}</strong></div>
-      <div class="well-popup-section">2025 production</div>
-      <div class="well-popup-row"><span>Oil</span><strong>${fmtNum(oil)} bbl</strong></div>
-      <div class="well-popup-row"><span>Gas</span><strong>${fmtNum(gas)} Mcf</strong></div>
-      <div class="well-popup-row"><span>Days</span><strong>${fmtNum(days)}</strong></div>
-    </div>`;
-    m.bindPopup(popup);
-    markers.push(m);
+    const cc = document.getElementById('ffCounty'); if (cc) cc.value = '';
+    const oo = document.getElementById('ffOperator'); if (oo) oo.value = '';
+    const uk = document.getElementById('ffUnknownYear'); if (uk) uk.checked = true;
+    MAP_STATE.selectedCounty = null;
+    restylePolygons();
+    if (MAP_STATE.map) MAP_STATE.map.flyTo([40.20, -81.30], 8, { duration: 0.6 });
+    applyFieldFilters();
+  });
+  MAP_STATE.filtersBound = true;
+}
+
+// Aggregate snapshot shown in the right-hand aside when no single county is
+// selected (i.e. a cross-county filtered view).
+function renderFilterSummary(items) {
+  const det = document.getElementById('mapDetail');
+  if (!det) return;
+  const n = items.length;
+  let totGas = 0, totOil = 0, totGasPerDay = 0;
+  const opWells = {};
+  for (const p of items) {
+    totGas += p.gasMcf; totOil += p.oilBbl; totGasPerDay += p.gasPerDayMMcf;
+    opWells[p.operator] = (opWells[p.operator] || 0) + 1;
   }
-  cluster.addLayers(markers);
-  return visible;
+  const topOps = Object.entries(opWells).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const avgGas = n ? totGasPerDay / n : 0;
+  const opRows = topOps.map(([op, w]) => `
+    <div class="map-op-row">
+      <div class="map-op-name">${escapeHtmlSimple(op) || '—'}</div>
+      <div class="map-op-stats"><span><strong>${w.toLocaleString()}</strong> wells</span></div>
+    </div>`).join('');
+  det.innerHTML = `
+    <div class="map-detail-header">
+      <div class="map-detail-tag">FILTERED RESULTS</div>
+      <h3>${n.toLocaleString()} well${n === 1 ? '' : 's'}</h3>
+      <div class="map-detail-sub">Across all producing counties matching the active filters.</div>
+    </div>
+    <div class="map-detail-body">
+      ${n ? `<div class="map-detail-section-title">2025 production · selection</div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Total gas</span><span class="map-detail-stat-value">${(totGas / 1e6).toFixed(2)} Bcf</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Total oil</span><span class="map-detail-stat-value">${fmt.num(Math.round(totOil))} bbl</span></div>
+      <div class="map-detail-stat"><span class="map-detail-stat-label">Avg. gas / day per well</span><span class="map-detail-stat-value">${avgGas.toLocaleString(undefined, { maximumFractionDigits: 2 })} MMcf/d</span></div>
+      ${topOps.length ? `<div class="map-detail-section-title">Top operators by well count</div><div class="map-op-list">${opRows}</div>` : ''}`
+      : `<div class="map-empty"><p>No wells match the current filters. Loosen a threshold or reset.</p></div>`}
+    </div>`;
 }
 
 function escapeHtmlSimple(s) {
@@ -2093,9 +2151,10 @@ function escapeHtmlSimple(s) {
 }
 
 // ===== Wells detail table =====
-// Builds the per-county table beneath the map. Honors the year filter so
-// the table mirrors what's pinned on the map. Sortable on every column.
-function renderWellsTable(countyName, rows, data) {
+// Renders the filtered wells (MAP_STATE.filteredItems) beneath the map.
+// Sortable on every column; capped for snappy rendering on broad queries.
+const WELLS_TABLE_CAP = 500;
+function renderWellsTable() {
   const section = document.getElementById('wellsTableSection');
   const tbody = document.getElementById('wellsTableBody');
   const countyEl = document.getElementById('wellsTableCounty');
@@ -2103,68 +2162,31 @@ function renderWellsTable(countyName, rows, data) {
   if (!section || !tbody) return;
 
   bindWellsTableHeaders();
-
-  if (!rows || rows.length === 0) {
-    section.hidden = true;
-    tbody.innerHTML = '';
-    return;
-  }
   section.hidden = false;
 
-  const operators = data.o || [];
-  const counties = data.c || [];
-  const titleCase = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-  const yMin = MAP_STATE.wellsYearMin;
-  const yMax = MAP_STATE.wellsYearMax;
-  const bounds = MAP_STATE.wellsYearBounds;
-  const isFullRange = bounds && yMin === bounds[0] && yMax === bounds[1];
-
-  // Project each row into the row-object the table uses for sorting + render.
-  const items = [];
-  for (const r of rows) {
-    const yr = r[10] || 0;
-    if (!isFullRange) {
-      if (yr === 0) continue;
-      if (yr < yMin || yr > yMax) continue;
-    }
-    const days = r[9] || 0;
-    const oil = r[7] || 0;
-    const gas = r[8] || 0;
-    items.push({
-      name: r[6] || '',
-      operator: operators[r[3]] || '',
-      county: titleCase(counties[r[2]] || ''),
-      firstProdYear: yr,
-      // Per-well per-day: divide by the well's own producing days, not a
-      // calendar denominator. Wells that came online mid-year aren't
-      // unfairly diluted.
-      oilPerDay: days > 0 ? oil / days : 0,
-      // Gas in bbl-of-oil-equivalent per day, matching the per-county
-      // detail panel convention (5.659 Mcf per BOE).
-      gasBoePerDay: days > 0 ? (gas / days) / 5.659 : 0,
-    });
-  }
-
+  const items = (MAP_STATE.filteredItems || []).slice();
   const { col, dir } = MAP_STATE.wellsTableSort;
   items.sort((a, b) => {
     const av = a[col], bv = b[col];
     let cmp;
-    if (typeof av === 'number' && typeof bv === 'number') {
-      cmp = av - bv;
-    } else {
-      cmp = String(av).localeCompare(String(bv), undefined, { sensitivity: 'base' });
-    }
+    if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv;
+    else cmp = String(av).localeCompare(String(bv), undefined, { sensitivity: 'base' });
     return dir === 'asc' ? cmp : -cmp;
   });
+  const shown = items.slice(0, WELLS_TABLE_CAP);
 
-  if (countyEl) countyEl.textContent = titleCase(countyName) + ' County';
+  if (countyEl) {
+    countyEl.textContent = MAP_STATE.filters.county
+      ? mapTitleCase(MAP_STATE.filters.county) + ' County'
+      : 'All counties';
+  }
   if (metaEl) {
-    metaEl.textContent = isFullRange
-      ? `${items.length.toLocaleString()} wells`
-      : `${items.length.toLocaleString()} wells · first prod. ${yMin === yMax ? yMin : `${yMin}–${yMax}`}`;
+    metaEl.textContent = items.length > WELLS_TABLE_CAP
+      ? `Showing top ${WELLS_TABLE_CAP} of ${items.length.toLocaleString()} matching wells — refine filters or sort to focus`
+      : `${items.length.toLocaleString()} matching well${items.length === 1 ? '' : 's'}`;
   }
 
-  // Update sort indicators on the headers
+  // Sort indicators
   document.querySelectorAll('#wellsTable th.sortable').forEach(th => {
     const isActive = th.dataset.sort === col;
     th.classList.toggle('sort-active', isActive);
@@ -2173,18 +2195,20 @@ function renderWellsTable(countyName, rows, data) {
     th.setAttribute('aria-sort', isActive ? (dir === 'asc' ? 'ascending' : 'descending') : 'none');
   });
 
-  // Render rows
-  const fmt0 = v => Math.round(v).toLocaleString();
-  const tcN = s => titleCase(s);
-  const html = items.map(it => `<tr>
+  const f0 = v => Math.round(v).toLocaleString();
+  const f1 = v => v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  const f2 = v => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  tbody.innerHTML = shown.map(it => `<tr>
     <td>${escapeHtmlSimple(it.name) || '—'}</td>
-    <td>${escapeHtmlSimple(tcN(it.operator)) || '—'}</td>
+    <td>${escapeHtmlSimple(it.operator) || '—'}</td>
     <td>${escapeHtmlSimple(it.county)}</td>
+    <td>${escapeHtmlSimple(it.township) || '—'}</td>
     <td class="num">${it.firstProdYear || '—'}</td>
-    <td class="num">${fmt0(it.oilPerDay)}</td>
-    <td class="num">${fmt0(it.gasBoePerDay)}</td>
+    <td class="num">${f0(it.oilPerDay)}</td>
+    <td class="num">${f2(it.gasPerDayMMcf)}</td>
+    <td class="num">${f1(it.gasMMcf)}</td>
+    <td class="num">${f0(it.oilBbl)}</td>
   </tr>`).join('');
-  tbody.innerHTML = html;
 }
 
 function bindWellsTableHeaders() {
@@ -2204,10 +2228,7 @@ function bindWellsTableHeaders() {
         cur.col = col;
         cur.dir = th.classList.contains('num') ? 'desc' : 'asc';
       }
-      if (MAP_STATE.selectedCounty && MAP_STATE.wellsData) {
-        const rows = MAP_STATE.wellsData.byCounty[MAP_STATE.selectedCounty.toUpperCase()] || [];
-        renderWellsTable(MAP_STATE.selectedCounty, rows, MAP_STATE.wellsData);
-      }
+      renderWellsTable(); // re-render from the cached filtered set
     });
   });
   MAP_STATE.wellsTableBound = true;
@@ -2267,67 +2288,21 @@ function zoomToCounty(name) {
   if (bounds) MAP_STATE.map.flyToBounds(bounds, { padding: [24, 24], duration: 0.7, maxZoom: 12 });
 }
 
-function populateCountyDropdown() {
-  const sel = document.getElementById('countySelect');
-  if (!sel || sel.dataset.bound === '1') return;
-  const { COUNTIES } = window.OhioCounties;
-  const sorted = [...COUNTIES].sort((a, b) => a.name.localeCompare(b.name));
-  sel.innerHTML = '<option value="">— Select a county —</option>' +
-    sorted.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-  sel.addEventListener('change', e => {
-    const name = e.target.value;
-    if (!name) return;
-    const c = COUNTIES.find(x => x.name === name);
-    if (c && MAP_STATE.map) {
-      showCountyDetail(c);
-    }
-  });
-  sel.dataset.bound = '1';
-  // Reset button
-  const reset = document.getElementById('countyClearBtn');
-  if (reset && reset.dataset.bound !== '1') {
-    reset.addEventListener('click', () => {
-      sel.value = '';
-      MAP_STATE.selectedCounty = null;
-      MAP_STATE.map.flyTo([40.20, -81.30], 8, { duration: 0.7 });
-      restylePolygons();
-      hideWells();
-      showEmptyDetail();
-    });
-    reset.dataset.bound = '1';
-  }
-}
-
-function showEmptyDetail() {
-  const det = document.getElementById('mapDetail');
-  if (!det) return;
-  det.innerHTML = `
-    <div class="map-detail-header">
-      <div class="map-detail-tag">SELECT A COUNTY</div>
-      <h3>Click a county</h3>
-      <div class="map-detail-sub">Counties are shaded darker as the selected metric increases.</div>
-    </div>
-    <div class="map-detail-body">
-      <div class="map-empty">
-        <p>Eight counties — Belmont, Carroll, Columbiana, Guernsey, Harrison, Jefferson, Monroe, and Noble — account for more than 98% of producing Utica wells in Ohio.</p>
-        <p>Tuscarawas County is the volatile-oil window emerging play that the financial model is calibrated to.</p>
-      </div>
-    </div>
-  `;
-}
-
-
 function showCountyDetail(c) {
   MAP_STATE.selectedCounty = c.name;
-  // Sync the dropdown
-  const sel = document.getElementById('countySelect');
-  if (sel && sel.value !== c.name) sel.value = c.name;
+  // Sync the county filter dropdown (option values are the raw uppercase names)
+  const sel = document.getElementById('ffCounty');
+  if (sel) {
+    const want = c.name.toUpperCase();
+    const opt = [...sel.options].find(o => o.value.toUpperCase() === want);
+    if (opt) sel.value = opt.value;
+  }
   // Grey out other counties on the map
   restylePolygons();
   // Zoom + center on the selected county's polygon bounds
   zoomToCounty(c.name);
-  // Show wells for this county (lazy-load on first selection, then per-county filtered)
-  showWellsForCounty(c.name);
+  // Scope the pins + table to this county (reads the filter dropdown just set)
+  applyFieldFilters();
   const det = document.getElementById('mapDetail');
   if (!det) return;
   // True per-well-per-day average uses total well-days as the denominator
@@ -2398,6 +2373,12 @@ function renderFieldMap() {
   initMap();
   // Leaflet sometimes mis-sizes when initialized in a hidden tab; nudge it
   setTimeout(() => MAP_STATE.map && MAP_STATE.map.invalidateSize(), 50);
+  // Load wells, then wire the filter bar + render the initial (unfiltered) set.
+  ensureWellsLoaded().then(() => {
+    populateFieldFilterDropdowns();
+    bindFieldFilters();
+    applyFieldFilters();
+  });
   window.MAP_STATE = MAP_STATE;
 }
 
