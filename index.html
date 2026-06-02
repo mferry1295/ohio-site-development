@@ -32,6 +32,7 @@
     <a href="#overview" class="navlink active" data-target="overview">Project Overview</a>
     <a href="#dashboard" class="navlink" data-target="dashboard">Dashboard</a>
     <a href="#fieldmap" class="navlink" data-target="fieldmap">Field Map</a>
+    <a href="#powerramp" class="navlink" data-target="powerramp">Power Ramp</a>
     <a href="#research" class="navlink" data-target="research">Oil and Gas Primer</a>
   </nav>
 </header>
@@ -676,6 +677,156 @@
         </table>
       </div>
     </section>
+  </div>
+</section>
+
+<!-- =========== POWER RAMP / WELL CURVE =========== -->
+<section id="powerramp" class="page">
+  <div class="content full">
+    <h2 class="page-title">Power Ramp · Behind-the-Meter Well Curve</h2>
+    <p class="page-lead">How many wells does it take to keep turbines fed for the full term of a hyperscaler lease? The model sizes the plant's gas burn, runs every well on hyperbolic decline, and drills exactly enough each year to hold deliverability at the plateau target. Dial the inputs to see the treadmill move in real time.</p>
+
+    <div class="ramp-kpis">
+      <div class="ramp-kpi">
+        <div class="ramp-kpi-label">Plant gas burn</div>
+        <div class="ramp-kpi-value" id="rampKpiBurn">—</div>
+        <div class="ramp-kpi-sub" id="rampKpiBurnSub">MMcf/day at capacity factor</div>
+      </div>
+      <div class="ramp-kpi">
+        <div class="ramp-kpi-label">Year-1 wells</div>
+        <div class="ramp-kpi-value" id="rampKpiY1">—</div>
+        <div class="ramp-kpi-sub">to reach plateau in month 1</div>
+      </div>
+      <div class="ramp-kpi">
+        <div class="ramp-kpi-label">Sustaining cadence</div>
+        <div class="ramp-kpi-value" id="rampKpiSust">—</div>
+        <div class="ramp-kpi-sub">wells / yr from Yr 8 onward</div>
+      </div>
+      <div class="ramp-kpi">
+        <div class="ramp-kpi-label">Total wells (life)</div>
+        <div class="ramp-kpi-value" id="rampKpiTotal">—</div>
+        <div class="ramp-kpi-sub" id="rampKpiTotalSub">over the project horizon</div>
+      </div>
+      <div class="ramp-kpi">
+        <div class="ramp-kpi-label">Gas delivered (life)</div>
+        <div class="ramp-kpi-value" id="rampKpiBcf">—</div>
+        <div class="ramp-kpi-sub" id="rampKpiBcfSub">Bcf cumulative</div>
+      </div>
+      <div class="ramp-kpi">
+        <div class="ramp-kpi-label">Drilling capex (life)</div>
+        <div class="ramp-kpi-value" id="rampKpiCapex">—</div>
+        <div class="ramp-kpi-sub">at D&amp;C cost per well</div>
+      </div>
+    </div>
+
+    <div class="ramp-card">
+      <div class="ramp-card-head">Configure the scenario</div>
+      <div class="ramp-inputs">
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">Plant capacity <button class="info" type="button" data-tip="Nameplate (max) electrical output of the behind-the-meter gas plant in megawatts. A 500 MW plant feeding the data center is the base case. Gas burn scales linearly with this — but fuel tracks actual MWh generated (capacity factor below), not nameplate.">i</button></span> <span class="unit">MW</span></label>
+          <input type="range" min="100" max="1500" step="10" data-ramp="plantMW" />
+          <input type="number" data-ramp="plantMW" />
+        </div>
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">Heat rate <button class="info" type="button" data-tip="Fuel efficiency of the generation technology — Btu of gas burned per kWh of electricity. Combined-cycle (CCGT) ≈ 7,000; simple-cycle turbines or recip engines ≈ 9,500. Lower heat rate = less gas burned = fewer wells. This input alone swings gas demand by ~35%.">i</button></span> <span class="unit">Btu/kWh</span></label>
+          <input type="range" min="6500" max="11000" step="50" data-ramp="heatRate" />
+          <input type="number" data-ramp="heatRate" />
+        </div>
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">Capacity factor <button class="info" type="button" data-tip="Share of nameplate the plant actually runs at, averaged over the year. Data centers pull a high, flat 24/7 load, so 90%+ is typical. Fuel consumption — and therefore well count — tracks this number, not the nameplate MW above.">i</button></span> <span class="unit">%</span></label>
+          <input type="range" min="50" max="98" step="1" data-ramp="cf" />
+          <input type="number" data-ramp="cf" />
+        </div>
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">Project horizon <button class="info" type="button" data-tip="Length of the analysis in years, usually matched to the hyperscaler lease term. A longer horizon means more replacement wells drilled to hold the plateau — but the sustaining cadence settles to a steady rate after roughly year 8 as the aging fleet's tail accumulates.">i</button></span> <span class="unit">years</span></label>
+          <input type="range" min="10" max="30" step="1" data-ramp="horizon" />
+          <input type="number" data-ramp="horizon" />
+        </div>
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">Per-well IP30 <button class="info" type="button" data-tip="Initial 30-day average gas rate of one new well — the peak before decline sets in, in million cubic feet per day. The single most important input: deep eastern-Ohio dry-gas Utica makes 15+ MMcf/d, while the oilier Tuscarawas western edge makes only 2–4 MMcf/d of associated gas, which 5×'s the well count.">i</button></span> <span class="unit">MMcf/d</span></label>
+          <input type="range" min="2" max="25" step="0.5" data-ramp="ip30" />
+          <input type="number" data-ramp="ip30" />
+        </div>
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">Hyperbolic b <button class="info" type="button" data-tip="Arps decline exponent — sets the curvature of the decline curve. b ≈ 1.0–1.3 is typical for shale gas: production drops steeply early, then flattens into a long tail. A higher b means a fatter tail, so older wells carry more of the base load and you drill less to sustain.">i</button></span> <span class="unit">exponent</span></label>
+          <input type="range" min="0.5" max="1.5" step="0.05" data-ramp="bExp" />
+          <input type="number" data-ramp="bExp" />
+        </div>
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">Initial decline Di <button class="info" type="button" data-tip="Nominal annual decline rate at the very start of a well's life (per year). Shale wells are steep — a well gives back 50–70% of its rate in year one. Combined with the b exponent, this defines how fast each well fades and therefore how hard you have to drill to replace it.">i</button></span> <span class="unit">/ yr</span></label>
+          <input type="range" min="0.5" max="3.0" step="0.05" data-ramp="diNominal" />
+          <input type="number" data-ramp="diNominal" />
+        </div>
+        <div class="ramp-input">
+          <label><span class="ramp-input-name">D&amp;C cost / well <button class="info" type="button" data-tip="All-in drilling &amp; completion cost for one well — drill, case, cement, and frac. Utica wells run ~$11.4M for a 3-mile lateral. Multiplied by total wells over life, this is the perpetual sustaining capex required just to keep the turbines fed.">i</button></span> <span class="unit">$M</span></label>
+          <input type="range" min="6" max="18" step="0.1" data-ramp="dnc" />
+          <input type="number" data-ramp="dnc" />
+        </div>
+      </div>
+
+      <!-- Optional grid-electricity blend -->
+      <div class="ramp-grid-blend">
+        <div class="ramp-grid-toggle">
+          <label class="switch">
+            <input type="checkbox" id="rampGridEnable" />
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+            <span class="switch-label">Blend in grid supply</span>
+          </label>
+          <button class="info" type="button" data-tip="Serve part of the data-center load from the utility grid instead of the on-site gas plant. Every MW taken from the grid is a MW the plant doesn't generate — so the gas the wells must hold drops and the drilling program thins during the grid window. Common uses: bridge the early years while the wells ramp, or hold a permanent firm-power slice for reliability. Outside the window the plant carries the full load.">i</button>
+          <span class="ramp-grid-hint">Wells only cover the remaining load — see the steel band on the deliverability chart</span>
+        </div>
+        <div class="ramp-grid-inputs" id="rampGridInputs" hidden>
+          <div class="ramp-input">
+            <label><span class="ramp-input-name">Grid supply <button class="info" type="button" data-tip="Megawatts of the data-center load served from the utility grid during the window below. This is subtracted from plant capacity, so the gas plant only generates the rest. Capped at plant capacity — you can't pull more from the grid than the load.">i</button></span> <span class="unit">MW</span></label>
+            <input type="range" min="0" max="500" step="10" data-ramp="gridMW" />
+            <input type="number" data-ramp="gridMW" />
+          </div>
+          <div class="ramp-input">
+            <label><span class="ramp-input-name">From year <button class="info" type="button" data-tip="First project year the grid supplies power. Set to 1 to lean on the grid from day one while the drilling program spins up.">i</button></span> <span class="unit">yr</span></label>
+            <input type="range" min="1" max="30" step="1" data-ramp="gridStart" />
+            <input type="number" data-ramp="gridStart" />
+          </div>
+          <div class="ramp-input">
+            <label><span class="ramp-input-name">To year <button class="info" type="button" data-tip="Last project year the grid supplies power. When the window closes, the wells must carry the full plant load — watch the year-after drilling burst in the table as the grid slice hands back to the wells.">i</button></span> <span class="unit">yr</span></label>
+            <input type="range" min="1" max="30" step="1" data-ramp="gridEnd" />
+            <input type="number" data-ramp="gridEnd" />
+          </div>
+          <div class="ramp-input ramp-input--select">
+            <label><span class="ramp-input-name">Profile <button class="info" type="button" data-tip="Flat holds a constant MW from the grid across the whole window — model a permanent firm-power slice. Taper starts at the full MW and fades linearly to zero by the end year — model the grid bridging the load while the wells ramp, then stepping out of the way.">i</button></span></label>
+            <select class="ramp-select" id="rampGridProfile">
+              <option value="flat">Flat — constant MW</option>
+              <option value="taper">Taper — fades as wells ramp</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-head"><h3>Per-Well Decline (avg daily rate)</h3><div class="card-sub">Arps hyperbolic — single well from IP30 to terminal trickle</div></div>
+        <div class="chart-wrap"><canvas id="rampDeclineChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Deliverability vs Plateau Target</h3><div class="card-sub">Stacked by drilling vintage · steel band = grid supply · dashed line = full plant burn</div></div>
+        <div class="chart-wrap"><canvas id="rampStackChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card wide">
+      <div class="card-head">
+        <h3>Drilling Cadence — Wells per Year to Hold Plateau</h3>
+        <div class="card-sub" id="rampTableSub">Year, new wells drilled, cumulative count, contribution from existing fleet, total deliverable</div>
+      </div>
+      <div class="table-scroll"><table id="rampTable" class="data-table"></table></div>
+    </div>
+
+    <article class="research-article ramp-note">
+      <div class="r-tag">Why this matters</div>
+      <h3>The decline is the treadmill</h3>
+      <p>Shale wells lose 50–70% of their rate in year one. A well count sized off IP collapses fast — you don't get a fixed fleet, you get a continuous drilling program to hold deliverability under the plant. The table above front-loads year 1 to reach plateau and then settles into a steady maintenance cadence by roughly year 8, when the aging fleet's accumulated tail starts carrying most of the base load.</p>
+      <p>The single assumption that swings the answer is per-well IP. In Belmont/Monroe dry-gas Utica with IP30s of 15+ MMcf/d, a 500 MW plant runs on 6–8 wells out of the gate. On the oilier western edge (Tuscarawas), associated gas drops to 2–4 MMcf/d per well and the year-1 count balloons to 25–45 wells — at which point a Nexus firm-transport blend stops being a hedge and becomes the supply backbone.</p>
+    </article>
   </div>
 </section>
 

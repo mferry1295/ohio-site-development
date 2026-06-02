@@ -15,6 +15,7 @@ const COLORS = {
   ngl: '#D46A6A',
   gas: '#C44040',
   power: '#8B1A1A',
+  grid: '#4F7799',   // steel blue — utility/grid supply, deliberately not red
   pos: '#2f7d32',
   neg: '#b00020',
 };
@@ -127,6 +128,13 @@ function bindNav() {
       render();
       // map needs explicit init / resize when its tab becomes visible
       if (target === 'fieldmap') renderFieldMap();
+      // Power Ramp charts need to be created/resized when their tab becomes visible
+      if (target === 'powerramp') {
+        renderPowerRamp();
+        setTimeout(() => {
+          ['rampDeclineChart', 'rampStackChart'].forEach(id => charts[id]?.resize?.());
+        }, 0);
+      }
       // Chart.js mis-sizes when canvases are created in a hidden parent (e.g. when
       // the user lands on the Project Overview tab first). Force a resize on
       // dashboard activation so canvases pick up their now-visible dimensions.
@@ -733,6 +741,433 @@ function renderWaterfall() {
         x: { grid: { display: false } }
       }
     }
+  });
+}
+
+// ===========================================================
+// Power Ramp / Well Curve
+// Stand-alone tab: sizes plant burn, drills wells on Arps hyperbolic decline,
+// and holds plateau deliverability over the project horizon. Decoupled from
+// the dashboard model so users can flex it independently.
+// ===========================================================
+const rampState = {
+  plantMW: 500,
+  heatRate: 7000,     // Btu/kWh — CCGT default; bump to 9500 for simple-cycle
+  cf: 90,             // capacity factor %
+  horizon: 20,        // years
+  ip30: 12,           // MMcf/d — peak 30-day rate (representative gassy Utica)
+  bExp: 1.1,          // Arps hyperbolic exponent
+  diNominal: 1.5,     // initial nominal annual decline (1/yr)
+  dnc: 11.4,          // $M per well, mirrors dashboard default
+  // --- Optional grid-electricity blend ---
+  // A slice of the data-center load can be served from the utility grid instead
+  // of the behind-the-meter gas plant. That offsets the MW the plant must
+  // generate, lowers the gas the wells must hold, and thins the drilling program
+  // during the grid window. Outside the window the plant carries the full load.
+  gridEnabled: false, // toggle the blend on/off
+  gridMW: 150,        // MW served from the grid during the window
+  gridStart: 1,       // first year the grid supplies
+  gridEnd: 3,         // last year the grid supplies
+  gridProfile: 'flat',// 'flat' = constant MW; 'taper' = fades to 0 across the window as wells ramp
+};
+
+// Plant burn in MMcf/day:
+//   MW × 24 h = MWh/day; × 1000 → kWh/day; × Btu/kWh = Btu/day
+//   ÷ 1.024e6 → Mcf/day (since 1 Mcf ≈ 1.024 MMBtu = 1,024,000 Btu)
+//   ÷ 1000 → MMcf/day
+function rampPlantBurnMMcfd(p) {
+  return (p.plantMW * 24 * 1000 * (p.cf / 100) * p.heatRate) / 1_024_000 / 1000;
+}
+
+// MW served from the utility grid in project year y (1-indexed).
+// Zero unless the blend is enabled and y falls inside [gridStart, gridEnd].
+//   flat  → constant gridMW across the window
+//   taper → full gridMW at the start year, fading linearly to 0 at the end year
+//           (models the grid bridging the load while the wells ramp up)
+function rampGridMWForYear(p, y, horizon) {
+  if (!p.gridEnabled || p.gridMW <= 0) return 0;
+  const hi = horizon || Math.round(p.horizon);
+  const s = Math.min(Math.max(1, Math.round(p.gridStart)), hi);
+  const e = Math.min(Math.max(s, Math.round(p.gridEnd)), hi); // force end ≥ start
+  if (y < s || y > e) return 0;
+  const cap = Math.min(p.gridMW, p.plantMW); // can't grid-supply more than the load
+  if (p.gridProfile === 'taper' && e > s) {
+    return cap * (e - y) / (e - s); // gridMW at s, 0 at e
+  }
+  return cap;
+}
+
+// Arps hyperbolic instantaneous rate at time t (years from IP).
+function rampInstRate(p, t) {
+  const denom = Math.pow(1 + p.bExp * p.diNominal * Math.max(0, t), 1 / p.bExp);
+  return p.ip30 / denom;
+}
+
+// Per-well average daily rate over year-of-life y (1-indexed), sampled monthly.
+function rampPerWellYearAvg(p, yearOfLife) {
+  const tStart = yearOfLife - 1;
+  let sum = 0;
+  const steps = 12;
+  for (let i = 0; i < steps; i++) {
+    sum += rampInstRate(p, tStart + (i + 0.5) / steps);
+  }
+  return sum / steps;
+}
+
+// Builds the full ramp: decline table, cohorts, and year-by-year rollup.
+function buildWellRamp(p) {
+  const horizon = Math.max(1, Math.round(p.horizon));
+  const fullBurn = rampPlantBurnMMcfd(p); // gas the wells hold when no grid blend is active
+
+  // Precompute per-well year-of-life rates (MMcf/d), one extra year for safety.
+  const declineTable = [];
+  for (let yol = 1; yol <= horizon + 1; yol++) {
+    declineTable.push(rampPerWellYearAvg(p, yol));
+  }
+  const yearOneAvg = declineTable[0] || 0.0001;
+
+  const cohorts = []; // { startYear, count }
+  const rampRows = [];
+
+  for (let y = 1; y <= horizon; y++) {
+    // Grid offset this year → the gas plant only generates the remaining MW,
+    // so the gas the wells must hold scales down linearly (burn ∝ MW).
+    const gridMW = rampGridMWForYear(p, y, horizon);
+    const gasMW = Math.max(0, p.plantMW - gridMW);
+    const targetY = p.plantMW > 0 ? fullBurn * (gasMW / p.plantMW) : 0;
+    const gridGas = Math.max(0, fullBurn - targetY); // gas-equivalent the grid covers
+
+    // Contribution from previously-drilled wells in their current year-of-life
+    let fromExisting = 0;
+    const perCohortContrib = []; // for stacked-area chart
+    for (const c of cohorts) {
+      const yol = y - c.startYear + 1;
+      const rate = yol >= 1 && yol <= declineTable.length ? declineTable[yol - 1] : 0;
+      const contrib = c.count * rate;
+      fromExisting += contrib;
+      perCohortContrib.push({ startYear: c.startYear, contrib });
+    }
+
+    const shortfall = Math.max(0, targetY - fromExisting);
+    const newWells = yearOneAvg > 0 ? Math.ceil(shortfall / yearOneAvg) : 0;
+    if (newWells > 0) {
+      cohorts.push({ startYear: y, count: newWells });
+      perCohortContrib.push({ startYear: y, contrib: newWells * yearOneAvg });
+    }
+
+    const totalDeliverable = fromExisting + newWells * yearOneAvg;
+    const cumulative = cohorts.reduce((s, c) => s + c.count, 0);
+
+    rampRows.push({
+      year: y,
+      newWells,
+      cumulative,
+      fromExisting,
+      totalDeliverable,
+      target: targetY,   // gas the wells must hold this year (post-grid)
+      fullBurn,          // full plant appetite (flat plateau line)
+      gridMW,
+      gridGas,
+      perCohortContrib,
+    });
+  }
+
+  // Lifetime aggregates
+  const totalWells = cohorts.reduce((s, c) => s + c.count, 0);
+  const totalBcf = rampRows.reduce((s, r) => s + r.totalDeliverable, 0) * 365 / 1000;
+  const gridBcf = rampRows.reduce((s, r) => s + r.gridGas, 0) * 365 / 1000;
+  const peakWellTarget = rampRows.reduce((m, r) => Math.max(m, r.target), 0);
+  // Deepest the well plateau dips while the grid is carrying load — captures the
+  // offset for both a permanent slice and an early bridge window.
+  const minWellTarget = rampRows.reduce((m, r) => Math.min(m, r.target), fullBurn);
+
+  // Sustaining cadence — average wells/yr from year 8 onward (or last third of horizon, whichever is later)
+  const sustStart = Math.min(horizon - 1, Math.max(8, Math.floor(horizon * 0.4)));
+  const sustainRows = rampRows.slice(sustStart - 1);
+  const sustainCadence = sustainRows.length
+    ? sustainRows.reduce((s, r) => s + r.newWells, 0) / sustainRows.length
+    : 0;
+
+  const totalDnc = totalWells * p.dnc; // $M
+
+  return {
+    target: fullBurn, fullBurn, peakWellTarget, minWellTarget, yearOneAvg, declineTable,
+    cohorts, rampRows,
+    totalWells, totalBcf, gridBcf, sustainCadence, sustStart,
+    totalDnc,
+    gridActive: p.gridEnabled && p.gridMW > 0,
+  };
+}
+
+// Group cohort vintages into ~5 buckets for the stacked chart legend.
+// Returns an array of { label, color, range:[startYear,endYear] }.
+function rampVintageBuckets(horizon) {
+  // Buckets adapt to horizon length. Aim for 5 buckets that read naturally.
+  const buckets = [];
+  if (horizon <= 12) {
+    buckets.push({ label: 'Year 1', range: [1, 1] });
+    buckets.push({ label: 'Yrs 2–3', range: [2, 3] });
+    buckets.push({ label: 'Yrs 4–6', range: [4, 6] });
+    buckets.push({ label: 'Yrs 7–9', range: [7, 9] });
+    buckets.push({ label: `Yrs 10–${horizon}`, range: [10, horizon] });
+  } else {
+    buckets.push({ label: 'Year 1', range: [1, 1] });
+    buckets.push({ label: 'Yrs 2–5', range: [2, 5] });
+    buckets.push({ label: 'Yrs 6–10', range: [6, 10] });
+    buckets.push({ label: 'Yrs 11–15', range: [11, 15] });
+    buckets.push({ label: `Yrs 16–${horizon}`, range: [16, horizon] });
+  }
+  // Wells-themed palette — strongest red for the original cohort, fading to clay/blush for newer vintages
+  const palette = [COLORS.derrick, COLORS.signal, COLORS.clay, '#E29A9A', COLORS.blush];
+  buckets.forEach((b, i) => { b.color = palette[i]; });
+  return buckets.filter(b => b.range[0] <= horizon);
+}
+
+function renderPowerRamp() {
+  if (typeof Chart === 'undefined') return;
+  const ramp = buildWellRamp(rampState);
+  renderRampKpis(ramp);
+  renderRampDeclineChart(ramp);
+  renderRampStackChart(ramp);
+  renderRampTable(ramp);
+}
+
+function renderRampKpis(ramp) {
+  const p = rampState;
+  const burn = ramp.fullBurn;
+  const burnBcfYr = burn * 365 / 1000;
+  const burnEl = document.getElementById('rampKpiBurn');
+  if (burnEl) burnEl.textContent = burn.toFixed(0) + ' MMcf/d';
+  const burnSub = document.getElementById('rampKpiBurnSub');
+  if (burnSub) {
+    burnSub.textContent = ramp.gridActive
+      ? `grid −${Math.round(p.gridMW)} MW · Yr ${Math.round(p.gridStart)}–${Math.round(p.gridEnd)} → well plateau dips to ${ramp.minWellTarget.toFixed(0)} MMcf/d`
+      : `${p.heatRate.toLocaleString()} Btu/kWh · ${p.cf}% CF · ${burnBcfYr.toFixed(1)} Bcf/yr`;
+  }
+
+  const y1 = ramp.rampRows[0]?.newWells ?? 0;
+  const y1El = document.getElementById('rampKpiY1');
+  if (y1El) y1El.textContent = y1.toLocaleString();
+
+  const sustEl = document.getElementById('rampKpiSust');
+  if (sustEl) sustEl.textContent = ramp.sustainCadence.toFixed(1) + ' / yr';
+
+  const totEl = document.getElementById('rampKpiTotal');
+  if (totEl) totEl.textContent = ramp.totalWells.toLocaleString();
+  const totSub = document.getElementById('rampKpiTotalSub');
+  if (totSub) totSub.textContent = ramp.gridActive ? `over ${p.horizon} yrs · grid-blended` : `over ${p.horizon} years`;
+
+  const bcfEl = document.getElementById('rampKpiBcf');
+  if (bcfEl) bcfEl.textContent = ramp.totalBcf.toFixed(0) + ' Bcf';
+  const bcfSub = document.getElementById('rampKpiBcfSub');
+  if (bcfSub) bcfSub.textContent = ramp.gridActive
+    ? `by wells · grid covers ${ramp.gridBcf.toFixed(0)} Bcf`
+    : 'Bcf cumulative';
+
+  const capexEl = document.getElementById('rampKpiCapex');
+  if (capexEl) capexEl.textContent = fmt.money0(ramp.totalDnc * 1e6);
+}
+
+function renderRampDeclineChart(ramp) {
+  const labels = ramp.declineTable.map((_, i) => 'Y' + (i + 1));
+  makeOrUpdate('rampDeclineChart', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'MMcf/d (year avg)',
+        data: ramp.declineTable,
+        borderColor: COLORS.derrick,
+        backgroundColor: 'rgba(139,26,26,0.10)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: COLORS.derrick,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.parsed.y.toFixed(2) + ' MMcf/d' } },
+      },
+      scales: {
+        y: { ticks: { callback: v => v + ' MMcf/d' }, grid: { color: '#eee' } },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderRampStackChart(ramp) {
+  const horizon = rampState.horizon;
+  const labels = ramp.rampRows.map(r => 'Y' + r.year);
+  const buckets = rampVintageBuckets(horizon);
+
+  // For each bucket, build a year-by-year contribution series (MMcf/d)
+  const datasets = buckets.map(b => {
+    const data = ramp.rampRows.map(r => {
+      let v = 0;
+      for (const c of r.perCohortContrib) {
+        if (c.startYear >= b.range[0] && c.startYear <= b.range[1]) v += c.contrib;
+      }
+      return v;
+    });
+    return {
+      label: `Wells drilled · ${b.label}`,
+      data,
+      backgroundColor: b.color,
+      borderColor: '#fff',
+      borderWidth: 1,
+      stack: 'gas',
+    };
+  });
+
+  // Grid-supply band — stacked on top of the well cohorts, filling the gap up to
+  // the full plant burn. Shrinks as wells take over / the grid window closes.
+  if (ramp.gridActive) {
+    datasets.push({
+      label: 'Grid supply (gas-equiv)',
+      data: ramp.rampRows.map(r => r.gridGas),
+      backgroundColor: COLORS.grid,
+      borderColor: '#fff',
+      borderWidth: 1,
+      stack: 'gas',
+    });
+  }
+
+  // Plateau line — the full plant gas appetite (flat). Wells + grid fill up to it.
+  datasets.push({
+    type: 'line',
+    label: 'Full plant gas burn',
+    data: ramp.rampRows.map(r => r.fullBurn),
+    borderColor: COLORS.iron,
+    borderDash: [6, 4],
+    borderWidth: 2,
+    pointRadius: 0,
+    fill: false,
+  });
+
+  makeOrUpdate('rampStackChart', {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 10 } } },
+        tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.parsed.y.toFixed(1) + ' MMcf/d' } },
+      },
+      scales: {
+        y: {
+          stacked: true,
+          ticks: { callback: v => v + ' MMcf/d' },
+          grid: { color: '#eee' },
+        },
+        x: { stacked: true, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderRampTable(ramp) {
+  const tbl = document.getElementById('rampTable');
+  if (!tbl) return;
+  const rows = ramp.rampRows;
+  const grid = ramp.gridActive;
+  const fmt1 = v => v.toFixed(1);
+  let html = '';
+  html += '<thead><tr>';
+  html += '<th>Year</th>';
+  if (grid) html += '<th class="num grid-col">Grid supply<br><span class="sub">MW</span></th>';
+  html += '<th class="num">New wells</th>';
+  html += '<th class="num">Cumulative wells</th>';
+  html += '<th class="num">From existing fleet<br><span class="sub">MMcf/d</span></th>';
+  html += '<th class="num">From new cohort<br><span class="sub">MMcf/d</span></th>';
+  html += '<th class="num">Total deliverable<br><span class="sub">MMcf/d</span></th>';
+  html += `<th class="num">${grid ? 'Well target' : 'Plateau target'}<br><span class="sub">MMcf/d</span></th>`;
+  html += '<th class="num">Drilling capex<br><span class="sub">$M</span></th>';
+  html += '</tr></thead>';
+  html += '<tbody>';
+  for (const r of rows) {
+    const fromNew = r.newWells * ramp.yearOneAvg;
+    const drillCapex = r.newWells * rampState.dnc;
+    html += '<tr>';
+    html += `<td class="rowhead">Y${r.year}</td>`;
+    if (grid) html += `<td class="num grid-col">${r.gridMW > 0 ? Math.round(r.gridMW) : '—'}</td>`;
+    html += `<td class="num">${r.newWells}</td>`;
+    html += `<td class="num">${r.cumulative}</td>`;
+    html += `<td class="num">${fmt1(r.fromExisting)}</td>`;
+    html += `<td class="num">${fmt1(fromNew)}</td>`;
+    html += `<td class="num bold">${fmt1(r.totalDeliverable)}</td>`;
+    html += `<td class="num sub">${fmt1(r.target)}</td>`;
+    html += `<td class="num">${drillCapex.toFixed(1)}</td>`;
+    html += '</tr>';
+  }
+  // Totals row
+  const totalNew = rows.reduce((s, r) => s + r.newWells, 0);
+  const totalCapex = totalNew * rampState.dnc;
+  html += '<tr class="total"><td class="rowhead">Total</td>';
+  if (grid) html += `<td class="num grid-col">${ramp.gridBcf.toFixed(0)} Bcf</td>`;
+  html += `<td class="num">${totalNew}</td>`;
+  html += `<td class="num">${rows[rows.length - 1]?.cumulative ?? 0}</td>`;
+  html += '<td class="num">—</td>';
+  html += '<td class="num">—</td>';
+  html += `<td class="num">${ramp.totalBcf.toFixed(0)} Bcf life</td>`;
+  html += '<td class="num">—</td>';
+  html += `<td class="num bold">${totalCapex.toFixed(0)}</td>`;
+  html += '</tr>';
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+// Reflect the grid-blend toggle/select into the UI and show or hide the
+// grid input row to match rampState.gridEnabled.
+function applyGridUiState() {
+  const chk = document.getElementById('rampGridEnable');
+  if (chk) chk.checked = !!rampState.gridEnabled;
+  const sel = document.getElementById('rampGridProfile');
+  if (sel) sel.value = rampState.gridProfile;
+  const panel = document.getElementById('rampGridInputs');
+  if (panel) panel.hidden = !rampState.gridEnabled;
+}
+
+function syncRampInputs() {
+  document.querySelectorAll('input[data-ramp]').forEach(el => {
+    const k = el.dataset.ramp;
+    if (k in rampState) el.value = rampState[k];
+  });
+  applyGridUiState();
+}
+
+function bindRampInputs() {
+  document.querySelectorAll('input[data-ramp]').forEach(el => {
+    const k = el.dataset.ramp;
+    el.addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (Number.isFinite(v)) {
+        rampState[k] = v;
+        document.querySelectorAll(`input[data-ramp="${k}"]`).forEach(other => {
+          if (other !== e.target) other.value = v;
+        });
+        renderPowerRamp();
+      }
+    });
+  });
+
+  // Grid-blend toggle
+  const chk = document.getElementById('rampGridEnable');
+  if (chk) chk.addEventListener('change', e => {
+    rampState.gridEnabled = e.target.checked;
+    applyGridUiState();
+    renderPowerRamp();
+  });
+
+  // Grid profile (flat / taper)
+  const sel = document.getElementById('rampGridProfile');
+  if (sel) sel.addEventListener('change', e => {
+    rampState.gridProfile = e.target.value;
+    renderPowerRamp();
   });
 }
 
@@ -2046,6 +2481,8 @@ function boot() {
   try {
     syncInputs();
     bindInputs();
+    syncRampInputs();
+    bindRampInputs();
     bindScenarioToggle();
     bindNav();
     bindJumpLinks();
