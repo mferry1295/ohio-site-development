@@ -2958,150 +2958,398 @@ function bindParcelControls() {
 // Content is specific to a behind-the-meter, gas-fired data-center campus
 // in the Utica fairway. Progress persists in localStorage.
 // ===========================================================
-const CHECKLIST_PHASES = {
-  P1: { label: 'Foundational', color: '#8B1A1A' },
-  P2: { label: 'Studies & clearance', color: '#C44040' },
-  P3: { label: 'Entitlements & interconnect', color: '#4F7799' },
-  P4: { label: 'Buyer package', color: '#2F7D49' },
-};
-
+// Each item: a plain-language milestone (title + overview anyone can read),
+// a few concrete activities (what it takes to finish it), and the original
+// technical detail kept as a note revealed on expand. `critical` flags the
+// longest-lead items that gate everything else.
 const CHECKLIST = [
   {
     key: 'site', title: 'Site Control & Title',
-    blurb: 'Lock up clean, contiguous control and a defensible base map.',
+    blurb: 'Lock up clean, connected control of the land and a solid base map.',
     items: [
-      { id: 'site-option', title: 'Secure site control (options / purchase agreements)', phase: 'P1', critical: true, lead: 'Real-estate counsel', time: '1–3 months',
-        desc: 'Tie up the full ~2,800-acre assemblage with option or purchase-and-sale agreements (with extension rights) before spending on studies. A hyperscaler will not engage until it sees clean, exclusive control of a contiguous footprint it can grow into.' },
-      { id: 'site-alta', title: 'ALTA / NSPS land title survey', phase: 'P1', critical: false, lead: 'Ohio-licensed surveyor', time: '1–2 months',
-        desc: 'Commission an ALTA/NSPS survey of the assemblage showing boundaries, acreage, easements, encroachments, setbacks and Table A items. It is the base map every downstream study, the OPSB application and the buyer diligence all build on.' },
-      { id: 'site-title', title: 'Title commitment & encumbrance cure plan', phase: 'P1', critical: true, lead: 'Title company / counsel', time: '1–2 months',
-        desc: 'Pull a title commitment and work every exception — easements, rights-of-way, oil & gas leases, restrictive covenants, liens. In the Utica fairway expect recorded leases and pipeline ROWs; build a plan to cure or quantify each before marketing.' },
-      { id: 'site-access', title: 'Legal access & public-road frontage', phase: 'P1', critical: false, lead: 'Surveyor / counsel', time: '2–4 weeks',
-        desc: 'Confirm legal, all-weather ingress/egress to a public road and document any access easements. Both a buyer and the OPSB need certainty the site can be reached, served and constructed.' },
-      { id: 'site-assemble', title: 'Parcel reconciliation & CAUV recoupment check', phase: 'P1', critical: false, lead: 'Counsel / County Auditor', time: '2–4 weeks',
-        desc: 'Reconcile every parcel ID and acreage with the Tuscarawas County Auditor and check Current Agricultural Use Value (CAUV) recoupment exposure — converting farmland out of CAUV triggers a tax recoupment that should be priced in.' },
+      { id: 'site-option', title: 'Lock up the land', critical: true, lead: 'Real-estate counsel', time: '1–3 months',
+        overview: 'Get the whole property under contract before you spend money on studies.',
+        activities: [
+          'Sign option or purchase agreements covering the full ~2,800 acres',
+          'Build in extension rights so you can hold control while studies run',
+          'Keep the footprint contiguous so it can grow into a campus',
+        ],
+        detail: 'Tie up the full ~2,800-acre assemblage with option or purchase-and-sale agreements (with extension rights) before spending on studies. A hyperscaler will not engage until it sees clean, exclusive control of a contiguous footprint it can grow into.' },
+      { id: 'site-alta', title: 'Get a professional land survey', critical: false, lead: 'Ohio-licensed surveyor', time: '1–2 months',
+        overview: 'Commission one accurate survey that every later study, permit and buyer review builds on.',
+        activities: [
+          'Hire an Ohio-licensed surveyor for an ALTA/NSPS survey',
+          'Map boundaries, acreage, easements, encroachments and setbacks',
+          'Include the Table A items buyers and lenders expect',
+        ],
+        detail: 'Commission an ALTA/NSPS survey of the assemblage showing boundaries, acreage, easements, encroachments, setbacks and Table A items. It is the base map every downstream study, the OPSB application and the buyer diligence all build on.' },
+      { id: 'site-title', title: 'Clear up the title', critical: true, lead: 'Title company / counsel', time: '1–2 months',
+        overview: 'Find everything recorded against the land and make a plan to fix or price each one.',
+        activities: [
+          'Order a title commitment from a title company',
+          'List every exception — easements, rights-of-way, oil & gas leases, liens',
+          'Write a plan to cure or quantify each before you market the site',
+        ],
+        detail: 'Pull a title commitment and work every exception — easements, rights-of-way, oil & gas leases, restrictive covenants, liens. In the Utica fairway expect recorded leases and pipeline ROWs; build a plan to cure or quantify each before marketing.' },
+      { id: 'site-access', title: 'Confirm road access', critical: false, lead: 'Surveyor / counsel', time: '2–4 weeks',
+        overview: 'Make sure the site has legal, all-weather access to a public road.',
+        activities: [
+          'Verify legal ingress/egress to a public road',
+          'Document any access easements you rely on',
+          'Confirm the site can be reached and built on year-round',
+        ],
+        detail: 'Confirm legal, all-weather ingress/egress to a public road and document any access easements. Both a buyer and the OPSB need certainty the site can be reached, served and constructed.' },
+      { id: 'site-assemble', title: 'Reconcile parcels & check the farmland tax', critical: false, lead: 'Counsel / County Auditor', time: '2–4 weeks',
+        overview: 'Match every parcel to county records and budget for the tax that comes due when farmland is converted.',
+        activities: [
+          'Reconcile parcel IDs and acreage with the County Auditor',
+          'Check CAUV (farmland tax) recoupment exposure',
+          'Price the recoupment into the deal',
+        ],
+        detail: 'Reconcile every parcel ID and acreage with the Tuscarawas County Auditor and check Current Agricultural Use Value (CAUV) recoupment exposure — converting farmland out of CAUV triggers a tax recoupment that should be priced in.' },
     ],
   },
   {
     key: 'mineral', title: 'Mineral, Oil & Gas, and Coal Rights',
-    blurb: 'The Utica-country issue that most often surprises buyers — resolve the subsurface.',
+    blurb: 'The Utica-country issue that surprises buyers most — sort out what’s underground.',
     items: [
-      { id: 'min-sever', title: 'Surface vs. mineral estate determination', phase: 'P1', critical: true, lead: 'Title / mineral counsel', time: '1–3 months',
-        desc: 'Run the chain of title to determine whether oil & gas and coal are severed from the surface — across the fairway most are. A severed mineral owner generally holds the dominant right to use the surface, so a buyer must know exactly who controls what is beneath the campus.' },
-      { id: 'min-leases', title: 'Existing oil & gas leases / pooling units', phase: 'P1', critical: true, lead: 'Landman / counsel', time: '1–3 months',
-        desc: 'Identify active Utica leases, drilling units and pooling on the acreage, their terms, and whether the surface is committed to drilling. Held-by-production leases and pooled acreage can dictate where you may and may not build.' },
-      { id: 'min-wells', title: 'Existing, idle & orphaned wells + pipelines', phase: 'P2', critical: false, lead: 'Landman / ODNR', time: '1–2 months',
-        desc: 'Map every active, idle, plugged and orphaned well (ODNR Division of Oil & Gas Resources well locator) and all gathering/transmission lines crossing the site, with setbacks. Legacy wellbores and lines shrink the buildable area and may need plugging or relocation.' },
-      { id: 'min-coal', title: 'Coal seams & abandoned-mine (undermining) review', phase: 'P2', critical: true, lead: 'Geotech / ODNR Geological Survey', time: '1–2 months',
-        desc: 'Pull ODNR Division of Geological Survey abandoned-underground-mine maps — much of eastern Ohio and Tuscarawas County was deep-mined for coal, creating subsidence risk that drives foundation design, mine-subsidence insurance and buildable-area decisions.' },
-      { id: 'min-sua', title: 'Surface use / accommodation agreement', phase: 'P1', critical: true, lead: 'Mineral counsel', time: '2–6 months',
-        desc: 'Where minerals are severed or leased, negotiate a surface use agreement — no-build/no-drill zones, well relocation, consolidated pipeline corridors — so the campus and the mineral program coexist. This is frequently the single biggest land-side de-risking step a buyer looks for.' },
+      { id: 'min-sever', title: 'Find out who owns the minerals below', critical: true, lead: 'Title / mineral counsel', time: '1–3 months',
+        overview: 'Trace the title to see whether oil, gas and coal were sold off separately from the surface — here, they usually were.',
+        activities: [
+          'Run the chain of title for the oil, gas and coal estates',
+          'Identify who holds any severed mineral rights',
+          'Understand their right to use the surface above',
+        ],
+        detail: 'Run the chain of title to determine whether oil & gas and coal are severed from the surface — across the fairway most are. A severed mineral owner generally holds the dominant right to use the surface, so a buyer must know exactly who controls what is beneath the campus.' },
+      { id: 'min-leases', title: 'Check existing oil & gas leases', critical: true, lead: 'Landman / counsel', time: '1–3 months',
+        overview: 'See which Utica leases and drilling units already cover the land and whether they tie up the surface.',
+        activities: [
+          'Identify active leases, drilling units and pooled acreage',
+          'Read their terms and held-by-production status',
+          'Flag where leases limit where you can build',
+        ],
+        detail: 'Identify active Utica leases, drilling units and pooling on the acreage, their terms, and whether the surface is committed to drilling. Held-by-production leases and pooled acreage can dictate where you may and may not build.' },
+      { id: 'min-wells', title: 'Map existing wells & pipelines', critical: false, lead: 'Landman / ODNR', time: '1–2 months',
+        overview: 'Locate every well and pipeline on the site — they shrink the buildable area and may need work.',
+        activities: [
+          'Map active, idle, plugged and orphaned wells (ODNR locator)',
+          'Map gathering and transmission lines crossing the site',
+          'Apply setbacks; flag wells to plug or lines to relocate',
+        ],
+        detail: 'Map every active, idle, plugged and orphaned well (ODNR Division of Oil & Gas Resources well locator) and all gathering/transmission lines crossing the site, with setbacks. Legacy wellbores and lines shrink the buildable area and may need plugging or relocation.' },
+      { id: 'min-coal', title: 'Check for old coal mines under the site', critical: true, lead: 'Geotech / ODNR Geological Survey', time: '1–2 months',
+        overview: 'Much of this area was deep-mined for coal; underground voids create collapse risk that drives foundation design.',
+        activities: [
+          'Pull ODNR abandoned-underground-mine maps',
+          'Identify any mined-out seams beneath the footprint',
+          'Factor subsidence into foundation design and insurance',
+        ],
+        detail: 'Pull ODNR Division of Geological Survey abandoned-underground-mine maps — much of eastern Ohio and Tuscarawas County was deep-mined for coal, creating subsidence risk that drives foundation design, mine-subsidence insurance and buildable-area decisions.' },
+      { id: 'min-sua', title: 'Negotiate a surface use agreement', critical: true, lead: 'Mineral counsel', time: '2–6 months',
+        overview: 'Where others own or lease the minerals, agree on how the campus and the drilling program coexist.',
+        activities: [
+          'Define no-build / no-drill zones',
+          'Agree on well relocation and consolidated pipeline corridors',
+          'Document it so the campus and mineral program don’t conflict',
+        ],
+        detail: 'Where minerals are severed or leased, negotiate a surface use agreement — no-build/no-drill zones, well relocation, consolidated pipeline corridors — so the campus and the mineral program coexist. This is frequently the single biggest land-side de-risking step a buyer looks for.' },
     ],
   },
   {
     key: 'zoning', title: 'Zoning & Local Land Use',
-    blurb: 'Establish what the land is entitled for and the path to what you need.',
+    blurb: 'Establish what the land is allowed to be used for, and the path to what you need.',
     items: [
-      { id: 'zone-determine', title: 'Township zoning determination (ORC Ch. 519)', phase: 'P1', critical: true, lead: 'Land-use counsel / township zoning inspector', time: '2–4 weeks',
-        desc: 'Determine whether the parcels lie in a township that has adopted zoning under Ohio Revised Code Chapter 519 (several Tuscarawas townships such as Sandy and Lawrence are zoned; some have none) and the current district and permitted uses. An unzoned township can be a speed advantage.' },
-      { id: 'zone-rezone', title: 'Rezoning / conditional-use path & schedule', phase: 'P3', critical: false, lead: 'Land-use counsel', time: '3–6 months',
-        desc: 'If the data-center use is not already permitted, map the rezoning or conditional-use-permit process through the township Zoning Commission, Board of Zoning Appeals and Trustees, including public hearings and notice periods.' },
-      { id: 'zone-county', title: 'County subdivision & comprehensive-plan review', phase: 'P2', critical: false, lead: 'Tuscarawas County Regional Planning Commission', time: '1–2 months',
-        desc: 'Coordinate lot-split/subdivision review, address assignment and consistency with the comprehensive plan through the Tuscarawas County Regional Planning Commission.' },
-      { id: 'zone-opsb', title: 'OPSB-vs-local jurisdiction mapping', phase: 'P1', critical: false, lead: 'Siting counsel', time: '2–4 weeks',
-        desc: 'Document the split: a ≥50 MW generating facility is sited by the Ohio Power Siting Board, which preempts local zoning for that facility — but the data-center buildings themselves stay under township zoning and county building codes. Sequence approvals accordingly.' },
-      { id: 'zone-setbacks', title: 'Setbacks, height & overlay constraints', phase: 'P2', critical: false, lead: 'Land-use counsel / civil', time: '2–4 weeks',
-        desc: 'Confirm setbacks, height limits, any FAA Part 77 airspace surfaces near airports, and floodplain or scenic overlays that shape the building envelope and turbine/stack placement.' },
+      { id: 'zone-determine', title: 'Check the township zoning', critical: true, lead: 'Land-use counsel / township zoning inspector', time: '2–4 weeks',
+        overview: 'Find out whether the township has zoning at all, and what the land is currently allowed to be used for.',
+        activities: [
+          'Confirm if the township adopted zoning (ORC Ch. 519)',
+          'Identify the current district and permitted uses',
+          'Note that an unzoned township can speed things up',
+        ],
+        detail: 'Determine whether the parcels lie in a township that has adopted zoning under Ohio Revised Code Chapter 519 (several Tuscarawas townships such as Sandy and Lawrence are zoned; some have none) and the current district and permitted uses. An unzoned township can be a speed advantage.' },
+      { id: 'zone-rezone', title: 'Map the rezoning path (if needed)', critical: false, lead: 'Land-use counsel', time: '3–6 months',
+        overview: 'If a data center isn’t already allowed, lay out the steps and schedule to get approval.',
+        activities: [
+          'Map the rezoning or conditional-use process',
+          'Identify hearings before the Zoning Commission, BZA and Trustees',
+          'Build in public notice periods',
+        ],
+        detail: 'If the data-center use is not already permitted, map the rezoning or conditional-use-permit process through the township Zoning Commission, Board of Zoning Appeals and Trustees, including public hearings and notice periods.' },
+      { id: 'zone-county', title: 'Coordinate county planning review', critical: false, lead: 'Tuscarawas County Regional Planning Commission', time: '1–2 months',
+        overview: 'Work the lot-split and comprehensive-plan review through the county planning commission.',
+        activities: [
+          'Coordinate subdivision / lot-split review',
+          'Get address assignments',
+          'Confirm consistency with the county comprehensive plan',
+        ],
+        detail: 'Coordinate lot-split/subdivision review, address assignment and consistency with the comprehensive plan through the Tuscarawas County Regional Planning Commission.' },
+      { id: 'zone-opsb', title: 'Sort out state vs. local approval', critical: false, lead: 'Siting counsel', time: '2–4 weeks',
+        overview: 'The power plant is approved by the state (which overrides local zoning), but the buildings stay under township rules — sequence both.',
+        activities: [
+          'Confirm the ≥50 MW plant falls under the state siting board',
+          'Confirm buildings stay under township zoning and county codes',
+          'Sequence the two approval tracks accordingly',
+        ],
+        detail: 'Document the split: a ≥50 MW generating facility is sited by the Ohio Power Siting Board, which preempts local zoning for that facility — but the data-center buildings themselves stay under township zoning and county building codes. Sequence approvals accordingly.' },
+      { id: 'zone-setbacks', title: 'Confirm setbacks & height limits', critical: false, lead: 'Land-use counsel / civil', time: '2–4 weeks',
+        overview: 'Check the rules that shape the building envelope and where turbines and stacks can go.',
+        activities: [
+          'Confirm setbacks and height limits',
+          'Check FAA airspace surfaces near any airport',
+          'Check floodplain or scenic overlays',
+        ],
+        detail: 'Confirm setbacks, height limits, any FAA Part 77 airspace surfaces near airports, and floodplain or scenic overlays that shape the building envelope and turbine/stack placement.' },
     ],
   },
   {
     key: 'opsb', title: 'State Power-Plant Siting (OPSB)',
-    blurb: 'The behind-the-meter plant is the long regulatory pole — start it first.',
+    blurb: 'The on-site power plant is the longest approval — start it first.',
     items: [
-      { id: 'opsb-applic', title: 'Confirm OPSB applicability & scope', phase: 'P1', critical: true, lead: 'OPSB counsel', time: '1 month',
-        desc: 'A ~500 MW on-site gas plant exceeds the 50 MW threshold and requires an Ohio Power Siting Board Certificate of Environmental Compatibility and Public Need (ORC Ch. 4906). Confirm scope early — this certificate sets the project critical path.' },
-      { id: 'opsb-preapp', title: 'Pre-application filing & public meeting', phase: 'P3', critical: false, lead: 'OPSB counsel', time: '2–3 months',
-        desc: 'File the required pre-application notification and hold the public informational meeting. Early agency and community engagement materially reduces certificate risk and opposition later.' },
-      { id: 'opsb-app', title: 'Certificate application & supporting studies', phase: 'P3', critical: true, lead: 'OPSB counsel / consultants', time: '4–8 months to file',
-        desc: 'Assemble the application — socioeconomic, ecological, surface-water, air, noise, visual and cultural studies for the generation site and laydown. Much overlaps the environmental workstream; coordinate fieldwork so studies are done once.' },
-      { id: 'opsb-schedule', title: 'Review timeline & certificate conditions', phase: 'P3', critical: false, lead: 'OPSB counsel', time: '9–12+ months review',
-        desc: 'Build the OPSB review window into the master schedule and anticipate likely certificate conditions (setbacks, operating hours, noise and monitoring) that feed back into site layout.' },
+      { id: 'opsb-applic', title: 'Confirm the plant needs a state siting certificate', critical: true, lead: 'OPSB counsel', time: '1 month',
+        overview: 'An on-site plant this big needs an Ohio Power Siting Board certificate, which sets the project’s critical path.',
+        activities: [
+          'Confirm the ~500 MW plant exceeds the 50 MW threshold',
+          'Confirm an OPSB certificate (ORC Ch. 4906) is required',
+          'Treat this certificate as the schedule driver',
+        ],
+        detail: 'A ~500 MW on-site gas plant exceeds the 50 MW threshold and requires an Ohio Power Siting Board Certificate of Environmental Compatibility and Public Need (ORC Ch. 4906). Confirm scope early — this certificate sets the project critical path.' },
+      { id: 'opsb-preapp', title: 'File the pre-application & hold the public meeting', critical: false, lead: 'OPSB counsel', time: '2–3 months',
+        overview: 'Do the required early filing and community meeting — engaging early lowers approval risk.',
+        activities: [
+          'File the pre-application notification with OPSB',
+          'Hold the required public informational meeting',
+          'Engage the community and agency early',
+        ],
+        detail: 'File the required pre-application notification and hold the public informational meeting. Early agency and community engagement materially reduces certificate risk and opposition later.' },
+      { id: 'opsb-app', title: 'Assemble the certificate application', critical: true, lead: 'OPSB counsel / consultants', time: '4–8 months to file',
+        overview: 'Pull together the studies the state requires for the plant — reuse the environmental fieldwork so it’s done once.',
+        activities: [
+          'Prepare socioeconomic, ecological, water, air, noise, visual and cultural studies',
+          'Cover the generation site and laydown areas',
+          'Coordinate with the environmental work to avoid duplicate fieldwork',
+        ],
+        detail: 'Assemble the application — socioeconomic, ecological, surface-water, air, noise, visual and cultural studies for the generation site and laydown. Much overlaps the environmental workstream; coordinate fieldwork so studies are done once.' },
+      { id: 'opsb-schedule', title: 'Plan for the review timeline & conditions', critical: false, lead: 'OPSB counsel', time: '9–12+ months review',
+        overview: 'Build the long state review window into the schedule and expect conditions that feed back into the layout.',
+        activities: [
+          'Add the 9–12+ month review window to the master schedule',
+          'Anticipate conditions on setbacks, hours, noise and monitoring',
+          'Feed likely conditions back into site design',
+        ],
+        detail: 'Build the OPSB review window into the master schedule and anticipate likely certificate conditions (setbacks, operating hours, noise and monitoring) that feed back into site layout.' },
     ],
   },
   {
     key: 'env', title: 'Environmental Clearance & Cultural Resources',
-    blurb: 'Prove the footprint is clean and buildable — the core of buyer diligence.',
+    blurb: 'Prove the land is clean and buildable — the heart of buyer due diligence.',
     items: [
-      { id: 'env-phase1', title: 'Phase I Environmental Site Assessment', phase: 'P2', critical: true, lead: 'Environmental consultant', time: '4–8 weeks',
-        desc: 'Complete a Phase I ESA (ASTM E1527-21) to surface recognized environmental conditions from prior agricultural, oil & gas or industrial use. Buyers and lenders require a clean Phase I or a clear path to resolve findings.' },
-      { id: 'env-phase2', title: 'Phase II ESA & VAP path (if warranted)', phase: 'P2', critical: false, lead: 'Environmental consultant / Ohio EPA VAP', time: '2–4 months',
-        desc: 'If the Phase I flags conditions (old tanks, pits, brine, dumping), perform Phase II sampling and a closure plan — potentially through Ohio EPA’s Voluntary Action Program to obtain a covenant-not-to-sue.' },
-      { id: 'env-wetlands', title: 'Waters & wetlands delineation (§404 / §401)', phase: 'P2', critical: true, lead: 'Env. consultant / USACE Huntington / Ohio EPA', time: '2–4 months (seasonal)',
-        desc: 'Delineate streams and wetlands and coordinate Clean Water Act §404 jurisdiction with the USACE Huntington District plus §401 water-quality certification and isolated-wetland permits with Ohio EPA. Wetlands can sterilize large areas, so this reshapes the site plan.' },
-      { id: 'env-species', title: 'Threatened & endangered species (bat clearance)', phase: 'P2', critical: true, lead: 'Ecologist / USFWS', time: '1–3 months + clearing window',
-        desc: 'Run a USFWS IPaC review and habitat assessment for listed bats — Indiana bat, northern long-eared bat (endangered) and tricolored bat (proposed) — which limit tree clearing to roughly Oct 1–Mar 31. Bat windows routinely govern the construction schedule.' },
-      { id: 'env-flood', title: 'Floodplain & FEMA / watershed mapping', phase: 'P2', critical: false, lead: 'Civil engineer / floodplain admin', time: '2–4 weeks',
-        desc: 'Overlay FEMA FIRM panels and the Tuscarawas River / Muskingum Watershed Conservancy District floodplain; keep data halls and the power island out of the 100-year floodplain or design for it.' },
-      { id: 'env-cultural', title: 'Cultural & archaeological survey (Section 106)', phase: 'P2', critical: false, lead: 'Cultural-resources consultant / Ohio SHPO', time: '2–4 months',
-        desc: 'Commission a Phase I archaeological and historic-resources survey coordinated with the Ohio History Connection State Historic Preservation Office (SHPO), triggered under Section 106 where federal permits (§404) or OPSB review apply.' },
+      { id: 'env-phase1', title: 'Phase I environmental assessment', critical: true, lead: 'Environmental consultant', time: '4–8 weeks',
+        overview: 'A standard records-and-site review to surface any contamination from past farming, oil & gas or industry.',
+        activities: [
+          'Commission a Phase I ESA (ASTM E1527-21)',
+          'Review prior agricultural, oil & gas and industrial use',
+          'Deliver a clean report or a clear path to resolve findings',
+        ],
+        detail: 'Complete a Phase I ESA (ASTM E1527-21) to surface recognized environmental conditions from prior agricultural, oil & gas or industrial use. Buyers and lenders require a clean Phase I or a clear path to resolve findings.' },
+      { id: 'env-phase2', title: 'Phase II testing (only if flagged)', critical: false, lead: 'Environmental consultant / Ohio EPA VAP', time: '2–4 months',
+        overview: 'If Phase I finds concerns, take samples and make a cleanup plan — possibly through Ohio EPA’s voluntary program.',
+        activities: [
+          'Sample where Phase I flags tanks, pits, brine or dumping',
+          'Develop a closure / cleanup plan',
+          'Consider Ohio EPA’s Voluntary Action Program for a covenant-not-to-sue',
+        ],
+        detail: 'If the Phase I flags conditions (old tanks, pits, brine, dumping), perform Phase II sampling and a closure plan — potentially through Ohio EPA’s Voluntary Action Program to obtain a covenant-not-to-sue.' },
+      { id: 'env-wetlands', title: 'Map streams & wetlands', critical: true, lead: 'Env. consultant / USACE Huntington / Ohio EPA', time: '2–4 months (seasonal)',
+        overview: 'Identify regulated waters on the site — they can block large areas and reshape the layout.',
+        activities: [
+          'Delineate streams and wetlands',
+          'Coordinate Clean Water Act §404 jurisdiction with USACE Huntington',
+          'Get §401 / isolated-wetland coverage from Ohio EPA',
+        ],
+        detail: 'Delineate streams and wetlands and coordinate Clean Water Act §404 jurisdiction with the USACE Huntington District plus §401 water-quality certification and isolated-wetland permits with Ohio EPA. Wetlands can sterilize large areas, so this reshapes the site plan.' },
+      { id: 'env-species', title: 'Endangered species (bat) clearance', critical: true, lead: 'Ecologist / USFWS', time: '1–3 months + clearing window',
+        overview: 'Listed bats limit when trees can be cleared — usually only Oct–Mar — which often drives the construction schedule.',
+        activities: [
+          'Run a USFWS IPaC review and habitat assessment',
+          'Check for Indiana, northern long-eared and tricolored bats',
+          'Schedule tree clearing to the ~Oct 1–Mar 31 window',
+        ],
+        detail: 'Run a USFWS IPaC review and habitat assessment for listed bats — Indiana bat, northern long-eared bat (endangered) and tricolored bat (proposed) — which limit tree clearing to roughly Oct 1–Mar 31. Bat windows routinely govern the construction schedule.' },
+      { id: 'env-flood', title: 'Check the floodplain', critical: false, lead: 'Civil engineer / floodplain admin', time: '2–4 weeks',
+        overview: 'Keep the data halls and power island out of the 100-year floodplain, or design for it.',
+        activities: [
+          'Overlay FEMA flood maps and the watershed floodplain',
+          'Locate critical buildings out of the 100-year floodplain',
+          'Design for flooding where it can’t be avoided',
+        ],
+        detail: 'Overlay FEMA FIRM panels and the Tuscarawas River / Muskingum Watershed Conservancy District floodplain; keep data halls and the power island out of the 100-year floodplain or design for it.' },
+      { id: 'env-cultural', title: 'Archaeological & historic survey', critical: false, lead: 'Cultural-resources consultant / Ohio SHPO', time: '2–4 months',
+        overview: 'A cultural-resources survey coordinated with the state, triggered when federal permits or OPSB review apply.',
+        activities: [
+          'Commission a Phase I archaeological / historic survey',
+          'Coordinate with the Ohio SHPO',
+          'Trigger Section 106 review where §404 permits or OPSB apply',
+        ],
+        detail: 'Commission a Phase I archaeological and historic-resources survey coordinated with the Ohio History Connection State Historic Preservation Office (SHPO), triggered under Section 106 where federal permits (§404) or OPSB review apply.' },
     ],
   },
   {
     key: 'geo', title: 'Geotechnical & Site Conditions',
-    blurb: 'Confirm you can actually found and grade heavy loads here.',
+    blurb: 'Confirm you can actually build heavy structures here.',
     items: [
-      { id: 'geo-borings', title: 'Geotechnical investigation (borings)', phase: 'P2', critical: true, lead: 'Geotechnical engineer', time: '1–2 months',
-        desc: 'Drill soil borings and test bearing capacity for heavy data-hall and turbine foundations. Glaciated and Appalachian-plateau soils, fill and shallow bedrock vary widely across eastern Ohio and drive foundation cost.' },
-      { id: 'geo-mine', title: 'Mine-subsidence & karst mitigation assessment', phase: 'P2', critical: false, lead: 'Geotech / ODNR', time: '1–2 months',
-        desc: 'Pair the abandoned-mine maps with borings to assess undermining, subsidence and any karst, then price mitigation (grouting, deep foundations) before a buyer’s engineers raise it.' },
-      { id: 'geo-topo', title: 'Topographic survey & mass-grading concept', phase: 'P2', critical: false, lead: 'Civil engineer / surveyor', time: '1–2 months',
-        desc: 'Produce a topo/LiDAR base and a cut-and-fill mass-grading concept for large, flat pads on rolling terrain. Earthwork volume is one of the first questions a buyer’s site team will ask.' },
+      { id: 'geo-borings', title: 'Drill soil borings', critical: true, lead: 'Geotechnical engineer', time: '1–2 months',
+        overview: 'Test the ground to confirm it can carry heavy data-hall and turbine foundations.',
+        activities: [
+          'Drill soil borings across the footprint',
+          'Test bearing capacity for heavy foundations',
+          'Use results to size and price foundations',
+        ],
+        detail: 'Drill soil borings and test bearing capacity for heavy data-hall and turbine foundations. Glaciated and Appalachian-plateau soils, fill and shallow bedrock vary widely across eastern Ohio and drive foundation cost.' },
+      { id: 'geo-mine', title: 'Assess mine-subsidence & karst', critical: false, lead: 'Geotech / ODNR', time: '1–2 months',
+        overview: 'Combine the mine maps with borings to judge collapse risk and price any mitigation.',
+        activities: [
+          'Overlay abandoned-mine maps with boring data',
+          'Assess undermining, subsidence and karst risk',
+          'Price mitigation (grouting, deep foundations)',
+        ],
+        detail: 'Pair the abandoned-mine maps with borings to assess undermining, subsidence and any karst, then price mitigation (grouting, deep foundations) before a buyer’s engineers raise it.' },
+      { id: 'geo-topo', title: 'Topographic survey & grading concept', critical: false, lead: 'Civil engineer / surveyor', time: '1–2 months',
+        overview: 'Map the terrain and estimate the earthwork to create large flat pads.',
+        activities: [
+          'Produce a topo / LiDAR base map',
+          'Develop a cut-and-fill mass-grading concept',
+          'Estimate earthwork volume for flat pads',
+        ],
+        detail: 'Produce a topo/LiDAR base and a cut-and-fill mass-grading concept for large, flat pads on rolling terrain. Earthwork volume is one of the first questions a buyer’s site team will ask.' },
     ],
   },
   {
     key: 'water', title: 'Water, Wastewater & Stormwater',
-    blurb: 'Secure cooling water and a discharge path — increasingly the gating utility.',
+    blurb: 'Secure cooling water and a way to discharge it — increasingly the gating utility.',
     items: [
-      { id: 'water-supply', title: 'Water-supply & withdrawal study', phase: 'P2', critical: true, lead: 'Water engineer / ODNR', time: '2–4 months',
-        desc: 'Quantify cooling and make-up water demand and secure a source (municipal, Tuscarawas River intake, or wells). A withdrawal over 100,000 gpd requires Ohio water-withdrawal registration/permitting (ORC Ch. 1521); the site sits in the Ohio River / Muskingum basin, outside the Great Lakes Compact.' },
-      { id: 'water-discharge', title: 'NPDES discharge / pretreatment permit', phase: 'P3', critical: false, lead: 'Env. engineer / Ohio EPA', time: '3–6 months',
-        desc: 'If cooling blowdown or process water is discharged, obtain an Ohio EPA NPDES permit, or negotiate sewer service and industrial pretreatment with a local POTW.' },
-      { id: 'water-sanitary', title: 'Potable water & sanitary service plan', phase: 'P2', critical: false, lead: 'Civil engineer', time: '1–2 months',
-        desc: 'Plan potable supply and sanitary sewer — extend service from Bolivar/Strasburg or the county, or design on-site systems — sized for the full campus build-out.' },
-      { id: 'water-storm', title: 'Stormwater plan & NPDES construction permit', phase: 'P3', critical: false, lead: 'Civil engineer / Ohio EPA', time: '1–2 months',
-        desc: 'For more than one acre of disturbance, obtain Ohio EPA’s NPDES Construction General Permit and prepare a SWPPP plus post-construction stormwater controls; large impervious areas require detention.' },
+      { id: 'water-supply', title: 'Secure a water supply', critical: true, lead: 'Water engineer / ODNR', time: '2–4 months',
+        overview: 'Figure out how much cooling water you need and lock in a source and the permit to withdraw it.',
+        activities: [
+          'Quantify cooling and make-up water demand',
+          'Secure a source (municipal, river intake or wells)',
+          'Register/permit withdrawals over 100,000 gpd (ORC Ch. 1521)',
+        ],
+        detail: 'Quantify cooling and make-up water demand and secure a source (municipal, Tuscarawas River intake, or wells). A withdrawal over 100,000 gpd requires Ohio water-withdrawal registration/permitting (ORC Ch. 1521); the site sits in the Ohio River / Muskingum basin, outside the Great Lakes Compact.' },
+      { id: 'water-discharge', title: 'Plan the wastewater discharge', critical: false, lead: 'Env. engineer / Ohio EPA', time: '3–6 months',
+        overview: 'Arrange a permitted way to get rid of cooling blowdown and process water.',
+        activities: [
+          'Determine if blowdown / process water is discharged',
+          'Get an Ohio EPA NPDES permit, or',
+          'Negotiate sewer service and pretreatment with a local plant',
+        ],
+        detail: 'If cooling blowdown or process water is discharged, obtain an Ohio EPA NPDES permit, or negotiate sewer service and industrial pretreatment with a local POTW.' },
+      { id: 'water-sanitary', title: 'Plan potable water & sewer', critical: false, lead: 'Civil engineer', time: '1–2 months',
+        overview: 'Plan drinking water and sanitary sewer sized for the whole campus.',
+        activities: [
+          'Extend service from Bolivar/Strasburg or the county, or design on-site systems',
+          'Size for full campus build-out',
+        ],
+        detail: 'Plan potable supply and sanitary sewer — extend service from Bolivar/Strasburg or the county, or design on-site systems — sized for the full campus build-out.' },
+      { id: 'water-storm', title: 'Stormwater plan & construction permit', critical: false, lead: 'Civil engineer / Ohio EPA', time: '1–2 months',
+        overview: 'Get the construction stormwater permit and plan for runoff from large paved areas.',
+        activities: [
+          'Obtain Ohio EPA’s NPDES Construction General Permit (>1 acre disturbed)',
+          'Prepare a SWPPP',
+          'Add post-construction controls and detention for paved areas',
+        ],
+        detail: 'For more than one acre of disturbance, obtain Ohio EPA’s NPDES Construction General Permit and prepare a SWPPP plus post-construction stormwater controls; large impervious areas require detention.' },
     ],
   },
   {
     key: 'util', title: 'Utility Interconnection & Air',
-    blurb: 'Power, gas and air permits — the longest external lead times after OPSB.',
+    blurb: 'Power, gas and air permits — the longest outside lead times after OPSB.',
     items: [
-      { id: 'util-load', title: 'AEP Ohio load & standby-service study', phase: 'P1', critical: true, lead: 'AEP Ohio (Ohio Power) / power consultant', time: '3–9 months',
-        desc: 'Engage AEP Ohio early on a large-load and standby/backup service study. Queue position and timeline for a campus of this size are make-or-break, and a credible utility letter is exactly what a hyperscaler wants to see.' },
-      { id: 'util-pjm', title: 'PJM interconnection request (tie / export)', phase: 'P3', critical: false, lead: 'Interconnection counsel / PJM', time: '12+ months',
-        desc: 'If interconnecting to PJM for backup, standby or export, file the interconnection request and track the study queue — a major schedule driver even for a behind-the-meter plant.' },
-      { id: 'util-gas', title: 'Nexus gas interconnect & firm transport', phase: 'P1', critical: true, lead: 'Midstream counsel / Nexus', time: '3–9 months',
-        desc: 'Negotiate a tap/interconnect and firm transportation with the adjacent Nexus pipeline (and any gathering) for the on-site plant; confirm pressure, volume and metering. The pipeline adjacency is a headline selling point — document deliverability.' },
-      { id: 'util-air', title: 'Air permit-to-install (PSD / Title V)', phase: 'P3', critical: true, lead: 'Air consultant / Ohio EPA DAPC', time: '9–12+ months',
-        desc: 'Obtain an Ohio EPA Permit-to-Install for the turbines. A ~500 MW combined-cycle plant is a PSD major source requiring Best Available Control Technology and likely Title V — a long-lead item that must move in lockstep with OPSB.' },
-      { id: 'util-fiber', title: 'Fiber & connectivity routes', phase: 'P2', critical: false, lead: 'Telecom broker', time: '1–2 months',
-        desc: 'Map long-haul and dark-fiber routes and carrier access to the site. Redundant, diverse fiber is a hard requirement for any hyperscaler and a fast disqualifier if absent.' },
+      { id: 'util-load', title: 'Start the AEP Ohio power study', critical: true, lead: 'AEP Ohio (Ohio Power) / power consultant', time: '3–9 months',
+        overview: 'Get in the utility’s queue early for large-load and backup service — queue position can make or break the timeline.',
+        activities: [
+          'Engage AEP Ohio on a large-load and standby-service study',
+          'Lock in a queue position',
+          'Get a credible utility letter for buyers',
+        ],
+        detail: 'Engage AEP Ohio early on a large-load and standby/backup service study. Queue position and timeline for a campus of this size are make-or-break, and a credible utility letter is exactly what a hyperscaler wants to see.' },
+      { id: 'util-pjm', title: 'File the grid interconnection (if connecting)', critical: false, lead: 'Interconnection counsel / PJM', time: '12+ months',
+        overview: 'If you tie to the grid for backup or export, file with PJM and track the study queue.',
+        activities: [
+          'File the PJM interconnection request',
+          'Track the study queue',
+          'Plan around a 12+ month timeline',
+        ],
+        detail: 'If interconnecting to PJM for backup, standby or export, file the interconnection request and track the study queue — a major schedule driver even for a behind-the-meter plant.' },
+      { id: 'util-gas', title: 'Set up the Nexus gas connection', critical: true, lead: 'Midstream counsel / Nexus', time: '3–9 months',
+        overview: 'Negotiate a tap and firm gas transport on the adjacent Nexus pipeline to fuel the plant.',
+        activities: [
+          'Negotiate a tap/interconnect and firm transportation',
+          'Confirm pressure, volume and metering',
+          'Document deliverability as a selling point',
+        ],
+        detail: 'Negotiate a tap/interconnect and firm transportation with the adjacent Nexus pipeline (and any gathering) for the on-site plant; confirm pressure, volume and metering. The pipeline adjacency is a headline selling point — document deliverability.' },
+      { id: 'util-air', title: 'Air permit for the turbines', critical: true, lead: 'Air consultant / Ohio EPA DAPC', time: '9–12+ months',
+        overview: 'Get the Ohio EPA permit to build the gas turbines — a long-lead item that moves alongside OPSB.',
+        activities: [
+          'Apply for an Ohio EPA Permit-to-Install',
+          'Plan for PSD review and Best Available Control Technology',
+          'Expect Title V; keep it in lockstep with OPSB',
+        ],
+        detail: 'Obtain an Ohio EPA Permit-to-Install for the turbines. A ~500 MW combined-cycle plant is a PSD major source requiring Best Available Control Technology and likely Title V — a long-lead item that must move in lockstep with OPSB.' },
+      { id: 'util-fiber', title: 'Confirm fiber routes', critical: false, lead: 'Telecom broker', time: '1–2 months',
+        overview: 'Make sure redundant, diverse fiber can reach the site — a hard requirement for any hyperscaler.',
+        activities: [
+          'Map long-haul and dark-fiber routes',
+          'Confirm carrier access to the site',
+          'Ensure redundant, diverse paths',
+        ],
+        detail: 'Map long-haul and dark-fiber routes and carrier access to the site. Redundant, diverse fiber is a hard requirement for any hyperscaler and a fast disqualifier if absent.' },
     ],
   },
   {
     key: 'pkg', title: 'Incentives & Buyer Diligence Package',
-    blurb: 'Translate the de-risked site into something a buyer can underwrite in weeks.',
+    blurb: 'Turn the de-risked site into something a buyer can underwrite in weeks.',
     items: [
-      { id: 'pkg-tax', title: 'Ohio data-center sales & use tax exemption', phase: 'P4', critical: false, lead: 'Incentives counsel / JobsOhio', time: '2–4 months',
-        desc: 'Pursue the Ohio data-center sales-and-use tax exemption on qualifying equipment (Ohio Tax Credit Authority / Development) — a headline incentive hyperscalers expect to be on the table.' },
-      { id: 'pkg-local', title: 'Local abatements (CRA / EZ / TIF / PILOT)', phase: 'P4', critical: false, lead: 'Counsel / County Economic Development', time: '3–6 months',
-        desc: 'Structure local property-tax tools — Community Reinvestment Area, Enterprise Zone, TIF or a PILOT — with the county, township and school districts. School-board engagement is essential in Ohio for any meaningful abatement.' },
-      { id: 'pkg-jobsohio', title: 'JobsOhio / Team NEO engagement', phase: 'P4', critical: false, lead: 'Developer / JobsOhio', time: 'Ongoing',
-        desc: 'Engage JobsOhio and the regional partner Team NEO for site-readiness grants, infrastructure support and warm introductions to end users and their site-selection consultants.' },
-      { id: 'pkg-siteready', title: 'Site-readiness / SiteOhio certification', phase: 'P4', critical: false, lead: 'Developer / JobsOhio', time: '3–6 months',
-        desc: 'Pursue authenticated-site certification (e.g., SiteOhio) — a third-party stamp that diligence is complete and the site is shovel-ready is exactly what compresses a buyer’s evaluation timeline.' },
-      { id: 'pkg-dataroom', title: 'Diligence data room & site book', phase: 'P4', critical: true, lead: 'Developer', time: '1–2 months',
-        desc: 'Compile everything above — survey, title, mineral resolution, environmental, geotech, utility and gas letters, zoning and OPSB status — into an organized data room and a one-stop site book / offering memorandum a hyperscaler’s real-estate team can underwrite.' },
+      { id: 'pkg-tax', title: 'Pursue the data-center tax exemption', critical: false, lead: 'Incentives counsel / JobsOhio', time: '2–4 months',
+        overview: 'Line up Ohio’s sales-tax exemption on data-center equipment — a headline incentive buyers expect.',
+        activities: [
+          'Apply for the Ohio data-center sales-and-use tax exemption',
+          'Work through the Ohio Tax Credit Authority / Development',
+          'Have it on the table for buyers',
+        ],
+        detail: 'Pursue the Ohio data-center sales-and-use tax exemption on qualifying equipment (Ohio Tax Credit Authority / Development) — a headline incentive hyperscalers expect to be on the table.' },
+      { id: 'pkg-local', title: 'Structure local tax abatements', critical: false, lead: 'Counsel / County Economic Development', time: '3–6 months',
+        overview: 'Set up local property-tax breaks with the county, township and schools.',
+        activities: [
+          'Structure a CRA, Enterprise Zone, TIF or PILOT',
+          'Engage the county and township',
+          'Bring the school districts in early — essential in Ohio',
+        ],
+        detail: 'Structure local property-tax tools — Community Reinvestment Area, Enterprise Zone, TIF or a PILOT — with the county, township and school districts. School-board engagement is essential in Ohio for any meaningful abatement.' },
+      { id: 'pkg-jobsohio', title: 'Engage JobsOhio & Team NEO', critical: false, lead: 'Developer / JobsOhio', time: 'Ongoing',
+        overview: 'Bring in the state and regional economic-development partners for support and buyer introductions.',
+        activities: [
+          'Engage JobsOhio and Team NEO',
+          'Pursue site-readiness grants and infrastructure support',
+          'Get warm introductions to end users and site selectors',
+        ],
+        detail: 'Engage JobsOhio and the regional partner Team NEO for site-readiness grants, infrastructure support and warm introductions to end users and their site-selection consultants.' },
+      { id: 'pkg-siteready', title: 'Get the site certified shovel-ready', critical: false, lead: 'Developer / JobsOhio', time: '3–6 months',
+        overview: 'Earn a third-party “authenticated site” stamp that tells buyers diligence is done.',
+        activities: [
+          'Pursue SiteOhio (or similar) certification',
+          'Complete the required diligence package',
+          'Use the stamp to compress buyer evaluation time',
+        ],
+        detail: 'Pursue authenticated-site certification (e.g., SiteOhio) — a third-party stamp that diligence is complete and the site is shovel-ready is exactly what compresses a buyer’s evaluation timeline.' },
+      { id: 'pkg-dataroom', title: 'Build the buyer data room', critical: true, lead: 'Developer', time: '1–2 months',
+        overview: 'Package everything above into one organized data room and site book a buyer can underwrite fast.',
+        activities: [
+          'Compile survey, title, mineral, environmental, geotech, utility and zoning records',
+          'Organize a clean data room',
+          'Write a one-stop site book / offering memorandum',
+        ],
+        detail: 'Compile everything above — survey, title, mineral resolution, environmental, geotech, utility and gas letters, zoning and OPSB status — into an organized data room and a one-stop site book / offering memorandum a hyperscaler’s real-estate team can underwrite.' },
     ],
   },
 ];
@@ -3124,12 +3372,10 @@ function renderChecklist() {
   const state = loadChecklistState();
   const esc = escapeHtmlSimple;
 
-  // Legend
+  // Legend — just the one flag we still use.
   const legendEl = document.getElementById('clLegend');
   if (legendEl) {
-    legendEl.innerHTML = Object.entries(CHECKLIST_PHASES)
-      .map(([k, p]) => `<span class="cl-legend-item"><span class="cl-dot" style="background:${p.color}"></span>${esc(p.label)}</span>`)
-      .join('') + `<span class="cl-legend-item"><span class="cl-dot cl-dot--crit"></span>Critical path</span>`;
+    legendEl.innerHTML = `<span class="cl-legend-item"><span class="cl-dot cl-dot--crit"></span>Critical path — longest lead time, start these first</span>`;
   }
 
   // Table of contents
@@ -3158,8 +3404,8 @@ function renderChecklist() {
     const items = cat.items.map(it => {
       const checked = state[it.id] ? 'checked' : '';
       const doneCls = state[it.id] ? ' is-done' : '';
-      const p = CHECKLIST_PHASES[it.phase];
-      const crit = it.critical ? `<span class="cl-badge cl-badge--crit">Critical path</span>` : '';
+      const crit = it.critical ? `<span class="cl-flag">Critical path</span>` : '';
+      const acts = (it.activities || []).map(a => `<li>${esc(a)}</li>`).join('');
       return `
         <li class="cl-item${doneCls}" data-id="${it.id}">
           <label class="cl-check">
@@ -3168,12 +3414,18 @@ function renderChecklist() {
           </label>
           <div class="cl-item-body">
             <div class="cl-item-head">
-              <span class="cl-badge" style="--badge:${p.color}">${esc(p.label)}</span>
-              ${crit}
               <span class="cl-item-title">${esc(it.title)}</span>
+              ${crit}
             </div>
-            <p class="cl-item-desc">${esc(it.desc)}</p>
-            <div class="cl-item-meta"><span><strong>Lead:</strong> ${esc(it.lead)}</span><span><strong>Typical timeline:</strong> ${esc(it.time)}</span></div>
+            <p class="cl-item-overview">${esc(it.overview)}</p>
+            <button class="cl-item-toggle" type="button" aria-expanded="false">
+              <span class="cl-item-toggle-caret" aria-hidden="true">▾</span>What it takes
+            </button>
+            <div class="cl-item-detail" hidden>
+              <ul class="cl-activities">${acts}</ul>
+              ${it.detail ? `<p class="cl-item-note">${esc(it.detail)}</p>` : ''}
+              <div class="cl-item-meta"><span><strong>Lead:</strong> ${esc(it.lead)}</span><span><strong>Typical timeline:</strong> ${esc(it.time)}</span></div>
+            </div>
           </div>
         </li>`;
     }).join('');
@@ -3214,6 +3466,17 @@ function renderChecklist() {
       const collapsed = cat.classList.toggle('is-collapsed');
       head.setAttribute('aria-expanded', String(!collapsed));
       syncExpandAllLabel();
+    });
+  });
+
+  // Per-item "What it takes" detail expander
+  root.querySelectorAll('.cl-item-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.cl-item');
+      const detail = item?.querySelector('.cl-item-detail');
+      const open = item.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', String(open));
+      if (detail) detail.hidden = !open;
     });
   });
 
