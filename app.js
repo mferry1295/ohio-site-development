@@ -3378,27 +3378,6 @@ function renderChecklist() {
     legendEl.innerHTML = `<span class="cl-legend-item"><span class="cl-dot cl-dot--crit"></span>Critical path — longest lead time, start these first</span>`;
   }
 
-  // Table of contents
-  const toc = document.getElementById('clToc');
-  if (toc) {
-    toc.innerHTML = CHECKLIST.map((cat, i) => `
-      <a class="cl-toc-chip" href="#cl-cat-${cat.key}" data-key="${cat.key}">
-        <span class="cl-toc-idx">${String(i + 1).padStart(2, '0')}</span>
-        <span class="cl-toc-name">${esc(cat.title)}</span>
-        <span class="cl-toc-count" id="cl-toc-count-${cat.key}">0/${cat.items.length}</span>
-      </a>`).join('');
-    toc.querySelectorAll('.cl-toc-chip').forEach(chip => {
-      chip.addEventListener('click', e => {
-        e.preventDefault();
-        const cat = document.getElementById('cl-cat-' + chip.dataset.key);
-        if (!cat) return;
-        cat.classList.remove('is-collapsed');
-        cat.querySelector('.cl-cat-head')?.setAttribute('aria-expanded', 'true');
-        cat.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
-  }
-
   // Categories
   root.innerHTML = CHECKLIST.map((cat, i) => {
     const items = cat.items.map(it => {
@@ -3500,11 +3479,6 @@ function updateChecklistProgress() {
     if (countEl) countEl.textContent = `${cDone}/${cat.items.length}`;
     const barEl = document.getElementById('cl-catbar-' + cat.key);
     if (barEl) barEl.style.width = pct + '%';
-    const tocEl = document.getElementById('cl-toc-count-' + cat.key);
-    if (tocEl) {
-      tocEl.textContent = `${cDone}/${cat.items.length}`;
-      tocEl.classList.toggle('is-complete', cDone === cat.items.length && cat.items.length > 0);
-    }
   });
   const pct = total ? Math.round(done / total * 100) : 0;
   const pctEl = document.getElementById('clPct'); if (pctEl) pctEl.textContent = pct + '%';

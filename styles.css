@@ -2843,34 +2843,6 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .cl-dot--crit { background: #fff; border: 2px solid var(--derrick); }
 .cl-actions { display: flex; gap: 8px; }
 
-/* Table of contents chips */
-.cl-toc { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
-.cl-toc-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  text-decoration: none;
-  background: var(--pure);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 5px 11px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink);
-  transition: all 0.15s ease;
-}
-.cl-toc-chip:hover { border-color: var(--clay); color: var(--derrick); }
-.cl-toc-idx { font-size: 9px; font-weight: 800; color: var(--clay); letter-spacing: 0.05em; }
-.cl-toc-count {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
-  background: var(--blush);
-  border-radius: 999px;
-  padding: 1px 7px;
-}
-.cl-toc-count.is-complete { background: #2F7D49; color: #fff; }
-
 /* Category cards */
 .cl-categories { display: flex; flex-direction: column; gap: 14px; }
 .cl-cat {
