@@ -135,6 +135,8 @@ function bindNav() {
           ['rampDeclineChart', 'rampStackChart'].forEach(id => charts[id]?.resize?.());
         }, 0);
       }
+      // Land Readiness Checklist builds once, then restores saved progress
+      if (target === 'checklist') renderChecklist();
       // Chart.js mis-sizes when canvases are created in a hidden parent (e.g. when
       // the user lands on the Project Overview tab first). Force a resize on
       // dashboard activation so canvases pick up their now-visible dimensions.
@@ -2380,6 +2382,336 @@ function renderFieldMap() {
     applyFieldFilters();
   });
   window.MAP_STATE = MAP_STATE;
+}
+
+// ===========================================================
+// Land Readiness Checklist (Tuscarawas County, Ohio)
+// Content is specific to a behind-the-meter, gas-fired data-center campus
+// in the Utica fairway. Progress persists in localStorage.
+// ===========================================================
+const CHECKLIST_PHASES = {
+  P1: { label: 'Foundational', color: '#8B1A1A' },
+  P2: { label: 'Studies & clearance', color: '#C44040' },
+  P3: { label: 'Entitlements & interconnect', color: '#4F7799' },
+  P4: { label: 'Buyer package', color: '#2F7D49' },
+};
+
+const CHECKLIST = [
+  {
+    key: 'site', title: 'Site Control & Title',
+    blurb: 'Lock up clean, contiguous control and a defensible base map.',
+    items: [
+      { id: 'site-option', title: 'Secure site control (options / purchase agreements)', phase: 'P1', critical: true, lead: 'Real-estate counsel', time: '1–3 months',
+        desc: 'Tie up the full ~2,800-acre assemblage with option or purchase-and-sale agreements (with extension rights) before spending on studies. A hyperscaler will not engage until it sees clean, exclusive control of a contiguous footprint it can grow into.' },
+      { id: 'site-alta', title: 'ALTA / NSPS land title survey', phase: 'P1', critical: false, lead: 'Ohio-licensed surveyor', time: '1–2 months',
+        desc: 'Commission an ALTA/NSPS survey of the assemblage showing boundaries, acreage, easements, encroachments, setbacks and Table A items. It is the base map every downstream study, the OPSB application and the buyer diligence all build on.' },
+      { id: 'site-title', title: 'Title commitment & encumbrance cure plan', phase: 'P1', critical: true, lead: 'Title company / counsel', time: '1–2 months',
+        desc: 'Pull a title commitment and work every exception — easements, rights-of-way, oil & gas leases, restrictive covenants, liens. In the Utica fairway expect recorded leases and pipeline ROWs; build a plan to cure or quantify each before marketing.' },
+      { id: 'site-access', title: 'Legal access & public-road frontage', phase: 'P1', critical: false, lead: 'Surveyor / counsel', time: '2–4 weeks',
+        desc: 'Confirm legal, all-weather ingress/egress to a public road and document any access easements. Both a buyer and the OPSB need certainty the site can be reached, served and constructed.' },
+      { id: 'site-assemble', title: 'Parcel reconciliation & CAUV recoupment check', phase: 'P1', critical: false, lead: 'Counsel / County Auditor', time: '2–4 weeks',
+        desc: 'Reconcile every parcel ID and acreage with the Tuscarawas County Auditor and check Current Agricultural Use Value (CAUV) recoupment exposure — converting farmland out of CAUV triggers a tax recoupment that should be priced in.' },
+    ],
+  },
+  {
+    key: 'mineral', title: 'Mineral, Oil & Gas, and Coal Rights',
+    blurb: 'The Utica-country issue that most often surprises buyers — resolve the subsurface.',
+    items: [
+      { id: 'min-sever', title: 'Surface vs. mineral estate determination', phase: 'P1', critical: true, lead: 'Title / mineral counsel', time: '1–3 months',
+        desc: 'Run the chain of title to determine whether oil & gas and coal are severed from the surface — across the fairway most are. A severed mineral owner generally holds the dominant right to use the surface, so a buyer must know exactly who controls what is beneath the campus.' },
+      { id: 'min-leases', title: 'Existing oil & gas leases / pooling units', phase: 'P1', critical: true, lead: 'Landman / counsel', time: '1–3 months',
+        desc: 'Identify active Utica leases, drilling units and pooling on the acreage, their terms, and whether the surface is committed to drilling. Held-by-production leases and pooled acreage can dictate where you may and may not build.' },
+      { id: 'min-wells', title: 'Existing, idle & orphaned wells + pipelines', phase: 'P2', critical: false, lead: 'Landman / ODNR', time: '1–2 months',
+        desc: 'Map every active, idle, plugged and orphaned well (ODNR Division of Oil & Gas Resources well locator) and all gathering/transmission lines crossing the site, with setbacks. Legacy wellbores and lines shrink the buildable area and may need plugging or relocation.' },
+      { id: 'min-coal', title: 'Coal seams & abandoned-mine (undermining) review', phase: 'P2', critical: true, lead: 'Geotech / ODNR Geological Survey', time: '1–2 months',
+        desc: 'Pull ODNR Division of Geological Survey abandoned-underground-mine maps — much of eastern Ohio and Tuscarawas County was deep-mined for coal, creating subsidence risk that drives foundation design, mine-subsidence insurance and buildable-area decisions.' },
+      { id: 'min-sua', title: 'Surface use / accommodation agreement', phase: 'P1', critical: true, lead: 'Mineral counsel', time: '2–6 months',
+        desc: 'Where minerals are severed or leased, negotiate a surface use agreement — no-build/no-drill zones, well relocation, consolidated pipeline corridors — so the campus and the mineral program coexist. This is frequently the single biggest land-side de-risking step a buyer looks for.' },
+    ],
+  },
+  {
+    key: 'zoning', title: 'Zoning & Local Land Use',
+    blurb: 'Establish what the land is entitled for and the path to what you need.',
+    items: [
+      { id: 'zone-determine', title: 'Township zoning determination (ORC Ch. 519)', phase: 'P1', critical: true, lead: 'Land-use counsel / township zoning inspector', time: '2–4 weeks',
+        desc: 'Determine whether the parcels lie in a township that has adopted zoning under Ohio Revised Code Chapter 519 (several Tuscarawas townships such as Sandy and Lawrence are zoned; some have none) and the current district and permitted uses. An unzoned township can be a speed advantage.' },
+      { id: 'zone-rezone', title: 'Rezoning / conditional-use path & schedule', phase: 'P3', critical: false, lead: 'Land-use counsel', time: '3–6 months',
+        desc: 'If the data-center use is not already permitted, map the rezoning or conditional-use-permit process through the township Zoning Commission, Board of Zoning Appeals and Trustees, including public hearings and notice periods.' },
+      { id: 'zone-county', title: 'County subdivision & comprehensive-plan review', phase: 'P2', critical: false, lead: 'Tuscarawas County Regional Planning Commission', time: '1–2 months',
+        desc: 'Coordinate lot-split/subdivision review, address assignment and consistency with the comprehensive plan through the Tuscarawas County Regional Planning Commission.' },
+      { id: 'zone-opsb', title: 'OPSB-vs-local jurisdiction mapping', phase: 'P1', critical: false, lead: 'Siting counsel', time: '2–4 weeks',
+        desc: 'Document the split: a ≥50 MW generating facility is sited by the Ohio Power Siting Board, which preempts local zoning for that facility — but the data-center buildings themselves stay under township zoning and county building codes. Sequence approvals accordingly.' },
+      { id: 'zone-setbacks', title: 'Setbacks, height & overlay constraints', phase: 'P2', critical: false, lead: 'Land-use counsel / civil', time: '2–4 weeks',
+        desc: 'Confirm setbacks, height limits, any FAA Part 77 airspace surfaces near airports, and floodplain or scenic overlays that shape the building envelope and turbine/stack placement.' },
+    ],
+  },
+  {
+    key: 'opsb', title: 'State Power-Plant Siting (OPSB)',
+    blurb: 'The behind-the-meter plant is the long regulatory pole — start it first.',
+    items: [
+      { id: 'opsb-applic', title: 'Confirm OPSB applicability & scope', phase: 'P1', critical: true, lead: 'OPSB counsel', time: '1 month',
+        desc: 'A ~500 MW on-site gas plant exceeds the 50 MW threshold and requires an Ohio Power Siting Board Certificate of Environmental Compatibility and Public Need (ORC Ch. 4906). Confirm scope early — this certificate sets the project critical path.' },
+      { id: 'opsb-preapp', title: 'Pre-application filing & public meeting', phase: 'P3', critical: false, lead: 'OPSB counsel', time: '2–3 months',
+        desc: 'File the required pre-application notification and hold the public informational meeting. Early agency and community engagement materially reduces certificate risk and opposition later.' },
+      { id: 'opsb-app', title: 'Certificate application & supporting studies', phase: 'P3', critical: true, lead: 'OPSB counsel / consultants', time: '4–8 months to file',
+        desc: 'Assemble the application — socioeconomic, ecological, surface-water, air, noise, visual and cultural studies for the generation site and laydown. Much overlaps the environmental workstream; coordinate fieldwork so studies are done once.' },
+      { id: 'opsb-schedule', title: 'Review timeline & certificate conditions', phase: 'P3', critical: false, lead: 'OPSB counsel', time: '9–12+ months review',
+        desc: 'Build the OPSB review window into the master schedule and anticipate likely certificate conditions (setbacks, operating hours, noise and monitoring) that feed back into site layout.' },
+    ],
+  },
+  {
+    key: 'env', title: 'Environmental Clearance & Cultural Resources',
+    blurb: 'Prove the footprint is clean and buildable — the core of buyer diligence.',
+    items: [
+      { id: 'env-phase1', title: 'Phase I Environmental Site Assessment', phase: 'P2', critical: true, lead: 'Environmental consultant', time: '4–8 weeks',
+        desc: 'Complete a Phase I ESA (ASTM E1527-21) to surface recognized environmental conditions from prior agricultural, oil & gas or industrial use. Buyers and lenders require a clean Phase I or a clear path to resolve findings.' },
+      { id: 'env-phase2', title: 'Phase II ESA & VAP path (if warranted)', phase: 'P2', critical: false, lead: 'Environmental consultant / Ohio EPA VAP', time: '2–4 months',
+        desc: 'If the Phase I flags conditions (old tanks, pits, brine, dumping), perform Phase II sampling and a closure plan — potentially through Ohio EPA’s Voluntary Action Program to obtain a covenant-not-to-sue.' },
+      { id: 'env-wetlands', title: 'Waters & wetlands delineation (§404 / §401)', phase: 'P2', critical: true, lead: 'Env. consultant / USACE Huntington / Ohio EPA', time: '2–4 months (seasonal)',
+        desc: 'Delineate streams and wetlands and coordinate Clean Water Act §404 jurisdiction with the USACE Huntington District plus §401 water-quality certification and isolated-wetland permits with Ohio EPA. Wetlands can sterilize large areas, so this reshapes the site plan.' },
+      { id: 'env-species', title: 'Threatened & endangered species (bat clearance)', phase: 'P2', critical: true, lead: 'Ecologist / USFWS', time: '1–3 months + clearing window',
+        desc: 'Run a USFWS IPaC review and habitat assessment for listed bats — Indiana bat, northern long-eared bat (endangered) and tricolored bat (proposed) — which limit tree clearing to roughly Oct 1–Mar 31. Bat windows routinely govern the construction schedule.' },
+      { id: 'env-flood', title: 'Floodplain & FEMA / watershed mapping', phase: 'P2', critical: false, lead: 'Civil engineer / floodplain admin', time: '2–4 weeks',
+        desc: 'Overlay FEMA FIRM panels and the Tuscarawas River / Muskingum Watershed Conservancy District floodplain; keep data halls and the power island out of the 100-year floodplain or design for it.' },
+      { id: 'env-cultural', title: 'Cultural & archaeological survey (Section 106)', phase: 'P2', critical: false, lead: 'Cultural-resources consultant / Ohio SHPO', time: '2–4 months',
+        desc: 'Commission a Phase I archaeological and historic-resources survey coordinated with the Ohio History Connection State Historic Preservation Office (SHPO), triggered under Section 106 where federal permits (§404) or OPSB review apply.' },
+    ],
+  },
+  {
+    key: 'geo', title: 'Geotechnical & Site Conditions',
+    blurb: 'Confirm you can actually found and grade heavy loads here.',
+    items: [
+      { id: 'geo-borings', title: 'Geotechnical investigation (borings)', phase: 'P2', critical: true, lead: 'Geotechnical engineer', time: '1–2 months',
+        desc: 'Drill soil borings and test bearing capacity for heavy data-hall and turbine foundations. Glaciated and Appalachian-plateau soils, fill and shallow bedrock vary widely across eastern Ohio and drive foundation cost.' },
+      { id: 'geo-mine', title: 'Mine-subsidence & karst mitigation assessment', phase: 'P2', critical: false, lead: 'Geotech / ODNR', time: '1–2 months',
+        desc: 'Pair the abandoned-mine maps with borings to assess undermining, subsidence and any karst, then price mitigation (grouting, deep foundations) before a buyer’s engineers raise it.' },
+      { id: 'geo-topo', title: 'Topographic survey & mass-grading concept', phase: 'P2', critical: false, lead: 'Civil engineer / surveyor', time: '1–2 months',
+        desc: 'Produce a topo/LiDAR base and a cut-and-fill mass-grading concept for large, flat pads on rolling terrain. Earthwork volume is one of the first questions a buyer’s site team will ask.' },
+    ],
+  },
+  {
+    key: 'water', title: 'Water, Wastewater & Stormwater',
+    blurb: 'Secure cooling water and a discharge path — increasingly the gating utility.',
+    items: [
+      { id: 'water-supply', title: 'Water-supply & withdrawal study', phase: 'P2', critical: true, lead: 'Water engineer / ODNR', time: '2–4 months',
+        desc: 'Quantify cooling and make-up water demand and secure a source (municipal, Tuscarawas River intake, or wells). A withdrawal over 100,000 gpd requires Ohio water-withdrawal registration/permitting (ORC Ch. 1521); the site sits in the Ohio River / Muskingum basin, outside the Great Lakes Compact.' },
+      { id: 'water-discharge', title: 'NPDES discharge / pretreatment permit', phase: 'P3', critical: false, lead: 'Env. engineer / Ohio EPA', time: '3–6 months',
+        desc: 'If cooling blowdown or process water is discharged, obtain an Ohio EPA NPDES permit, or negotiate sewer service and industrial pretreatment with a local POTW.' },
+      { id: 'water-sanitary', title: 'Potable water & sanitary service plan', phase: 'P2', critical: false, lead: 'Civil engineer', time: '1–2 months',
+        desc: 'Plan potable supply and sanitary sewer — extend service from Bolivar/Strasburg or the county, or design on-site systems — sized for the full campus build-out.' },
+      { id: 'water-storm', title: 'Stormwater plan & NPDES construction permit', phase: 'P3', critical: false, lead: 'Civil engineer / Ohio EPA', time: '1–2 months',
+        desc: 'For more than one acre of disturbance, obtain Ohio EPA’s NPDES Construction General Permit and prepare a SWPPP plus post-construction stormwater controls; large impervious areas require detention.' },
+    ],
+  },
+  {
+    key: 'util', title: 'Utility Interconnection & Air',
+    blurb: 'Power, gas and air permits — the longest external lead times after OPSB.',
+    items: [
+      { id: 'util-load', title: 'AEP Ohio load & standby-service study', phase: 'P1', critical: true, lead: 'AEP Ohio (Ohio Power) / power consultant', time: '3–9 months',
+        desc: 'Engage AEP Ohio early on a large-load and standby/backup service study. Queue position and timeline for a campus of this size are make-or-break, and a credible utility letter is exactly what a hyperscaler wants to see.' },
+      { id: 'util-pjm', title: 'PJM interconnection request (tie / export)', phase: 'P3', critical: false, lead: 'Interconnection counsel / PJM', time: '12+ months',
+        desc: 'If interconnecting to PJM for backup, standby or export, file the interconnection request and track the study queue — a major schedule driver even for a behind-the-meter plant.' },
+      { id: 'util-gas', title: 'Nexus gas interconnect & firm transport', phase: 'P1', critical: true, lead: 'Midstream counsel / Nexus', time: '3–9 months',
+        desc: 'Negotiate a tap/interconnect and firm transportation with the adjacent Nexus pipeline (and any gathering) for the on-site plant; confirm pressure, volume and metering. The pipeline adjacency is a headline selling point — document deliverability.' },
+      { id: 'util-air', title: 'Air permit-to-install (PSD / Title V)', phase: 'P3', critical: true, lead: 'Air consultant / Ohio EPA DAPC', time: '9–12+ months',
+        desc: 'Obtain an Ohio EPA Permit-to-Install for the turbines. A ~500 MW combined-cycle plant is a PSD major source requiring Best Available Control Technology and likely Title V — a long-lead item that must move in lockstep with OPSB.' },
+      { id: 'util-fiber', title: 'Fiber & connectivity routes', phase: 'P2', critical: false, lead: 'Telecom broker', time: '1–2 months',
+        desc: 'Map long-haul and dark-fiber routes and carrier access to the site. Redundant, diverse fiber is a hard requirement for any hyperscaler and a fast disqualifier if absent.' },
+    ],
+  },
+  {
+    key: 'pkg', title: 'Incentives & Buyer Diligence Package',
+    blurb: 'Translate the de-risked site into something a buyer can underwrite in weeks.',
+    items: [
+      { id: 'pkg-tax', title: 'Ohio data-center sales & use tax exemption', phase: 'P4', critical: false, lead: 'Incentives counsel / JobsOhio', time: '2–4 months',
+        desc: 'Pursue the Ohio data-center sales-and-use tax exemption on qualifying equipment (Ohio Tax Credit Authority / Development) — a headline incentive hyperscalers expect to be on the table.' },
+      { id: 'pkg-local', title: 'Local abatements (CRA / EZ / TIF / PILOT)', phase: 'P4', critical: false, lead: 'Counsel / County Economic Development', time: '3–6 months',
+        desc: 'Structure local property-tax tools — Community Reinvestment Area, Enterprise Zone, TIF or a PILOT — with the county, township and school districts. School-board engagement is essential in Ohio for any meaningful abatement.' },
+      { id: 'pkg-jobsohio', title: 'JobsOhio / Team NEO engagement', phase: 'P4', critical: false, lead: 'Developer / JobsOhio', time: 'Ongoing',
+        desc: 'Engage JobsOhio and the regional partner Team NEO for site-readiness grants, infrastructure support and warm introductions to end users and their site-selection consultants.' },
+      { id: 'pkg-siteready', title: 'Site-readiness / SiteOhio certification', phase: 'P4', critical: false, lead: 'Developer / JobsOhio', time: '3–6 months',
+        desc: 'Pursue authenticated-site certification (e.g., SiteOhio) — a third-party stamp that diligence is complete and the site is shovel-ready is exactly what compresses a buyer’s evaluation timeline.' },
+      { id: 'pkg-dataroom', title: 'Diligence data room & site book', phase: 'P4', critical: true, lead: 'Developer', time: '1–2 months',
+        desc: 'Compile everything above — survey, title, mineral resolution, environmental, geotech, utility and gas letters, zoning and OPSB status — into an organized data room and a one-stop site book / offering memorandum a hyperscaler’s real-estate team can underwrite.' },
+    ],
+  },
+];
+
+const CHECKLIST_KEY = 'lantern.checklist.v1';
+let checklistBuilt = false;
+
+function loadChecklistState() {
+  try { return JSON.parse(localStorage.getItem(CHECKLIST_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveChecklistState(state) {
+  try { localStorage.setItem(CHECKLIST_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+}
+
+function renderChecklist() {
+  if (checklistBuilt) return;
+  const root = document.getElementById('clCategories');
+  if (!root) return;
+  const state = loadChecklistState();
+  const esc = escapeHtmlSimple;
+
+  // Legend
+  const legendEl = document.getElementById('clLegend');
+  if (legendEl) {
+    legendEl.innerHTML = Object.entries(CHECKLIST_PHASES)
+      .map(([k, p]) => `<span class="cl-legend-item"><span class="cl-dot" style="background:${p.color}"></span>${esc(p.label)}</span>`)
+      .join('') + `<span class="cl-legend-item"><span class="cl-dot cl-dot--crit"></span>Critical path</span>`;
+  }
+
+  // Table of contents
+  const toc = document.getElementById('clToc');
+  if (toc) {
+    toc.innerHTML = CHECKLIST.map((cat, i) => `
+      <a class="cl-toc-chip" href="#cl-cat-${cat.key}" data-key="${cat.key}">
+        <span class="cl-toc-idx">${String(i + 1).padStart(2, '0')}</span>
+        <span class="cl-toc-name">${esc(cat.title)}</span>
+        <span class="cl-toc-count" id="cl-toc-count-${cat.key}">0/${cat.items.length}</span>
+      </a>`).join('');
+    toc.querySelectorAll('.cl-toc-chip').forEach(chip => {
+      chip.addEventListener('click', e => {
+        e.preventDefault();
+        const cat = document.getElementById('cl-cat-' + chip.dataset.key);
+        if (!cat) return;
+        cat.classList.remove('is-collapsed');
+        cat.querySelector('.cl-cat-head')?.setAttribute('aria-expanded', 'true');
+        cat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+
+  // Categories
+  root.innerHTML = CHECKLIST.map((cat, i) => {
+    const items = cat.items.map(it => {
+      const checked = state[it.id] ? 'checked' : '';
+      const doneCls = state[it.id] ? ' is-done' : '';
+      const p = CHECKLIST_PHASES[it.phase];
+      const crit = it.critical ? `<span class="cl-badge cl-badge--crit">Critical path</span>` : '';
+      return `
+        <li class="cl-item${doneCls}" data-id="${it.id}">
+          <label class="cl-check">
+            <input type="checkbox" data-cl="${it.id}" ${checked} aria-label="${esc(it.title)}" />
+            <span class="cl-check-box" aria-hidden="true"></span>
+          </label>
+          <div class="cl-item-body">
+            <div class="cl-item-head">
+              <span class="cl-badge" style="--badge:${p.color}">${esc(p.label)}</span>
+              ${crit}
+              <span class="cl-item-title">${esc(it.title)}</span>
+            </div>
+            <p class="cl-item-desc">${esc(it.desc)}</p>
+            <div class="cl-item-meta"><span><strong>Lead:</strong> ${esc(it.lead)}</span><span><strong>Typical timeline:</strong> ${esc(it.time)}</span></div>
+          </div>
+        </li>`;
+    }).join('');
+    return `
+      <section class="cl-cat" id="cl-cat-${cat.key}">
+        <button class="cl-cat-head" type="button" aria-expanded="true" data-key="${cat.key}">
+          <span class="cl-cat-index">${String(i + 1).padStart(2, '0')}</span>
+          <span class="cl-cat-titles">
+            <span class="cl-cat-title">${esc(cat.title)}</span>
+            <span class="cl-cat-blurb">${esc(cat.blurb)}</span>
+          </span>
+          <span class="cl-cat-progress">
+            <span class="cl-cat-count" id="cl-cat-count-${cat.key}">0/${cat.items.length}</span>
+            <span class="cl-catbar"><span class="cl-catbar-fill" id="cl-catbar-${cat.key}"></span></span>
+          </span>
+          <span class="cl-cat-caret" aria-hidden="true">▾</span>
+        </button>
+        <ul class="cl-item-list">${items}</ul>
+      </section>`;
+  }).join('');
+
+  // Checkbox changes
+  root.querySelectorAll('input[data-cl]').forEach(box => {
+    box.addEventListener('change', e => {
+      const id = e.target.dataset.cl;
+      const st = loadChecklistState();
+      if (e.target.checked) st[id] = true; else delete st[id];
+      saveChecklistState(st);
+      e.target.closest('.cl-item')?.classList.toggle('is-done', e.target.checked);
+      updateChecklistProgress();
+    });
+  });
+
+  // Category collapse/expand
+  root.querySelectorAll('.cl-cat-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const cat = head.closest('.cl-cat');
+      const collapsed = cat.classList.toggle('is-collapsed');
+      head.setAttribute('aria-expanded', String(!collapsed));
+      syncExpandAllLabel();
+    });
+  });
+
+  bindChecklistControls();
+  updateChecklistProgress();
+  checklistBuilt = true;
+}
+
+function updateChecklistProgress() {
+  const state = loadChecklistState();
+  let total = 0, done = 0, critTotal = 0, critDone = 0;
+  CHECKLIST.forEach(cat => {
+    let cDone = 0;
+    cat.items.forEach(it => {
+      total++;
+      if (it.critical) critTotal++;
+      if (state[it.id]) { done++; cDone++; if (it.critical) critDone++; }
+    });
+    const pct = cat.items.length ? Math.round(cDone / cat.items.length * 100) : 0;
+    const countEl = document.getElementById('cl-cat-count-' + cat.key);
+    if (countEl) countEl.textContent = `${cDone}/${cat.items.length}`;
+    const barEl = document.getElementById('cl-catbar-' + cat.key);
+    if (barEl) barEl.style.width = pct + '%';
+    const tocEl = document.getElementById('cl-toc-count-' + cat.key);
+    if (tocEl) {
+      tocEl.textContent = `${cDone}/${cat.items.length}`;
+      tocEl.classList.toggle('is-complete', cDone === cat.items.length && cat.items.length > 0);
+    }
+  });
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const pctEl = document.getElementById('clPct'); if (pctEl) pctEl.textContent = pct + '%';
+  const fillEl = document.getElementById('clOverallFill'); if (fillEl) fillEl.style.width = pct + '%';
+  const doneEl = document.getElementById('clDoneCount'); if (doneEl) doneEl.textContent = `${done} of ${total}`;
+  const critEl = document.getElementById('clCritCount'); if (critEl) critEl.textContent = `${critDone} of ${critTotal}`;
+}
+
+function syncExpandAllLabel() {
+  const btn = document.getElementById('clExpandAll');
+  if (!btn) return;
+  const anyOpen = [...document.querySelectorAll('.cl-cat')].some(c => !c.classList.contains('is-collapsed'));
+  btn.textContent = anyOpen ? 'Collapse all' : 'Expand all';
+}
+
+function bindChecklistControls() {
+  const expandBtn = document.getElementById('clExpandAll');
+  if (expandBtn && expandBtn.dataset.bound !== '1') {
+    expandBtn.addEventListener('click', () => {
+      const cats = [...document.querySelectorAll('.cl-cat')];
+      const anyOpen = cats.some(c => !c.classList.contains('is-collapsed'));
+      cats.forEach(c => {
+        c.classList.toggle('is-collapsed', anyOpen);
+        c.querySelector('.cl-cat-head')?.setAttribute('aria-expanded', String(!anyOpen));
+      });
+      syncExpandAllLabel();
+    });
+    expandBtn.dataset.bound = '1';
+  }
+  const resetBtn = document.getElementById('clReset');
+  if (resetBtn && resetBtn.dataset.bound !== '1') {
+    resetBtn.addEventListener('click', () => {
+      saveChecklistState({});
+      document.querySelectorAll('#clCategories input[data-cl]').forEach(b => { b.checked = false; });
+      document.querySelectorAll('#clCategories .cl-item').forEach(li => li.classList.remove('is-done'));
+      updateChecklistProgress();
+    });
+    resetBtn.dataset.bound = '1';
+  }
 }
 
 // ===== Master render =====
