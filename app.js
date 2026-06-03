@@ -126,8 +126,6 @@ function bindNav() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // re-render charts (canvas needs to be visible to size correctly)
       render();
-      // map needs explicit init / resize when its tab becomes visible
-      if (target === 'fieldmap') renderFieldMap();
       // Parcel map (Krizman holdings) — init / resize Leaflet on activation
       if (target === 'parcelmap') renderParcelMap();
       // Productivity heatmap — init / resize Leaflet on activation
@@ -2031,11 +2029,12 @@ function renderWellPins(items) {
   MAP_STATE.wellsLayer.addLayers(items.map(buildWellMarker));
 }
 
-// Main entry: recompute the matching set and refresh pins, table, and count.
+// Main entry: recompute the matching set, refresh the productivity dots and
+// the detail table, and update the filtered-count chip.
 async function applyFieldFilters() {
   await ensureWellsLoaded();
   const data = MAP_STATE.wellsData;
-  if (!data || !MAP_STATE.map) return;
+  if (!data) return;
   readFieldFilters();
   const f = MAP_STATE.filters;
   const all = data.r || [];
@@ -2045,10 +2044,11 @@ async function applyFieldFilters() {
     if (wellPasses(p, f)) items.push(p);
   }
   MAP_STATE.filteredItems = items;
-  renderWellPins(items);
+  // Productivity map respects the same filters — rebuild dots/grid from the
+  // filtered set (no-op if the map isn't initialized yet).
+  if (PROD_STATE && PROD_STATE.map) buildProductivity();
   renderWellsTable();
   updateFilterCount(items.length, all.length);
-  if (!f.county) renderFilterSummary(items); // county view keeps its own detail aside
 }
 
 function updateFilterCount(matched, total) {
@@ -2086,17 +2086,7 @@ function populateFieldFilterDropdowns() {
 function bindFieldFilters() {
   if (MAP_STATE.filtersBound) return;
   const apply = fieldDebounce(() => applyFieldFilters(), 160);
-  const onCounty = () => {
-    const v = document.getElementById('ffCounty')?.value || '';
-    if (v) {
-      const c = window.OhioCounties.COUNTIES.find(x => x.name.toUpperCase() === v.toUpperCase());
-      if (c) { showCountyDetail(c); return; } // zooms + applies the county filter
-    }
-    MAP_STATE.selectedCounty = null;
-    restylePolygons();
-    applyFieldFilters();
-  };
-  document.getElementById('ffCounty')?.addEventListener('change', onCounty);
+  document.getElementById('ffCounty')?.addEventListener('change', () => applyFieldFilters());
   document.getElementById('ffOperator')?.addEventListener('change', () => applyFieldFilters());
   document.getElementById('ffUnknownYear')?.addEventListener('change', () => applyFieldFilters());
   ['ffYearMin', 'ffYearMax', 'ffGasMin', 'ffGasMax', 'ffOilMin', 'ffOilMax'].forEach(id => {
@@ -2109,9 +2099,6 @@ function bindFieldFilters() {
     const cc = document.getElementById('ffCounty'); if (cc) cc.value = '';
     const oo = document.getElementById('ffOperator'); if (oo) oo.value = '';
     const uk = document.getElementById('ffUnknownYear'); if (uk) uk.checked = true;
-    MAP_STATE.selectedCounty = null;
-    restylePolygons();
-    if (MAP_STATE.map) MAP_STATE.map.flyTo([40.20, -81.30], 8, { duration: 0.6 });
     applyFieldFilters();
   });
   MAP_STATE.filtersBound = true;
@@ -2421,8 +2408,12 @@ function renderProductivityMap() {
     for (let i = 0; i < 120 && !MAP_STATE.wellsData; i++) await new Promise(r => setTimeout(r, 100));
     if (loadEl) loadEl.hidden = true;
     if (!MAP_STATE.wellsData) return;
-    buildProductivity();
+    // Wire the filter bar (above the map) and seed the filtered set — the dots
+    // and the detail table both render off MAP_STATE.filteredItems.
+    populateFieldFilterDropdowns();
+    bindFieldFilters();
     PROD_STATE.built = true;
+    await applyFieldFilters();
   })();
 }
 
@@ -2446,19 +2437,17 @@ function initProductivityMap() {
   bindProdControls();
 }
 
+// Source wells from the active filter set so the dots, the grid, and the
+// detail table all stay in lockstep. No cache — applyFieldFilters runs on
+// every change and we want the next buildProductivity to see the new set.
 function prodWellItems() {
-  if (PROD_STATE.items) return PROD_STATE.items;
-  const data = MAP_STATE.wellsData;
-  if (!data) return [];
-  const counties = data.c || [], operators = data.o || [];
-  const items = [];
-  for (const r of (data.r || [])) {
-    const days = r[9] || 0;
-    if (days <= 0) continue;
-    items.push({ lat: r[0] / 1e5, lon: r[1] / 1e5, county: counties[r[2]] || '', operator: operators[r[3]] || '', name: r[6] || '', oil: r[7] || 0, gas: r[8] || 0, days });
+  const items = MAP_STATE.filteredItems || [];
+  const out = [];
+  for (const p of items) {
+    if (!p.days || p.days <= 0) continue;
+    out.push({ lat: p.lat, lon: p.lon, county: p.countyRaw || '', operator: p.operator || '', name: p.name || '', oil: p.oilBbl || 0, gas: p.gasMcf || 0, days: p.days });
   }
-  PROD_STATE.items = items;
-  return items;
+  return out;
 }
 
 function prodPercentile(sortedAsc, p) {
