@@ -139,6 +139,8 @@ function bindNav() {
       }
       // Land Readiness Checklist builds once, then restores saved progress
       if (target === 'checklist') renderChecklist();
+      // Go-to-Market canvas — builds once, then reacts to its own toggles
+      if (target === 'gtm') renderGtm();
       // Chart.js mis-sizes when canvases are created in a hidden parent (e.g. when
       // the user lands on the Project Overview tab first). Force a resize on
       // dashboard activation so canvases pick up their now-visible dimensions.
@@ -3518,6 +3520,224 @@ function bindChecklistControls() {
     });
     resetBtn.dataset.bound = '1';
   }
+}
+
+// ===========================================================
+// Go-to-Market canvas — dynamic buyer / lease / positioning tool.
+// Four toggles (campus size, product, power model, build plan) drive
+// everything downstream: the pitch, the headline metrics, the ranked
+// buyer shortlist, and the channel call.
+// ===========================================================
+const GTM_STATE = { size: 100, product: 'shell', power: 'btm-gas', phasing: 'single', built: false };
+
+// Buyer universe. min/max = the single-deal MW range a buyer realistically
+// engages on; gas = tolerance for an on-site gas power island
+// (high = a selling point, low = carbon-sensitive). 2025–26 market read.
+const GTM_BUYERS = [
+  { name: 'Microsoft (Azure)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med',
+    wants: 'Scale and expandability; pragmatic on gas with a carbon-offset or CCS path.' },
+  { name: 'Amazon (AWS)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med',
+    wants: 'Multi-hundred-MW phases; nuclear- and gas-pragmatic when speed demands it.' },
+  { name: 'Google Cloud', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'low',
+    wants: '24/7 carbon-free-energy goal — gas is a hard sell without clean firming.' },
+  { name: 'Meta', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high',
+    wants: 'GW-scale AI buildout; has embraced on-site gas to move fast.' },
+  { name: 'Oracle (OCI / Stargate)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'high',
+    wants: 'Aggressive and speed-first; highly gas-tolerant for AI capacity.' },
+  { name: 'OpenAI / Stargate', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high',
+    wants: 'GW-scale and speed-obsessed; fuel-agnostic if it powers up fast.' },
+  { name: 'Crusoe', tier: 'Neocloud', min: 100, max: 500, gas: 'high',
+    wants: 'Built on behind-the-meter gas — your fuel story is their entire model.' },
+  { name: 'CoreWeave', tier: 'Neocloud', min: 50, max: 500, gas: 'high',
+    wants: 'Speed-to-power above all; takes whatever energizes GPUs first.' },
+  { name: 'Nebius', tier: 'Neocloud', min: 50, max: 300, gas: 'high',
+    wants: 'Rapid GPU-cloud expansion; flexible on power source.' },
+  { name: 'Lambda', tier: 'Neocloud', min: 20, max: 150, gas: 'high',
+    wants: 'GPU cloud; smaller, fast deployments and gas-friendly.' },
+  { name: 'Nscale', tier: 'Neocloud', min: 50, max: 250, gas: 'high',
+    wants: 'AI-native, power-hungry and speed-driven.' },
+  { name: 'QTS (Blackstone)', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med',
+    wants: 'Builds large shells and leases to the megacaps; power-led siting.' },
+  { name: 'Vantage', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med',
+    wants: 'Large campuses for hyperscale tenants; follows the power.' },
+  { name: 'Switch', tier: 'Hyperscale colo', min: 100, max: 300, gas: 'med',
+    wants: 'Big campuses; sustainability brand but pragmatic on firm power.' },
+  { name: 'Digital Realty', tier: 'Colocation', min: 50, max: 250, gas: 'med',
+    wants: 'Global colo platform; carbon goals but takes firm power.' },
+  { name: 'Equinix', tier: 'Colocation', min: 20, max: 150, gas: 'low',
+    wants: 'Interconnection-led with a strong sustainability posture.' },
+  { name: 'TeraWulf / IREN / Cipher', tier: 'Crypto → HPC', min: 50, max: 250, gas: 'high',
+    wants: 'Power-first miners pivoting to AI hosting — love cheap on-site gas.' },
+  { name: 'Enterprise / regional cloud', tier: 'Enterprise', min: 10, max: 50, gas: 'med',
+    wants: 'Single-tenant enterprise AI or regional colo; smaller footprints.' },
+];
+
+const GTM_PRODUCTS = {
+  land:    { label: 'Powered land',  short: 'powered-land',           term: '20–50 yrs', leasePerMW: 0.18 },
+  shell:   { label: 'Powered shell', short: 'powered-shell',          term: '15–20 yrs', leasePerMW: 0.85 },
+  turnkey: { label: 'Turnkey lease', short: 'turnkey build-to-suit',  term: '15–20 yrs', leasePerMW: 1.45 },
+  colo:    { label: 'Colocation',    short: 'colocation',             term: '3–10 yrs',  leasePerMW: 1.90 },
+};
+const GTM_POWER = {
+  'btm-gas':    { label: 'Behind-the-meter gas', speed: '18–30 mo', value: 'speed-to-power and fuel security' },
+  'hybrid':     { label: 'Grid + gas hybrid',    speed: '24–42 mo', value: 'resilience and a credible carbon path' },
+  'grid-renew': { label: 'Grid + renewables',    speed: '48–84 mo', value: 'clean, firm power and ESG fit' },
+};
+const GTM_PHASED_CEILING = 1000; // master-plan scale the assemblage can carry
+
+function gtmSizeLabel(mw) { return mw >= 1000 ? (mw / 1000) + ' GW' : mw + ' MW'; }
+function gtmFacilityMW(mw) { return Math.round(mw * 1.25); }            // PUE ~1.25
+function gtmGasMMcfd(mw) { return mw * 1.25 * 0.1748; }                 // ~0.175 MMcf/d per facility-MW
+function gtmWells(mw) { return Math.ceil(gtmGasMMcfd(mw) / 0.9); }      // ~0.9 MMcf/d/well near site
+
+// Fit for one buyer at the current state. Returns null if not a target.
+function gtmFit(b, s) {
+  const inRange = s.size >= b.min && s.size <= b.max;
+  const phaseFit = s.phasing === 'phased' && b.min > s.size && b.min <= GTM_PHASED_CEILING && b.max >= s.size;
+  if (!inRange && !phaseFit) return null;
+  let score = inRange ? 2 : 1;
+  const notes = [];
+  if (phaseFit) notes.push('Engages via the phased master plan');
+  if (s.power === 'btm-gas') {
+    if (b.gas === 'high') { score += 1; notes.push('On-site gas is a selling point'); }
+    else if (b.gas === 'low') { score -= 1; notes.push('Carbon-sensitive — needs a CCS / offset story'); }
+  } else if (s.power === 'grid-renew') {
+    if (b.gas === 'low') { score += 1; notes.push('Clean-power posture fits their carbon goals'); }
+    else notes.push('Gas speed advantage is muted in this model');
+  } else if (b.gas === 'low') {
+    notes.push('Cleaner blend softens the carbon objection');
+  }
+  return { stars: Math.max(1, Math.min(3, score)), raw: score, notes };
+}
+
+function renderGtm() {
+  if (!document.getElementById('gtmControls')) return;
+  if (!GTM_STATE.built) { bindGtmControls(); GTM_STATE.built = true; }
+  gtmRender();
+}
+
+function bindGtmControls() {
+  document.querySelectorAll('#gtmControls .gtm-seg').forEach(seg => {
+    const group = seg.dataset.group;
+    seg.querySelectorAll('.gtm-seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        seg.querySelectorAll('.gtm-seg-btn').forEach(x => x.classList.toggle('active', x === btn));
+        GTM_STATE[group] = (group === 'size') ? Number(btn.dataset.val) : btn.dataset.val;
+        gtmRender();
+      });
+    });
+  });
+}
+
+function gtmRender() {
+  gtmRenderPitch();
+  gtmRenderMetrics();
+  gtmRenderBuyers();
+  gtmRenderApproach();
+}
+
+function gtmMatches(s) {
+  return GTM_BUYERS.map(b => ({ b, f: gtmFit(b, s) })).filter(x => x.f);
+}
+
+function gtmRenderPitch() {
+  const el = document.getElementById('gtmPitch');
+  if (!el) return;
+  const s = GTM_STATE, prod = GTM_PRODUCTS[s.product], pow = GTM_POWER[s.power];
+  const matches = gtmMatches(s);
+  const tierCount = {};
+  matches.forEach(m => { tierCount[m.b.tier] = (tierCount[m.b.tier] || 0) + 1; });
+  const topTiers = Object.entries(tierCount).sort((a, b) => b[1] - a[1]).slice(0, 2).map(t => t[0]);
+  el.innerHTML = `
+    <div class="gtm-pitch-tag">The pitch</div>
+    <p class="gtm-pitch-line">A <strong>${gtmSizeLabel(s.size)}</strong> ${escapeHtmlSimple(prod.short)} campus on the Bolivar site${s.phasing === 'phased' ? ', master-planned to ~1 GW,' : ''} powered by <strong>${escapeHtmlSimple(pow.label.toLowerCase())}</strong> and deliverable in <strong>~${pow.speed}</strong> — taken to ${topTiers.length ? escapeHtmlSimple(topTiers.join(' and ').toLowerCase()) + ' buyers' : 'the buyers'} who prize <strong>${escapeHtmlSimple(pow.value)}</strong>.</p>`;
+}
+
+function gtmRenderMetrics() {
+  const el = document.getElementById('gtmMetrics');
+  if (!el) return;
+  const s = GTM_STATE, prod = GTM_PRODUCTS[s.product], pow = GTM_POWER[s.power];
+  const gas = gtmGasMMcfd(s.size);
+  const leaseLo = s.size * prod.leasePerMW * 0.8, leaseHi = s.size * prod.leasePerMW * 1.25;
+  const fmtM = v => v >= 1000 ? '$' + (v / 1000).toFixed(1) + 'B' : '$' + Math.round(v) + 'M';
+  const cards = [
+    { label: 'IT load', value: gtmSizeLabel(s.size), sub: `~${gtmFacilityMW(s.size)} MW total facility (PUE 1.25)` },
+    { label: 'On-site gas burn', value: gas.toFixed(0) + ' MMcf/d', sub: `~${(gas * 365 / 1000).toFixed(1)} Bcf/yr at full load` },
+    { label: 'Wells to sustain', value: '~' + gtmWells(s.size), sub: 'producing near site, before decline + infill' },
+    { label: 'Speed to power', value: pow.speed, sub: pow.label },
+    { label: 'Lease term', value: prod.term, sub: prod.label },
+    { label: 'Indicative lease value', value: `${fmtM(leaseLo)}–${fmtM(leaseHi)}/yr`, sub: 'stabilized · illustrative only' },
+    { label: 'Buyers in play', value: String(gtmMatches(s).length), sub: 'matching the current filters' },
+  ];
+  el.innerHTML = cards.map(c => `
+    <div class="gtm-metric">
+      <div class="gtm-metric-label">${c.label}</div>
+      <div class="gtm-metric-value">${c.value}</div>
+      <div class="gtm-metric-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+function gtmRenderBuyers() {
+  const el = document.getElementById('gtmBuyers');
+  const countEl = document.getElementById('gtmBuyerCount');
+  if (!el) return;
+  const scored = gtmMatches(GTM_STATE).sort((a, b) => b.f.raw - a.f.raw || a.b.min - b.b.min);
+  if (countEl) countEl.textContent = `· ${scored.length} target${scored.length === 1 ? '' : 's'}`;
+  if (!scored.length) {
+    el.innerHTML = `<div class="gtm-buyer-empty">No clean buyer match at this configuration — widen the size or switch to a phased master plan to reach the larger players.</div>`;
+    return;
+  }
+  const star = n => '★'.repeat(n) + '☆'.repeat(3 - n);
+  el.innerHTML = scored.map(({ b, f }) => {
+    const deal = gtmSizeLabel(b.min) + '–' + gtmSizeLabel(b.max);
+    const notes = f.notes.map(n => `<li>${escapeHtmlSimple(n)}</li>`).join('');
+    return `
+      <div class="gtm-buyer gtm-buyer--s${f.stars}">
+        <div class="gtm-buyer-top">
+          <span class="gtm-buyer-name">${escapeHtmlSimple(b.name)}</span>
+          <span class="gtm-buyer-stars" title="${f.stars} of 3 fit">${star(f.stars)}</span>
+        </div>
+        <div class="gtm-buyer-meta"><span class="gtm-buyer-tier">${escapeHtmlSimple(b.tier)}</span><span class="gtm-buyer-deal">${deal}</span></div>
+        <p class="gtm-buyer-wants">${escapeHtmlSimple(b.wants)}</p>
+        ${notes ? `<ul class="gtm-buyer-notes">${notes}</ul>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function gtmRenderApproach() {
+  const el = document.getElementById('gtmApproach');
+  if (!el) return;
+  const s = GTM_STATE;
+  const tiers = new Set(gtmMatches(s).map(m => m.b.tier));
+  let channel;
+  if (tiers.has('Hyperscaler') || tiers.has('Hyperscale colo')) {
+    channel = 'Data-center site-selection advisors (JLL, CBRE, Cushman, Newmark) plus hyperscaler land + energy teams direct.';
+  } else if (tiers.has('Neocloud') || tiers.has('Crypto → HPC')) {
+    channel = 'Direct to neocloud and crypto-to-HPC real-estate teams, plus power-developer / IPP partners who can co-bid the gas plant.';
+  } else {
+    channel = 'Regional brokers, JobsOhio / Team NEO, and direct enterprise outreach.';
+  }
+  const pillars = [
+    { h: 'Speed to power', p: `Behind-the-meter gas skips the multi-year interconnection queue — energized in ~${GTM_POWER[s.power].speed}, the scarcest commodity in the AI buildout.` },
+    { h: 'Shovel-ready & de-risked', p: 'The Land Readiness Checklist and data room show clean control, a buildable footprint and entitlements already in motion.' },
+    { h: 'Fuel-secure', p: 'A captive Utica position plus the adjacent Nexus pipeline back the gas thesis with both on-site wells and firm transport.' },
+    { h: 'Scalable', p: 'A ~3,000-acre assemblage supports phasing from a first 100 MW to a ~1 GW master plan without re-siting.' },
+    { h: 'Incentive-rich', p: 'Ohio’s data-center sales-tax exemption plus local abatements and JobsOhio support sharpen the all-in cost.' },
+  ];
+  const steps = [
+    { n: '01', h: 'Package', p: 'Finish the site book, data room and this model into one underwriteable story (ties to the Land Checklist).' },
+    { n: '02', h: 'Tease', p: 'Anonymous one-page teaser to the advisor channel and target tenants — power, speed, acreage, fuel.' },
+    { n: '03', h: 'Target', p: 'Matched outreach to the shortlist above, sequenced by fit and the active power model.' },
+    { n: '04', h: 'Convert', p: 'LOI → diligence against the data room → lease, ground lease or JV with a power partner.' },
+  ];
+  el.innerHTML = `
+    <div class="gtm-pillars">
+      ${pillars.map(p => `<div class="gtm-pillar"><div class="gtm-pillar-h">${escapeHtmlSimple(p.h)}</div><p>${escapeHtmlSimple(p.p)}</p></div>`).join('')}
+    </div>
+    <div class="gtm-channel"><span class="gtm-channel-tag">Primary channel now</span><p>${escapeHtmlSimple(channel)}</p></div>
+    <div class="gtm-steps">
+      ${steps.map(st => `<div class="gtm-step"><span class="gtm-step-n">${st.n}</span><div class="gtm-step-body"><div class="gtm-step-h">${escapeHtmlSimple(st.h)}</div><p>${escapeHtmlSimple(st.p)}</p></div></div>`).join('')}
+    </div>`;
 }
 
 // ===== Master render =====

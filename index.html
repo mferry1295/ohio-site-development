@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<link rel="stylesheet" href="styles.css?v=2026-06-03i" />
+<link rel="stylesheet" href="styles.css?v=2026-06-03j" />
 </head>
 <body>
 
@@ -35,6 +35,7 @@
     <a href="#parcelmap" class="navlink" data-target="parcelmap">Parcel Map</a>
     <a href="#powerramp" class="navlink" data-target="powerramp">Power Ramp</a>
     <a href="#checklist" class="navlink" data-target="checklist">Land Checklist</a>
+    <a href="#gtm" class="navlink" data-target="gtm">Go to Market</a>
     <a href="#research" class="navlink" data-target="research">Oil and Gas Primer</a>
   </nav>
 </header>
@@ -908,6 +909,69 @@
   </div>
 </section>
 
+<!-- =========== GO TO MARKET =========== -->
+<section id="gtm" class="page">
+  <div class="content full">
+    <h2 class="page-title">Go to Market · How We Sell the Site</h2>
+    <p class="page-lead">A live working canvas for the marketing strategy. Set the campus size and how we package and power it — the buyer shortlist, lease structure, fuel math and the pitch all re-rate in real time. Use it to pressure-test "who do we call, and what do we say" before we take the site to market.</p>
+
+    <div class="gtm-controls" id="gtmControls">
+      <div class="gtm-ctrl">
+        <span class="gtm-ctrl-label">Campus size</span>
+        <div class="gtm-seg" data-group="size">
+          <button class="gtm-seg-btn" data-val="50" type="button">50 MW</button>
+          <button class="gtm-seg-btn active" data-val="100" type="button">100 MW</button>
+          <button class="gtm-seg-btn" data-val="250" type="button">250 MW</button>
+          <button class="gtm-seg-btn" data-val="500" type="button">500 MW</button>
+          <button class="gtm-seg-btn" data-val="1000" type="button">1 GW</button>
+        </div>
+      </div>
+      <div class="gtm-ctrl">
+        <span class="gtm-ctrl-label">What we sell</span>
+        <div class="gtm-seg" data-group="product">
+          <button class="gtm-seg-btn" data-val="land" type="button">Powered land</button>
+          <button class="gtm-seg-btn active" data-val="shell" type="button">Powered shell</button>
+          <button class="gtm-seg-btn" data-val="turnkey" type="button">Turnkey lease</button>
+          <button class="gtm-seg-btn" data-val="colo" type="button">Colocation</button>
+        </div>
+      </div>
+      <div class="gtm-ctrl">
+        <span class="gtm-ctrl-label">Power model</span>
+        <div class="gtm-seg" data-group="power">
+          <button class="gtm-seg-btn active" data-val="btm-gas" type="button">Behind-the-meter gas</button>
+          <button class="gtm-seg-btn" data-val="hybrid" type="button">Grid + gas hybrid</button>
+          <button class="gtm-seg-btn" data-val="grid-renew" type="button">Grid + renewables</button>
+        </div>
+      </div>
+      <div class="gtm-ctrl">
+        <span class="gtm-ctrl-label">Build plan</span>
+        <div class="gtm-seg" data-group="phasing">
+          <button class="gtm-seg-btn active" data-val="single" type="button">Single phase</button>
+          <button class="gtm-seg-btn" data-val="phased" type="button">Phased master plan</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="gtm-pitch" id="gtmPitch"></div>
+
+    <div class="gtm-metrics" id="gtmMetrics"></div>
+
+    <div class="gtm-section-head">
+      <h3>Buyer shortlist <span class="gtm-buyer-count" id="gtmBuyerCount"></span></h3>
+      <p>Who to call at this configuration — ranked by fit. Toggle the controls above to watch the target list shift.</p>
+    </div>
+    <div class="gtm-buyers" id="gtmBuyers"></div>
+
+    <div class="gtm-section-head">
+      <h3>Our approach</h3>
+      <p>The value proposition we lead with and how we run the process.</p>
+    </div>
+    <div class="gtm-approach" id="gtmApproach"></div>
+
+    <div class="gtm-source">Buyer fit, lease terms and economics are directional planning aids for working sessions — not offers, forecasts, or commitments. Calibrate against live broker and tenant feedback before relying on any figure.</div>
+  </div>
+</section>
+
 <!-- =========== INDUSTRY RESEARCH =========== -->
 <section id="research" class="page">
   <div class="content full">
@@ -1103,10 +1167,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-06-03i"></script>
-<script src="counties.js?v=2026-06-03i"></script>
-<script src="operators.js?v=2026-06-03i"></script>
-<script src="model.js?v=2026-06-03i"></script>
-<script src="app.js?v=2026-06-03i"></script>
+<script src="supabase-config.js?v=2026-06-03j"></script>
+<script src="counties.js?v=2026-06-03j"></script>
+<script src="operators.js?v=2026-06-03j"></script>
+<script src="model.js?v=2026-06-03j"></script>
+<script src="app.js?v=2026-06-03j"></script>
 </body>
 </html>
