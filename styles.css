@@ -3136,3 +3136,85 @@ footer .muted { color: rgba(255,255,255,0.55); }
   .pm-sidebar { max-height: 460px; }
   .pm-stat--wide { grid-column: span 1; }
 }
+
+/* ===== Productivity Map (Utica well heatmap) ===== */
+.prod-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+.prod-metric, .prod-view, .prod-basemap { display: inline-flex; gap: 4px; }
+.prod-metric-btn, .prod-view-btn, .prod-base-btn {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 13px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.prod-metric-btn:hover, .prod-view-btn:hover, .prod-base-btn:hover { border-color: var(--clay); color: var(--derrick); }
+.prod-metric-btn.active, .prod-view-btn.active, .prod-base-btn.active { background: var(--derrick); border-color: var(--derrick); color: #fff; }
+.prod-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--iron); cursor: pointer; }
+.prod-toggle input { accent-color: var(--derrick); cursor: pointer; }
+.prod-loading { font-size: 11px; font-weight: 700; color: var(--derrick); }
+
+.prod-mapwrap { position: relative; }
+.prod-canvas { height: 600px; border: 1px solid var(--line); border-radius: 6px; }
+.prod-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 18px;
+  z-index: 600;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 9px 11px;
+  box-shadow: var(--shadow);
+  width: 168px;
+}
+.prod-legend-title { font-size: 10.5px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.prod-legend-title span { color: var(--muted); font-weight: 600; }
+.prod-legend-bar { height: 9px; border-radius: 3px; background: linear-gradient(90deg, #FDDBA0, #F5B25F, #E97837, #C73726, #780E12); }
+.prod-legend-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+.prod-site-icon {
+  color: #1156A3;
+  font-size: 22px;
+  line-height: 26px;
+  text-align: center;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 5px #fff;
+  cursor: default;
+}
+
+.prod-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.prod-stat {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+.prod-stat--wide { grid-column: span 2; }
+.prod-stat--site { border-left: 3px solid #1156A3; }
+.prod-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.prod-stat-value { font-family: 'Times New Roman', serif; font-size: 26px; font-weight: 800; color: var(--derrick); line-height: 1; }
+.prod-stat-unit { font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700; color: var(--iron); }
+.prod-stat-sub { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+.prod-leaders { display: flex; flex-direction: column; gap: 5px; }
+.prod-leader { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.prod-leader-rank { width: 16px; height: 16px; flex: none; border-radius: 50%; background: var(--blush); color: var(--derrick); font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.prod-leader-name { flex: 1; font-weight: 700; color: var(--ink); }
+.prod-leader-val { font-weight: 700; color: var(--derrick); white-space: nowrap; }
+.prod-note { margin-top: 22px; }
+.prod-source { font-size: 10.5px; color: var(--muted); margin-top: 10px; font-style: italic; }
+
+@media (max-width: 760px) {
+  .prod-canvas { height: 440px; }
+  .prod-stat--wide { grid-column: span 1; }
+  .prod-legend { width: 140px; }
+}

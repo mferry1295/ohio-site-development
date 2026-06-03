@@ -130,6 +130,8 @@ function bindNav() {
       if (target === 'fieldmap') renderFieldMap();
       // Parcel map (Krizman holdings) — init / resize Leaflet on activation
       if (target === 'parcelmap') renderParcelMap();
+      // Productivity heatmap — init / resize Leaflet on activation
+      if (target === 'productivity') renderProductivityMap();
       // Power Ramp charts need to be created/resized when their tab becomes visible
       if (target === 'powerramp') {
         renderPowerRamp();
@@ -2384,6 +2386,231 @@ function renderFieldMap() {
     applyFieldFilters();
   });
   window.MAP_STATE = MAP_STATE;
+}
+
+// ===========================================================
+// Productivity Map — Utica well heatmap (ODNR 2025 production)
+// Reuses the Field Map's wells.json; weights a heat layer by per-well rate.
+// ===========================================================
+const PROD_STATE = { map: null, canvas: null, wellLayer: null, gridLayer: null, site: null, baseLayers: {}, basemap: 'street', metric: 'gas', view: 'wells', built: false, items: null };
+const PROD_METRICS = {
+  gas:  { label: 'Gas rate', unit: 'Mcf/d', short: 'gas', val: (oil, gas, days) => days > 0 ? gas / days : 0 },
+  oil:  { label: 'Oil rate', unit: 'bbl/d', short: 'oil', val: (oil, gas, days) => days > 0 ? oil / days : 0 },
+  mcfe: { label: 'Gas-equivalent', unit: 'Mcfe/d', short: 'gas-equiv', val: (oil, gas, days) => days > 0 ? (gas + oil * 5.659) / days : 0 },
+};
+// Sequential productivity ramp: light orange (low) → deep red (high).
+const PROD_RAMP = [[253, 219, 160], [245, 178, 95], [233, 120, 55], [199, 55, 38], [120, 14, 18]];
+function prodColor(t) {
+  t = Math.max(0, Math.min(1, t || 0));
+  const x = t * (PROD_RAMP.length - 1), i = Math.floor(x), f = x - i;
+  const a = PROD_RAMP[i], b = PROD_RAMP[Math.min(PROD_RAMP.length - 1, i + 1)];
+  return `rgb(${Math.round(a[0] + (b[0] - a[0]) * f)},${Math.round(a[1] + (b[1] - a[1]) * f)},${Math.round(a[2] + (b[2] - a[2]) * f)})`;
+}
+const PROD_SITE = [40.6299, -81.4312]; // Project Lantern site, Bolivar
+
+function renderProductivityMap() {
+  if (typeof L === 'undefined') return;
+  initProductivityMap();
+  setTimeout(() => PROD_STATE.map && PROD_STATE.map.invalidateSize(), 60);
+  if (PROD_STATE.built) return;
+  const loadEl = document.getElementById('prodLoading');
+  if (loadEl) loadEl.hidden = false;
+  (async () => {
+    await ensureWellsLoaded();
+    // ensureWellsLoaded can return before an in-flight load resolves — poll briefly.
+    for (let i = 0; i < 120 && !MAP_STATE.wellsData; i++) await new Promise(r => setTimeout(r, 100));
+    if (loadEl) loadEl.hidden = true;
+    if (!MAP_STATE.wellsData) return;
+    buildProductivity();
+    PROD_STATE.built = true;
+  })();
+}
+
+function initProductivityMap() {
+  if (PROD_STATE.map) return;
+  const el = document.getElementById('prodMap');
+  if (!el) return;
+  const map = L.map('prodMap', { center: [40.05, -81.05], zoom: 8, minZoom: 7, maxZoom: 14, scrollWheelZoom: false });
+  PROD_STATE.map = map;
+  PROD_STATE.canvas = L.canvas({ padding: 0.5 }); // GPU-light rendering for thousands of markers
+  PROD_STATE.baseLayers.street = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap, &copy; CARTO', subdomains: 'abcd', maxZoom: 19,
+  }).addTo(map);
+  PROD_STATE.baseLayers.aerial = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Imagery &copy; Esri', maxZoom: 19,
+  });
+  const icon = L.divIcon({ className: 'prod-site-icon', html: '★', iconSize: [26, 26], iconAnchor: [13, 13] });
+  PROD_STATE.site = L.marker(PROD_SITE, { icon, zIndexOffset: 1000 })
+    .bindTooltip('Project Lantern site · Bolivar', { direction: 'top', offset: [0, -10] })
+    .addTo(map);
+  bindProdControls();
+}
+
+function prodWellItems() {
+  if (PROD_STATE.items) return PROD_STATE.items;
+  const data = MAP_STATE.wellsData;
+  if (!data) return [];
+  const counties = data.c || [], operators = data.o || [];
+  const items = [];
+  for (const r of (data.r || [])) {
+    const days = r[9] || 0;
+    if (days <= 0) continue;
+    items.push({ lat: r[0] / 1e5, lon: r[1] / 1e5, county: counties[r[2]] || '', operator: operators[r[3]] || '', name: r[6] || '', oil: r[7] || 0, gas: r[8] || 0, days });
+  }
+  PROD_STATE.items = items;
+  return items;
+}
+
+function prodPercentile(sortedAsc, p) {
+  if (!sortedAsc.length) return 0;
+  return sortedAsc[Math.min(sortedAsc.length - 1, Math.floor(p * sortedAsc.length))];
+}
+
+function buildProductivity() {
+  const map = PROD_STATE.map;
+  if (!map) return;
+  const m = PROD_METRICS[PROD_STATE.metric];
+  const items = prodWellItems();
+  if (PROD_STATE.wellLayer) { map.removeLayer(PROD_STATE.wellLayer); PROD_STATE.wellLayer = null; }
+  if (PROD_STATE.gridLayer) { map.removeLayer(PROD_STATE.gridLayer); PROD_STATE.gridLayer = null; }
+  const vals = [];
+  for (const it of items) { const v = m.val(it.oil, it.gas, it.days); if (v > 0) vals.push(v); }
+  vals.sort((a, b) => a - b);
+  const legendMax = PROD_STATE.view === 'grid' ? renderGridView(items, m) : renderWellsView(items, m, vals);
+  renderProdLegend(m, legendMax);
+  renderProdStats(items, m, vals);
+}
+
+// Graduated symbols: every well a dot, sized + colored by its own rate.
+function renderWellsView(items, m, vals) {
+  const colorMax = prodPercentile(vals, 0.95) || 1;
+  const sizeMax = prodPercentile(vals, 0.90) || 1;
+  const e = escapeHtmlSimple;
+  const tc = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const group = L.layerGroup();
+  // Draw lowest-rate wells first so the big producers sit on top.
+  const scored = items.map(it => ({ it, v: m.val(it.oil, it.gas, it.days) })).filter(x => x.v > 0).sort((a, b) => a.v - b.v);
+  scored.forEach(({ it, v }) => {
+    const radius = 2.5 + Math.sqrt(Math.min(1, v / sizeMax)) * 8.5;
+    const mk = L.circleMarker([it.lat, it.lon], {
+      renderer: PROD_STATE.canvas, radius,
+      color: 'rgba(45,20,20,0.4)', weight: 0.5,
+      fillColor: prodColor(v / colorMax), fillOpacity: 0.82,
+    });
+    mk.bindPopup(`<div class="well-popup">
+      <div class="well-popup-name">${e(it.name) || '—'}</div>
+      <div class="well-popup-row"><span>Operator</span><strong>${e(tc(it.operator))}</strong></div>
+      <div class="well-popup-row"><span>County</span><strong>${e(tc(it.county))}</strong></div>
+      <div class="well-popup-section">2025 rate</div>
+      <div class="well-popup-row"><span>Gas</span><strong>${Math.round(it.gas / it.days).toLocaleString()} Mcf/d</strong></div>
+      <div class="well-popup-row"><span>Oil</span><strong>${Math.round(it.oil / it.days).toLocaleString()} bbl/d</strong></div>
+    </div>`, { maxWidth: 240 });
+    group.addLayer(mk);
+  });
+  PROD_STATE.wellLayer = group.addTo(PROD_STATE.map);
+  return colorMax;
+}
+
+// Area grid: bin wells into ~2.5 mi cells, color by AVERAGE rate (well quality,
+// not well density) — the legible "best areas to drill" heatmap.
+function renderGridView(items, m) {
+  const CELL = 0.035;
+  const cells = {};
+  items.forEach(it => {
+    const v = m.val(it.oil, it.gas, it.days);
+    if (v <= 0) return;
+    const gx = Math.floor(it.lon / CELL), gy = Math.floor(it.lat / CELL), key = gx + '_' + gy;
+    const c = cells[key] || (cells[key] = { gx, gy, sum: 0, n: 0, gas: 0, oil: 0, days: 0 });
+    c.sum += v; c.n++; c.gas += it.gas; c.oil += it.oil; c.days += it.days;
+  });
+  const list = Object.values(cells).filter(c => c.n >= 2);
+  const avgs = list.map(c => c.sum / c.n).sort((a, b) => a - b);
+  const colorMax = prodPercentile(avgs, 0.92) || 1;
+  const group = L.layerGroup();
+  list.forEach(c => {
+    const avg = c.sum / c.n;
+    const bounds = [[c.gy * CELL, c.gx * CELL], [(c.gy + 1) * CELL, (c.gx + 1) * CELL]];
+    const rect = L.rectangle(bounds, {
+      renderer: PROD_STATE.canvas, color: 'rgba(255,255,255,0.2)', weight: 0.4,
+      fillColor: prodColor(avg / colorMax), fillOpacity: 0.66,
+    });
+    rect.bindPopup(`<div class="well-popup">
+      <div class="well-popup-name">${c.n} wells · this area</div>
+      <div class="well-popup-row"><span>Avg ${m.short}</span><strong>${Math.round(avg).toLocaleString()} ${m.unit}</strong></div>
+      <div class="well-popup-row"><span>Avg gas</span><strong>${c.days > 0 ? Math.round(c.gas / c.days).toLocaleString() : '—'} Mcf/d</strong></div>
+      <div class="well-popup-row"><span>Avg oil</span><strong>${c.days > 0 ? Math.round(c.oil / c.days).toLocaleString() : '—'} bbl/d</strong></div>
+    </div>`, { maxWidth: 220 });
+    group.addLayer(rect);
+  });
+  PROD_STATE.gridLayer = group.addTo(PROD_STATE.map);
+  return colorMax;
+}
+
+function renderProdLegend(m, max) {
+  const el = document.getElementById('prodLegend');
+  if (!el) return;
+  el.innerHTML = `<div class="prod-legend-title">${m.label} <span>(${m.unit})</span></div>
+    <div class="prod-legend-bar"></div>
+    <div class="prod-legend-scale"><span>low</span><span>&ge; ${Math.round(max).toLocaleString()}</span></div>`;
+}
+
+function renderProdStats(items, m, valsAsc) {
+  const el = document.getElementById('prodStats');
+  if (!el) return;
+  const e = escapeHtmlSimple;
+  const tc = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const f0 = v => Math.round(v).toLocaleString();
+  let peak = null;
+  for (const it of items) { const v = m.val(it.oil, it.gas, it.days); if (!peak || v > peak.v) peak = { it, v }; }
+  const cty = {};
+  items.forEach(it => { const v = m.val(it.oil, it.gas, it.days); const c = (cty[it.county] = cty[it.county] || { sum: 0, n: 0 }); c.sum += v; c.n++; });
+  const leaders = Object.entries(cty).filter(([, c]) => c.n >= 10).map(([name, c]) => ({ name, avg: c.sum / c.n }))
+    .sort((a, b) => b.avg - a.avg).slice(0, 3);
+  let sgas = 0, soil = 0, sdays = 0, scount = 0;
+  items.forEach(it => { if (Math.abs(it.lat - PROD_SITE[0]) < 0.18 && Math.abs(it.lon - PROD_SITE[1]) < 0.22) { sgas += it.gas; soil += it.oil; sdays += it.days; scount++; } });
+  const siteGasRate = sdays > 0 ? sgas / sdays : 0;
+  const siteOilShare = (soil * 5.659 + sgas) > 0 ? (soil * 5.659) / (soil * 5.659 + sgas) * 100 : 0;
+  const leaderRows = leaders.map((l, i) => `<div class="prod-leader"><span class="prod-leader-rank">${i + 1}</span><span class="prod-leader-name">${e(tc(l.name))}</span><span class="prod-leader-val">${f0(l.avg)} ${m.unit}</span></div>`).join('');
+  el.innerHTML = `
+    <div class="prod-stat"><div class="prod-stat-label">Wells mapped</div><div class="prod-stat-value">${valsAsc.length.toLocaleString()}</div><div class="prod-stat-sub">with 2025 production</div></div>
+    <div class="prod-stat"><div class="prod-stat-label">Peak well · ${m.short}</div><div class="prod-stat-value">${f0(peak ? peak.v : 0)}</div><div class="prod-stat-sub">${m.unit}${peak ? ' · ' + e(tc(peak.it.county)) : ''}</div></div>
+    <div class="prod-stat prod-stat--wide"><div class="prod-stat-label">Best counties · avg ${m.short} rate / well</div><div class="prod-leaders">${leaderRows || '—'}</div></div>
+    <div class="prod-stat prod-stat--site"><div class="prod-stat-label">Near the Lantern site (~12 mi)</div>${scount ? `<div class="prod-stat-value">${f0(siteGasRate)}<span class="prod-stat-unit"> Mcf/d gas</span></div><div class="prod-stat-sub">${scount} horizontal wells · ~${siteOilShare.toFixed(0)}% oil by BOE → oilier window</div>` : `<div class="prod-stat-value">—</div><div class="prod-stat-sub">few/no horizontal Utica wells yet — emerging western edge</div>`}</div>`;
+}
+
+function bindProdControls() {
+  document.querySelectorAll('.prod-metric-btn').forEach(btn => {
+    if (btn.dataset.bound === '1') return;
+    btn.addEventListener('click', () => {
+      PROD_STATE.metric = btn.dataset.metric;
+      document.querySelectorAll('.prod-metric-btn').forEach(b => b.classList.toggle('active', b === btn));
+      buildProductivity();
+    });
+    btn.dataset.bound = '1';
+  });
+  document.querySelectorAll('.prod-base-btn').forEach(btn => {
+    if (btn.dataset.bound === '1') return;
+    btn.addEventListener('click', () => {
+      const base = btn.dataset.base;
+      if (base === PROD_STATE.basemap) return;
+      const map = PROD_STATE.map;
+      map.removeLayer(PROD_STATE.baseLayers[PROD_STATE.basemap]);
+      PROD_STATE.baseLayers[base].addTo(map);
+      PROD_STATE.baseLayers[base].bringToBack();
+      PROD_STATE.basemap = base;
+      document.querySelectorAll('.prod-base-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+    btn.dataset.bound = '1';
+  });
+  document.querySelectorAll('.prod-view-btn').forEach(btn => {
+    if (btn.dataset.bound === '1') return;
+    btn.addEventListener('click', () => {
+      PROD_STATE.view = btn.dataset.view;
+      document.querySelectorAll('.prod-view-btn').forEach(b => b.classList.toggle('active', b === btn));
+      buildProductivity();
+    });
+    btn.dataset.bound = '1';
+  });
 }
 
 // ===========================================================

@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<link rel="stylesheet" href="styles.css?v=2026-06-02d" />
+<link rel="stylesheet" href="styles.css?v=2026-06-02f" />
 </head>
 <body>
 
@@ -32,6 +32,7 @@
     <a href="#overview" class="navlink active" data-target="overview">Project Overview</a>
     <a href="#dashboard" class="navlink" data-target="dashboard">Dashboard</a>
     <a href="#fieldmap" class="navlink" data-target="fieldmap">Field Map</a>
+    <a href="#productivity" class="navlink" data-target="productivity">Productivity Map</a>
     <a href="#parcelmap" class="navlink" data-target="parcelmap">Parcel Map</a>
     <a href="#powerramp" class="navlink" data-target="powerramp">Power Ramp</a>
     <a href="#checklist" class="navlink" data-target="checklist">Land Checklist</a>
@@ -707,6 +708,46 @@
   </div>
 </section>
 
+<!-- =========== PRODUCTIVITY MAP (UTICA WELL HEATMAP) =========== -->
+<section id="productivity" class="page">
+  <div class="content full">
+    <h2 class="page-title">Productivity Map · Where the Best Utica Wells Are</h2>
+    <p class="page-lead">All 3,798 horizontal Utica wells that filed 2025 production with ODNR — each dot <strong>sized and colored by the rate you choose</strong>, so the biggest producers pop instead of smearing into a blob. Toggle <strong>gas</strong> vs <strong>oil</strong> to watch the play windows shift: the dry-gas core (Belmont / Monroe / Harrison) for gas, the oilier western edge for oil. Switch to <strong>Area grid</strong> to color ~2.5-mile cells by <em>average</em> well quality. The ★ marks the Project Lantern site near Bolivar.</p>
+
+    <div class="prod-controls">
+      <div class="prod-metric" role="tablist" aria-label="Rate metric">
+        <button class="prod-metric-btn active" data-metric="gas" type="button">Gas rate</button>
+        <button class="prod-metric-btn" data-metric="oil" type="button">Oil rate</button>
+        <button class="prod-metric-btn" data-metric="mcfe" type="button">Gas-equivalent</button>
+      </div>
+      <div class="prod-view" role="tablist" aria-label="View">
+        <button class="prod-view-btn active" data-view="wells" type="button">Wells</button>
+        <button class="prod-view-btn" data-view="grid" type="button">Area grid</button>
+      </div>
+      <div class="prod-basemap" role="tablist" aria-label="Basemap">
+        <button class="prod-base-btn active" data-base="street" type="button">Map</button>
+        <button class="prod-base-btn" data-base="aerial" type="button">Aerial</button>
+      </div>
+      <div class="prod-loading" id="prodLoading" hidden>Loading wells…</div>
+    </div>
+
+    <div class="prod-mapwrap">
+      <div id="prodMap" class="map-canvas prod-canvas"></div>
+      <div class="prod-legend" id="prodLegend"></div>
+    </div>
+
+    <div class="prod-stats" id="prodStats"></div>
+
+    <article class="research-article prod-note">
+      <div class="r-tag">Reading the map</div>
+      <h3>This is the empirical “best places to drill” — what’s actually producing</h3>
+      <p>Productivity is driven by thermal maturity and rock quality: the deep, overpressured dry-gas window in eastern Belmont/Monroe/Harrison delivers the biggest gas rates, while the shallower western edge (Tuscarawas and west) makes more oil and condensate and far less gas per well. Flip the metric to <em>oil</em> and the heat shifts west — that is the play window, mapped from real wells rather than a geologist’s contour. For the behind-the-meter <em>gas</em> thesis, the takeaway is the one we keep hitting: the Lantern site sits on the oilier edge, so local wells make less gas per well — which is exactly why the Nexus firm-transport blend matters. For the definitive geology, pair this with the free Utica <a href="https://www.wvgs.wvnet.edu/Utica" target="_blank" rel="noopener">Geologic Play Book</a> thermal-maturity maps and ODNR’s <a href="https://ohiodnr.gov/discover-and-learn/safety-conservation/about-odnr/geologic-survey/energy-resources/unconventional-shale-resources" target="_blank" rel="noopener">shale resource maps</a>.</p>
+    </article>
+
+    <div class="prod-source">Source: Ohio DNR horizontal-well quarterly production filings, all four quarters of 2025 (3,798 wells). Heat weight = the selected per-well daily rate (production ÷ days on production).</div>
+  </div>
+</section>
+
 <!-- =========== PARCEL MAP (KRIZMAN HOLDINGS) =========== -->
 <section id="parcelmap" class="page">
   <div class="content full">
@@ -1128,10 +1169,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-06-02d"></script>
-<script src="counties.js?v=2026-06-02d"></script>
-<script src="operators.js?v=2026-06-02d"></script>
-<script src="model.js?v=2026-06-02d"></script>
-<script src="app.js?v=2026-06-02d"></script>
+<script src="supabase-config.js?v=2026-06-02f"></script>
+<script src="counties.js?v=2026-06-02f"></script>
+<script src="operators.js?v=2026-06-02f"></script>
+<script src="model.js?v=2026-06-02f"></script>
+<script src="app.js?v=2026-06-02f"></script>
 </body>
 </html>
