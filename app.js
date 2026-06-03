@@ -1957,6 +1957,10 @@ function readFieldFilters() {
   f.includeUnknownYear = document.getElementById('ffUnknownYear')?.checked ?? true;
 }
 
+// Stable identity for a well — used to match a detail-table row to its map dot.
+// Prefer the ODNR API number; fall back to coordinates when API is missing.
+function wellKey(p) { return p.api ? 'a:' + p.api : 'c:' + p.lat + '_' + p.lon; }
+
 // Decode one raw wells.json record into a labelled object with derived rates.
 function projectWell(r, data) {
   const days = r[9] || 0, oil = r[7] || 0, gas = r[8] || 0;
@@ -2044,6 +2048,8 @@ async function applyFieldFilters() {
     if (wellPasses(p, f)) items.push(p);
   }
   MAP_STATE.filteredItems = items;
+  // A changed filter set invalidates any well selection.
+  if (PROD_STATE) PROD_STATE.selectedWell = null;
   // Productivity map respects the same filters — rebuild dots/grid from the
   // filtered set (no-op if the map isn't initialized yet).
   if (PROD_STATE && PROD_STATE.map) buildProductivity();
@@ -2155,6 +2161,7 @@ function renderWellsTable() {
   if (!section || !tbody) return;
 
   bindWellsTableHeaders();
+  bindWellsTableRows();
   section.hidden = false;
 
   const items = (MAP_STATE.filteredItems || []).slice();
@@ -2191,7 +2198,10 @@ function renderWellsTable() {
   const f0 = v => Math.round(v).toLocaleString();
   const f1 = v => v.toLocaleString(undefined, { maximumFractionDigits: 1 });
   const f2 = v => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  tbody.innerHTML = shown.map(it => `<tr>
+  const sel = PROD_STATE && PROD_STATE.selectedWell;
+  tbody.innerHTML = shown.map(it => {
+    const key = wellKey(it);
+    return `<tr data-key="${escapeHtmlSimple(key)}" data-lat="${it.lat}" data-lon="${it.lon}"${key === sel ? ' class="row-active"' : ''} title="Zoom to this well on the map">
     <td>${escapeHtmlSimple(it.name) || '—'}</td>
     <td>${escapeHtmlSimple(it.operator) || '—'}</td>
     <td>${escapeHtmlSimple(it.county)}</td>
@@ -2201,7 +2211,20 @@ function renderWellsTable() {
     <td class="num">${f2(it.gasPerDayMMcf)}</td>
     <td class="num">${f1(it.gasMMcf)}</td>
     <td class="num">${f0(it.oilBbl)}</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
+}
+
+// Delegated click handler so it survives every tbody re-render. Bound once.
+function bindWellsTableRows() {
+  if (MAP_STATE.wellsRowsBound) return;
+  const tbody = document.getElementById('wellsTableBody');
+  if (!tbody) return;
+  tbody.addEventListener('click', ev => {
+    const tr = ev.target.closest('tr');
+    if (tr && tbody.contains(tr)) onWellRowClick(tr);
+  });
+  MAP_STATE.wellsRowsBound = true;
 }
 
 function bindWellsTableHeaders() {
@@ -2379,7 +2402,7 @@ function renderFieldMap() {
 // Productivity Map — Utica well heatmap (ODNR 2025 production)
 // Reuses the Field Map's wells.json; weights a heat layer by per-well rate.
 // ===========================================================
-const PROD_STATE = { map: null, canvas: null, wellLayer: null, gridLayer: null, site: null, baseLayers: {}, basemap: 'street', metric: 'gas', view: 'wells', built: false, items: null };
+const PROD_STATE = { map: null, canvas: null, wellLayer: null, gridLayer: null, site: null, baseLayers: {}, basemap: 'street', metric: 'gas', view: 'wells', built: false, items: null, wellMarkers: null, selectedWell: null };
 const PROD_METRICS = {
   gas:  { label: 'Gas rate', unit: 'Mcf/d', short: 'gas', val: (oil, gas, days) => days > 0 ? gas / days : 0 },
   oil:  { label: 'Oil rate', unit: 'bbl/d', short: 'oil', val: (oil, gas, days) => days > 0 ? oil / days : 0 },
@@ -2445,7 +2468,7 @@ function prodWellItems() {
   const out = [];
   for (const p of items) {
     if (!p.days || p.days <= 0) continue;
-    out.push({ lat: p.lat, lon: p.lon, county: p.countyRaw || '', operator: p.operator || '', name: p.name || '', oil: p.oilBbl || 0, gas: p.gasMcf || 0, days: p.days });
+    out.push({ key: wellKey(p), api: p.api || '', lat: p.lat, lon: p.lon, county: p.countyRaw || '', operator: p.operator || '', name: p.name || '', oil: p.oilBbl || 0, gas: p.gasMcf || 0, days: p.days });
   }
   return out;
 }
@@ -2467,7 +2490,6 @@ function buildProductivity() {
   vals.sort((a, b) => a - b);
   const legendMax = PROD_STATE.view === 'grid' ? renderGridView(items, m) : renderWellsView(items, m, vals);
   renderProdLegend(m, legendMax);
-  renderProdStats(items, m, vals);
 }
 
 // Graduated symbols: every well a dot, sized + colored by its own rate.
@@ -2477,15 +2499,14 @@ function renderWellsView(items, m, vals) {
   const e = escapeHtmlSimple;
   const tc = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const group = L.layerGroup();
+  // Registry so the detail table can find a well's dot by its stable key.
+  const registry = new Map();
   // Draw lowest-rate wells first so the big producers sit on top.
   const scored = items.map(it => ({ it, v: m.val(it.oil, it.gas, it.days) })).filter(x => x.v > 0).sort((a, b) => a.v - b.v);
   scored.forEach(({ it, v }) => {
     const radius = 2.5 + Math.sqrt(Math.min(1, v / sizeMax)) * 8.5;
-    const mk = L.circleMarker([it.lat, it.lon], {
-      renderer: PROD_STATE.canvas, radius,
-      color: 'rgba(45,20,20,0.4)', weight: 0.5,
-      fillColor: prodColor(v / colorMax), fillOpacity: 0.82,
-    });
+    const base = { radius, color: 'rgba(45,20,20,0.4)', weight: 0.5, fillColor: prodColor(v / colorMax), fillOpacity: 0.82 };
+    const mk = L.circleMarker([it.lat, it.lon], { renderer: PROD_STATE.canvas, ...base });
     mk.bindPopup(`<div class="well-popup">
       <div class="well-popup-name">${e(it.name) || '—'}</div>
       <div class="well-popup-row"><span>Operator</span><strong>${e(tc(it.operator))}</strong></div>
@@ -2495,8 +2516,10 @@ function renderWellsView(items, m, vals) {
       <div class="well-popup-row"><span>Oil</span><strong>${Math.round(it.oil / it.days).toLocaleString()} bbl/d</strong></div>
     </div>`, { maxWidth: 240 });
     group.addLayer(mk);
+    if (it.key) registry.set(it.key, { marker: mk, lat: it.lat, lon: it.lon, base });
   });
   PROD_STATE.wellLayer = group.addTo(PROD_STATE.map);
+  PROD_STATE.wellMarkers = registry;
   return colorMax;
 }
 
@@ -2543,36 +2566,13 @@ function renderProdLegend(m, max) {
     <div class="prod-legend-scale"><span>low</span><span>&ge; ${Math.round(max).toLocaleString()}</span></div>`;
 }
 
-function renderProdStats(items, m, valsAsc) {
-  const el = document.getElementById('prodStats');
-  if (!el) return;
-  const e = escapeHtmlSimple;
-  const tc = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-  const f0 = v => Math.round(v).toLocaleString();
-  let peak = null;
-  for (const it of items) { const v = m.val(it.oil, it.gas, it.days); if (!peak || v > peak.v) peak = { it, v }; }
-  const cty = {};
-  items.forEach(it => { const v = m.val(it.oil, it.gas, it.days); const c = (cty[it.county] = cty[it.county] || { sum: 0, n: 0 }); c.sum += v; c.n++; });
-  const leaders = Object.entries(cty).filter(([, c]) => c.n >= 10).map(([name, c]) => ({ name, avg: c.sum / c.n }))
-    .sort((a, b) => b.avg - a.avg).slice(0, 3);
-  let sgas = 0, soil = 0, sdays = 0, scount = 0;
-  items.forEach(it => { if (Math.abs(it.lat - PROD_SITE[0]) < 0.18 && Math.abs(it.lon - PROD_SITE[1]) < 0.22) { sgas += it.gas; soil += it.oil; sdays += it.days; scount++; } });
-  const siteGasRate = sdays > 0 ? sgas / sdays : 0;
-  const siteOilShare = (soil * 5.659 + sgas) > 0 ? (soil * 5.659) / (soil * 5.659 + sgas) * 100 : 0;
-  const leaderRows = leaders.map((l, i) => `<div class="prod-leader"><span class="prod-leader-rank">${i + 1}</span><span class="prod-leader-name">${e(tc(l.name))}</span><span class="prod-leader-val">${f0(l.avg)} ${m.unit}</span></div>`).join('');
-  el.innerHTML = `
-    <div class="prod-stat"><div class="prod-stat-label">Wells mapped</div><div class="prod-stat-value">${valsAsc.length.toLocaleString()}</div><div class="prod-stat-sub">with 2025 production</div></div>
-    <div class="prod-stat"><div class="prod-stat-label">Peak well · ${m.short}</div><div class="prod-stat-value">${f0(peak ? peak.v : 0)}</div><div class="prod-stat-sub">${m.unit}${peak ? ' · ' + e(tc(peak.it.county)) : ''}</div></div>
-    <div class="prod-stat prod-stat--wide"><div class="prod-stat-label">Best counties · avg ${m.short} rate / well</div><div class="prod-leaders">${leaderRows || '—'}</div></div>
-    <div class="prod-stat prod-stat--site"><div class="prod-stat-label">Near the Lantern site (~12 mi)</div>${scount ? `<div class="prod-stat-value">${f0(siteGasRate)}<span class="prod-stat-unit"> Mcf/d gas</span></div><div class="prod-stat-sub">${scount} horizontal wells · ~${siteOilShare.toFixed(0)}% oil by BOE → oilier window</div>` : `<div class="prod-stat-value">—</div><div class="prod-stat-sub">few/no horizontal Utica wells yet — emerging western edge</div>`}</div>`;
-}
-
 function bindProdControls() {
   document.querySelectorAll('.prod-metric-btn').forEach(btn => {
     if (btn.dataset.bound === '1') return;
     btn.addEventListener('click', () => {
       PROD_STATE.metric = btn.dataset.metric;
       document.querySelectorAll('.prod-metric-btn').forEach(b => b.classList.toggle('active', b === btn));
+      clearProdSelection();        // recolored dots — drop any stale highlight
       buildProductivity();
     });
     btn.dataset.bound = '1';
@@ -2596,10 +2596,71 @@ function bindProdControls() {
     btn.addEventListener('click', () => {
       PROD_STATE.view = btn.dataset.view;
       document.querySelectorAll('.prod-view-btn').forEach(b => b.classList.toggle('active', b === btn));
+      clearProdSelection();        // metric/view changes rebuild fresh dots
       buildProductivity();
     });
     btn.dataset.bound = '1';
   });
+}
+
+// ===== Detail-table → map selection =====
+// Clicking a table row zooms the map to that well and greys out the rest.
+function highlightProdWell(key, opts = {}) {
+  const reg = PROD_STATE.wellMarkers;
+  if (!reg) return;
+  const rec = reg.get(key);
+  PROD_STATE.selectedWell = key;
+  reg.forEach((r, k) => {
+    if (k === key) {
+      r.marker.setStyle({ fillColor: r.base.fillColor, fillOpacity: 1, color: '#1B1B1B', weight: 2 });
+      r.marker.setRadius(Math.max(7, r.base.radius + 2));
+      r.marker.bringToFront();
+    } else {
+      r.marker.setStyle({ fillColor: '#c2c2c2', fillOpacity: 0.16, color: 'rgba(120,120,120,0.22)', weight: 0.5 });
+    }
+  });
+  if (rec) {
+    if (opts.zoom) PROD_STATE.map.setView([rec.lat, rec.lon], 13, { animate: true });
+    rec.marker.openPopup();
+  }
+}
+
+function clearProdSelection() {
+  PROD_STATE.selectedWell = null;
+  document.querySelectorAll('#wellsTable tbody tr.row-active').forEach(r => r.classList.remove('row-active'));
+  if (PROD_STATE.map) PROD_STATE.map.closePopup();
+  const reg = PROD_STATE.wellMarkers;
+  if (!reg) return;
+  reg.forEach(r => {
+    r.marker.setStyle({ fillColor: r.base.fillColor, fillOpacity: r.base.fillOpacity, color: r.base.color, weight: r.base.weight });
+    r.marker.setRadius(r.base.radius);
+  });
+}
+
+function onWellRowClick(tr) {
+  if (!PROD_STATE || !PROD_STATE.map) return;
+  const key = tr.dataset.key;
+  if (!key) return;
+  // Click the already-selected row → toggle the highlight back off.
+  if (PROD_STATE.selectedWell === key) { clearProdSelection(); return; }
+  // Dots only exist in the Wells view — switch into it first if needed.
+  if (PROD_STATE.view !== 'wells') {
+    PROD_STATE.view = 'wells';
+    document.querySelectorAll('.prod-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === 'wells'));
+    buildProductivity();
+  }
+  document.querySelectorAll('#wellsTable tbody tr.row-active').forEach(r => r.classList.remove('row-active'));
+  tr.classList.add('row-active');
+  const reg = PROD_STATE.wellMarkers;
+  if (reg && reg.has(key)) {
+    highlightProdWell(key, { zoom: true });
+  } else {
+    // No 2025-producing dot for this well — just pan to its coordinates.
+    const lat = parseFloat(tr.dataset.lat), lon = parseFloat(tr.dataset.lon);
+    if (isFinite(lat) && isFinite(lon)) PROD_STATE.map.setView([lat, lon], 13, { animate: true });
+  }
+  // The table sits below the map — bring the map back into view to show the zoom.
+  document.getElementById('prodMap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ===========================================================

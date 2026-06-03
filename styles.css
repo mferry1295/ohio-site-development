@@ -1662,6 +1662,20 @@ details[open] > summary::after { content: "−"; }
 .sortable-table thead th .sort-ind::before { content: '↕'; }
 .sortable-table thead th.sort-asc .sort-ind::before { content: '↑'; }
 .sortable-table thead th.sort-desc .sort-ind::before { content: '↓'; }
+/* Rows are clickable — clicking one zooms the map to that well. */
+.wells-table-section .data-table tbody tr {
+  cursor: pointer;
+}
+.wells-table-section .data-table tbody tr:hover {
+  background: #fbeeee;
+}
+.wells-table-section .data-table tbody tr.row-active {
+  background: #f6dede;
+  box-shadow: inset 3px 0 0 var(--derrick);
+}
+.wells-table-section .data-table tbody tr.row-active:hover {
+  background: #f2d2d2;
+}
 /* Cap the table at a reasonable height; rows above scroll */
 .wells-table-section .table-scroll {
   max-height: 480px;
@@ -3186,35 +3200,9 @@ footer .muted { color: rgba(255,255,255,0.55); }
   cursor: default;
 }
 
-.prod-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-.prod-stat {
-  background: var(--pure);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 12px 14px;
-  box-shadow: var(--shadow);
-}
-.prod-stat--wide { grid-column: span 2; }
-.prod-stat--site { border-left: 3px solid #1156A3; }
-.prod-stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-.prod-stat-value { font-family: 'Times New Roman', serif; font-size: 26px; font-weight: 800; color: var(--derrick); line-height: 1; }
-.prod-stat-unit { font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700; color: var(--iron); }
-.prod-stat-sub { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
-.prod-leaders { display: flex; flex-direction: column; gap: 5px; }
-.prod-leader { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.prod-leader-rank { width: 16px; height: 16px; flex: none; border-radius: 50%; background: var(--blush); color: var(--derrick); font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
-.prod-leader-name { flex: 1; font-weight: 700; color: var(--ink); }
-.prod-leader-val { font-weight: 700; color: var(--derrick); white-space: nowrap; }
-.prod-note { margin-top: 22px; }
 .prod-source { font-size: 10.5px; color: var(--muted); margin-top: 10px; font-style: italic; }
 
 @media (max-width: 760px) {
   .prod-canvas { height: 440px; }
-  .prod-stat--wide { grid-column: span 1; }
   .prod-legend { width: 140px; }
 }
