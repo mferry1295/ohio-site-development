@@ -2979,3 +2979,141 @@ footer .muted { color: rgba(255,255,255,0.55); }
   .cl-cat-progress { min-width: 72px; }
   .cl-catbar { width: 60px; }
 }
+
+/* ===== Parcel Map (Krizman holdings) ===== */
+.pm-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.pm-stat {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+.pm-stat--wide { grid-column: span 2; }
+.pm-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.pm-stat-value {
+  font-family: 'Times New Roman', serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--derrick);
+  line-height: 1;
+}
+.pm-stat-sub { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+.pm-lubar {
+  display: flex;
+  height: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0;
+  background: #efe6e6;
+}
+.pm-lubar-seg { display: block; height: 100%; }
+.pm-lu-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.pm-lu-leg { font-size: 10.5px; color: var(--iron); display: inline-flex; align-items: center; gap: 5px; }
+.pm-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; flex: none; }
+
+.pm-controls { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.pm-basemap { display: inline-flex; gap: 4px; }
+.pm-base-btn {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pm-base-btn:hover { border-color: var(--clay); color: var(--derrick); }
+.pm-base-btn.active { background: var(--derrick); border-color: var(--derrick); color: #fff; }
+.pm-loading { font-size: 11px; font-weight: 700; color: var(--derrick); }
+.pm-owner-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-left: auto; }
+.pm-owner-leg { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--iron); }
+.pm-owner-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; border: 1.5px solid var(--iron); }
+.pm-row-idwrap { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.pm-row-owner { color: var(--iron); font-weight: 600; }
+
+.pm-layout { display: grid; grid-template-columns: 1fr 320px; gap: 14px; align-items: stretch; }
+.pm-canvas { height: 580px; border: 1px solid var(--line); border-radius: 6px; }
+.pm-sidebar {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pure);
+  overflow: hidden;
+  max-height: 580px;
+}
+.pm-sidebar-head { padding: 10px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.pm-search {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.pm-search:focus { outline: none; border-color: var(--derrick); }
+.pm-sort { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--muted); }
+.pm-sort > span { font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.pm-sort-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--iron);
+  cursor: pointer;
+}
+.pm-sort-btn.active { background: var(--blush); border-color: var(--clay); color: var(--derrick); }
+
+.pm-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+.pm-row { padding: 9px 12px; border-bottom: 1px solid #f0eaea; cursor: pointer; transition: background 0.12s ease; }
+.pm-row:hover { background: #fbf8f8; }
+.pm-row.is-active { background: var(--blush); box-shadow: inset 3px 0 0 var(--derrick); }
+.pm-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pm-row-id { font-size: 12px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pm-row-acres { font-size: 11.5px; font-weight: 700; color: var(--derrick); white-space: nowrap; }
+.pm-row-addr { font-size: 11px; color: var(--muted); margin: 2px 0 5px; }
+.pm-lu-chip {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--lu, var(--iron));
+  border-radius: 3px;
+  padding: 1px 7px;
+}
+.pm-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 12px; }
+.pm-source { font-size: 10.5px; color: var(--muted); margin-top: 10px; font-style: italic; }
+
+/* Parcel popup */
+.parcel-popup-id { font-size: 13px; font-weight: 800; color: var(--derrick); font-variant-numeric: tabular-nums; }
+.parcel-popup-owner { font-size: 11px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.parcel-popup-row { display: flex; justify-content: space-between; gap: 12px; font-size: 11.5px; padding: 3px 0; border-top: 1px solid #f0eaea; }
+.parcel-popup-row span { color: var(--muted); }
+.parcel-popup-row strong { color: var(--ink); text-align: right; }
+
+@media (max-width: 880px) {
+  .pm-layout { grid-template-columns: 1fr; }
+  .pm-canvas { height: 420px; }
+  .pm-sidebar { max-height: 460px; }
+  .pm-stat--wide { grid-column: span 1; }
+}

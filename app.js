@@ -128,6 +128,8 @@ function bindNav() {
       render();
       // map needs explicit init / resize when its tab becomes visible
       if (target === 'fieldmap') renderFieldMap();
+      // Parcel map (Krizman holdings) — init / resize Leaflet on activation
+      if (target === 'parcelmap') renderParcelMap();
       // Power Ramp charts need to be created/resized when their tab becomes visible
       if (target === 'powerramp') {
         renderPowerRamp();
@@ -2382,6 +2384,243 @@ function renderFieldMap() {
     applyFieldFilters();
   });
   window.MAP_STATE = MAP_STATE;
+}
+
+// ===========================================================
+// Parcel Map — Krizman land holdings (Tuscarawas County)
+// Polygons sourced from the county Auditor GIS, bundled as a local GeoJSON.
+// ===========================================================
+const PARCEL_STATE = { map: null, layer: null, data: null, byId: {}, baseLayers: {}, basemap: 'street', selected: null, loaded: false, loading: false, sort: 'acres', filter: '' };
+
+// Parcels are colored by ownership umbrella — Krizman entities vs the related
+// Wilkshire Hills Holdings (same owner-of-record address).
+const OWNER_GROUPS = {
+  krizman:   { label: 'Krizman', color: '#8B1A1A', fill: '#C44040' },
+  wilkshire: { label: 'Wilkshire Hills', color: '#1F6F78', fill: '#4FA3AD' },
+  other:     { label: 'Other', color: '#6B6B6B', fill: '#A8A8A8' },
+};
+function ownerGroup(p) { return OWNER_GROUPS[p && p.owner_group] ? p.owner_group : 'other'; }
+function parcelStyleFor(p, mode) {
+  const g = OWNER_GROUPS[ownerGroup(p)];
+  if (mode === 'selected') return { color: '#2B2B2B', weight: 3, opacity: 1, fillColor: g.fill, fillOpacity: 0.7 };
+  if (mode === 'hover')    return { color: g.color, weight: 2.6, opacity: 1, fillColor: g.color, fillOpacity: 0.55 };
+  return { color: g.color, weight: 1.4, opacity: 0.9, fillColor: g.fill, fillOpacity: 0.34 };
+}
+
+const LU_COLORS = { ag: '#8B1A1A', commercial: '#4F7799', residential: '#C99A4E', other: '#9A9A9A' };
+const LU_LABELS = { ag: 'Agricultural', commercial: 'Commercial / office', residential: 'Residential', other: 'Other' };
+
+function luBucket(lu) {
+  const s = (lu || '').toUpperCase();
+  if (s.includes('AGRICULTURAL')) return 'ag';
+  if (s.includes('COMMERCIAL') || s.includes('OFFICE') || s.includes('BUILDING') || s.includes('STRUCTURE')) return 'commercial';
+  if (s.includes('RESIDENTIAL')) return 'residential';
+  return 'other';
+}
+function cleanLandUse(lu) {
+  if (!lu) return '—';
+  return lu.replace(/^\d+\s*-\s*/, '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderParcelMap() {
+  if (typeof L === 'undefined') return;
+  initParcelMap();
+  setTimeout(() => PARCEL_STATE.map && PARCEL_STATE.map.invalidateSize(), 60);
+  if (!PARCEL_STATE.loaded && !PARCEL_STATE.loading) loadParcels();
+}
+
+function initParcelMap() {
+  if (PARCEL_STATE.map) return;
+  const el = document.getElementById('parcelMapCanvas');
+  if (!el) return;
+  const map = L.map('parcelMapCanvas', { center: [40.6299, -81.4312], zoom: 13, minZoom: 9, maxZoom: 18, scrollWheelZoom: false });
+  PARCEL_STATE.map = map;
+  PARCEL_STATE.baseLayers.street = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap, &copy; CARTO', subdomains: 'abcd', maxZoom: 19,
+  });
+  PARCEL_STATE.baseLayers.aerial = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Imagery &copy; Esri', maxZoom: 19,
+  });
+  PARCEL_STATE.baseLayers.street.addTo(map);
+  bindParcelControls();
+}
+
+async function loadParcels() {
+  PARCEL_STATE.loading = true;
+  const loadEl = document.getElementById('pmLoading');
+  if (loadEl) loadEl.hidden = false;
+  try {
+    const resp = await fetch('krizman_parcels.geojson?v=2026-06-02c');
+    const gj = await resp.json();
+    PARCEL_STATE.data = gj;
+    PARCEL_STATE.byId = {};
+    const layer = L.geoJSON(gj, {
+      style: f => parcelStyleFor(f.properties, 'default'),
+      onEachFeature: (feat, lyr) => {
+        const p = feat.properties;
+        PARCEL_STATE.byId[p.PARCEL_ID] = lyr;
+        lyr.bindPopup(parcelPopup(p), { maxWidth: 260 });
+        lyr.on('mouseover', () => { if (PARCEL_STATE.selected !== p.PARCEL_ID) lyr.setStyle(parcelStyleFor(p, 'hover')); });
+        lyr.on('mouseout', () => { if (PARCEL_STATE.selected !== p.PARCEL_ID) lyr.setStyle(parcelStyleFor(p, 'default')); });
+        lyr.on('click', () => selectParcel(p.PARCEL_ID, false));
+      },
+    }).addTo(PARCEL_STATE.map);
+    PARCEL_STATE.layer = layer;
+    try { PARCEL_STATE.map.fitBounds(layer.getBounds(), { padding: [24, 24] }); } catch (e) {}
+    renderParcelStats(gj);
+    renderParcelList();
+    PARCEL_STATE.loaded = true;
+  } catch (e) {
+    console.error('Failed to load parcels:', e);
+    const list = document.getElementById('pmList');
+    if (list) list.innerHTML = '<li class="pm-empty">Could not load parcel data.</li>';
+  } finally {
+    PARCEL_STATE.loading = false;
+    if (loadEl) loadEl.hidden = true;
+  }
+}
+
+function parcelPopup(p) {
+  const e = escapeHtmlSimple;
+  const val = (typeof p.appraised === 'number') ? fmt.money0(p.appraised) : '—';
+  return `<div class="parcel-popup">
+    <div class="parcel-popup-id">${e(p.PARCEL_ID)}</div>
+    <div class="parcel-popup-owner">${e(p.owner || '')}</div>
+    <div class="parcel-popup-row"><span>Address</span><strong>${e(p.address || '—')}</strong></div>
+    <div class="parcel-popup-row"><span>Acres</span><strong>${(p.acres || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
+    <div class="parcel-popup-row"><span>Land use</span><strong>${e(cleanLandUse(p.land_use))}</strong></div>
+    <div class="parcel-popup-row"><span>Appraised</span><strong>${val}</strong></div>
+  </div>`;
+}
+
+function selectParcel(id, fly) {
+  const lyr = PARCEL_STATE.byId[id];
+  if (!lyr) return;
+  const prev = PARCEL_STATE.selected;
+  if (prev && PARCEL_STATE.byId[prev]) {
+    const pl = PARCEL_STATE.byId[prev];
+    pl.setStyle(parcelStyleFor(pl.feature.properties, 'default'));
+  }
+  PARCEL_STATE.selected = id;
+  lyr.setStyle(parcelStyleFor(lyr.feature.properties, 'selected'));
+  lyr.bringToFront();
+  if (fly) { try { PARCEL_STATE.map.fitBounds(lyr.getBounds(), { maxZoom: 17, padding: [50, 50] }); } catch (e) {} }
+  lyr.openPopup();
+  document.querySelectorAll('#pmList .pm-row').forEach(r => r.classList.toggle('is-active', r.dataset.id === id));
+  const row = document.querySelector(`#pmList .pm-row[data-id="${id}"]`);
+  if (row) row.scrollIntoView({ block: 'nearest' });
+}
+
+function renderParcelStats(gj) {
+  const feats = gj.features || [];
+  let totalAcres = 0, appraised = 0;
+  const buckets = { ag: 0, commercial: 0, residential: 0, other: 0 };
+  const owners = {}; // group -> { count, acres }
+  feats.forEach(f => {
+    const p = f.properties;
+    totalAcres += p.acres || 0;
+    if (typeof p.appraised === 'number') appraised += p.appraised;
+    buckets[luBucket(p.land_use)] += p.acres || 0;
+    const g = ownerGroup(p);
+    (owners[g] = owners[g] || { count: 0, acres: 0 }).count++;
+    owners[g].acres += p.acres || 0;
+  });
+  // Owner legend (map color key)
+  const legEl = document.getElementById('pmOwnerLegend');
+  if (legEl) {
+    legEl.innerHTML = Object.keys(owners)
+      .sort((a, b) => owners[b].acres - owners[a].acres)
+      .map(g => `<span class="pm-owner-leg"><span class="pm-dot" style="background:${OWNER_GROUPS[g].fill};border:1.5px solid ${OWNER_GROUPS[g].color}"></span>${OWNER_GROUPS[g].label} · ${owners[g].count} · ${owners[g].acres.toFixed(0)} ac</span>`)
+      .join('');
+  }
+  const segs = Object.keys(buckets).filter(k => buckets[k] > 0).map(k => {
+    const w = totalAcres ? (buckets[k] / totalAcres * 100) : 0;
+    return `<span class="pm-lubar-seg" style="width:${w}%;background:${LU_COLORS[k]}" title="${LU_LABELS[k]}: ${buckets[k].toFixed(1)} ac"></span>`;
+  }).join('');
+  const legend = Object.keys(buckets).filter(k => buckets[k] > 0).map(k =>
+    `<span class="pm-lu-leg"><span class="pm-dot" style="background:${LU_COLORS[k]}"></span>${LU_LABELS[k]} · ${buckets[k].toFixed(1)} ac</span>`).join('');
+  const el = document.getElementById('pmStats');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="pm-stat"><div class="pm-stat-label">Parcels</div><div class="pm-stat-value">${feats.length}</div><div class="pm-stat-sub">Krizman + Wilkshire Hills</div></div>
+    <div class="pm-stat"><div class="pm-stat-label">Total acres</div><div class="pm-stat-value">${totalAcres.toLocaleString(undefined, { maximumFractionDigits: 1 })}</div><div class="pm-stat-sub">combined assemblage</div></div>
+    <div class="pm-stat"><div class="pm-stat-label">Appraised value</div><div class="pm-stat-value">${fmt.money0(appraised)}</div><div class="pm-stat-sub">county auditor total</div></div>
+    <div class="pm-stat pm-stat--wide">
+      <div class="pm-stat-label">Land use by acreage</div>
+      <div class="pm-lubar">${segs}</div>
+      <div class="pm-lu-legend">${legend}</div>
+    </div>`;
+}
+
+function renderParcelList() {
+  const ul = document.getElementById('pmList');
+  if (!ul || !PARCEL_STATE.data) return;
+  const e = escapeHtmlSimple;
+  const filter = PARCEL_STATE.filter.trim().toLowerCase();
+  let items = (PARCEL_STATE.data.features || []).map(f => f.properties);
+  if (filter) items = items.filter(p =>
+    (p.PARCEL_ID || '').toLowerCase().includes(filter) || (p.address || '').toLowerCase().includes(filter));
+  const sort = PARCEL_STATE.sort;
+  items.sort((a, b) => {
+    if (sort === 'acres') return (b.acres || 0) - (a.acres || 0);
+    if (sort === 'id') return String(a.PARCEL_ID).localeCompare(String(b.PARCEL_ID));
+    if (sort === 'owner') {
+      const o = String(a.owner || '').localeCompare(String(b.owner || ''));
+      return o !== 0 ? o : (b.acres || 0) - (a.acres || 0); // group by owner, biggest first within
+    }
+    return String(a.address || '').localeCompare(String(b.address || ''));
+  });
+  if (!items.length) { ul.innerHTML = '<li class="pm-empty">No parcels match.</li>'; return; }
+  ul.innerHTML = items.map(p => {
+    const b = luBucket(p.land_use);
+    const og = OWNER_GROUPS[ownerGroup(p)];
+    const active = PARCEL_STATE.selected === p.PARCEL_ID ? ' is-active' : '';
+    return `<li class="pm-row${active}" data-id="${p.PARCEL_ID}">
+      <div class="pm-row-top">
+        <span class="pm-row-idwrap"><span class="pm-owner-dot" style="background:${og.fill};border-color:${og.color}" title="${e(p.owner || '')}"></span><span class="pm-row-id">${e(p.PARCEL_ID)}</span></span>
+        <span class="pm-row-acres">${(p.acres || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ac</span>
+      </div>
+      <div class="pm-row-addr">${e(p.address || '—')}${sort === 'owner' ? ` · <span class="pm-row-owner">${e(og.label)}</span>` : ''}</div>
+      <span class="pm-lu-chip" style="--lu:${LU_COLORS[b]}">${e(cleanLandUse(p.land_use))}</span>
+    </li>`;
+  }).join('');
+  ul.querySelectorAll('.pm-row').forEach(row => {
+    const id = row.dataset.id;
+    row.addEventListener('click', () => selectParcel(id, true));
+    row.addEventListener('mouseenter', () => { const l = PARCEL_STATE.byId[id]; if (l && PARCEL_STATE.selected !== id) l.setStyle(parcelStyleFor(l.feature.properties, 'hover')); });
+    row.addEventListener('mouseleave', () => { const l = PARCEL_STATE.byId[id]; if (l && PARCEL_STATE.selected !== id) l.setStyle(parcelStyleFor(l.feature.properties, 'default')); });
+  });
+}
+
+function bindParcelControls() {
+  document.querySelectorAll('.pm-base-btn').forEach(btn => {
+    if (btn.dataset.bound === '1') return;
+    btn.addEventListener('click', () => {
+      const base = btn.dataset.base;
+      if (base === PARCEL_STATE.basemap) return;
+      const map = PARCEL_STATE.map;
+      map.removeLayer(PARCEL_STATE.baseLayers[PARCEL_STATE.basemap]);
+      PARCEL_STATE.baseLayers[base].addTo(map);
+      PARCEL_STATE.baseLayers[base].bringToBack();
+      PARCEL_STATE.basemap = base;
+      document.querySelectorAll('.pm-base-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+    btn.dataset.bound = '1';
+  });
+  const search = document.getElementById('pmSearch');
+  if (search && search.dataset.bound !== '1') {
+    search.addEventListener('input', e => { PARCEL_STATE.filter = e.target.value; renderParcelList(); });
+    search.dataset.bound = '1';
+  }
+  document.querySelectorAll('.pm-sort-btn').forEach(btn => {
+    if (btn.dataset.bound === '1') return;
+    btn.addEventListener('click', () => {
+      PARCEL_STATE.sort = btn.dataset.sort;
+      document.querySelectorAll('.pm-sort-btn').forEach(b => b.classList.toggle('active', b === btn));
+      renderParcelList();
+    });
+    btn.dataset.bound = '1';
+  });
 }
 
 // ===========================================================

@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<link rel="stylesheet" href="styles.css?v=2026-06-02a" />
+<link rel="stylesheet" href="styles.css?v=2026-06-02c" />
 </head>
 <body>
 
@@ -32,6 +32,7 @@
     <a href="#overview" class="navlink active" data-target="overview">Project Overview</a>
     <a href="#dashboard" class="navlink" data-target="dashboard">Dashboard</a>
     <a href="#fieldmap" class="navlink" data-target="fieldmap">Field Map</a>
+    <a href="#parcelmap" class="navlink" data-target="parcelmap">Parcel Map</a>
     <a href="#powerramp" class="navlink" data-target="powerramp">Power Ramp</a>
     <a href="#checklist" class="navlink" data-target="checklist">Land Checklist</a>
     <a href="#research" class="navlink" data-target="research">Oil and Gas Primer</a>
@@ -706,6 +707,44 @@
   </div>
 </section>
 
+<!-- =========== PARCEL MAP (KRIZMAN HOLDINGS) =========== -->
+<section id="parcelmap" class="page">
+  <div class="content full">
+    <h2 class="page-title">Parcel Map · Krizman &amp; Wilkshire Hills Holdings</h2>
+    <p class="page-lead">Every Tuscarawas County parcel of record under the Krizman name — plus the related <strong>Wilkshire Hills Holdings LLC</strong> parcels, which share the same owner-of-record address (310 Michigan St, Plymouth, IN) and so sit under the same ownership umbrella. Together the assemblage runs along State Route 212, Wilkshire Blvd and Kerns Dr in Lawrence Township (Bolivar / Wilkshire Hills) — the footprint behind Project Lantern. Parcels are colored by owner; click any parcel or list row for detail.</p>
+
+    <div class="pm-stats" id="pmStats"></div>
+
+    <div class="pm-controls">
+      <div class="pm-basemap" role="tablist" aria-label="Basemap">
+        <button class="pm-base-btn active" data-base="street" type="button">Map</button>
+        <button class="pm-base-btn" data-base="aerial" type="button">Aerial</button>
+      </div>
+      <div class="pm-owner-legend" id="pmOwnerLegend"></div>
+      <div class="pm-loading" id="pmLoading" hidden>Loading parcels…</div>
+    </div>
+
+    <div class="pm-layout">
+      <div id="parcelMapCanvas" class="map-canvas pm-canvas"></div>
+      <aside class="pm-sidebar">
+        <div class="pm-sidebar-head">
+          <input type="search" id="pmSearch" class="pm-search" placeholder="Filter by parcel ID or address…" aria-label="Filter parcels" />
+          <div class="pm-sort">
+            <span>Sort</span>
+            <button class="pm-sort-btn active" data-sort="acres" type="button">Acres</button>
+            <button class="pm-sort-btn" data-sort="owner" type="button">Owner</button>
+            <button class="pm-sort-btn" data-sort="id" type="button">Parcel ID</button>
+            <button class="pm-sort-btn" data-sort="address" type="button">Address</button>
+          </div>
+        </div>
+        <ul class="pm-list" id="pmList"></ul>
+      </aside>
+    </div>
+
+    <div class="pm-source">Source: Tuscarawas County Auditor GIS — PAT_Parcels layer (parcel boundaries, owner of record, acreage, land use), retrieved June 2026. Boundaries are for planning reference only, not a survey.</div>
+  </div>
+</section>
+
 <!-- =========== POWER RAMP / WELL CURVE =========== -->
 <section id="powerramp" class="page">
   <div class="content full">
@@ -1088,10 +1127,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-06-02a"></script>
-<script src="counties.js?v=2026-06-02a"></script>
-<script src="operators.js?v=2026-06-02a"></script>
-<script src="model.js?v=2026-06-02a"></script>
-<script src="app.js?v=2026-06-02a"></script>
+<script src="supabase-config.js?v=2026-06-02c"></script>
+<script src="counties.js?v=2026-06-02c"></script>
+<script src="operators.js?v=2026-06-02c"></script>
+<script src="model.js?v=2026-06-02c"></script>
+<script src="app.js?v=2026-06-02c"></script>
 </body>
 </html>
