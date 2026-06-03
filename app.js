@@ -2491,7 +2491,7 @@ function renderWellsView(items, m, vals) {
       <div class="well-popup-row"><span>Operator</span><strong>${e(tc(it.operator))}</strong></div>
       <div class="well-popup-row"><span>County</span><strong>${e(tc(it.county))}</strong></div>
       <div class="well-popup-section">2025 rate</div>
-      <div class="well-popup-row"><span>Gas</span><strong>${Math.round(it.gas / it.days).toLocaleString()} Mcf/d</strong></div>
+      <div class="well-popup-row"><span>Gas</span><strong>${((it.gas / it.days) / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} MMcf/d</strong></div>
       <div class="well-popup-row"><span>Oil</span><strong>${Math.round(it.oil / it.days).toLocaleString()} bbl/d</strong></div>
     </div>`, { maxWidth: 240 });
     group.addLayer(mk);
@@ -2526,7 +2526,7 @@ function renderGridView(items, m) {
     rect.bindPopup(`<div class="well-popup">
       <div class="well-popup-name">${c.n} wells · this area</div>
       <div class="well-popup-row"><span>Avg ${m.short}</span><strong>${Math.round(avg).toLocaleString()} ${m.unit}</strong></div>
-      <div class="well-popup-row"><span>Avg gas</span><strong>${c.days > 0 ? Math.round(c.gas / c.days).toLocaleString() : '—'} Mcf/d</strong></div>
+      <div class="well-popup-row"><span>Avg gas</span><strong>${c.days > 0 ? ((c.gas / c.days) / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' MMcf/d' : '—'}</strong></div>
       <div class="well-popup-row"><span>Avg oil</span><strong>${c.days > 0 ? Math.round(c.oil / c.days).toLocaleString() : '—'} bbl/d</strong></div>
     </div>`, { maxWidth: 220 });
     group.addLayer(rect);
