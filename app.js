@@ -2390,7 +2390,10 @@ function renderFieldMap() {
 // Parcel Map — Krizman land holdings (Tuscarawas County)
 // Polygons sourced from the county Auditor GIS, bundled as a local GeoJSON.
 // ===========================================================
-const PARCEL_STATE = { map: null, layer: null, data: null, byId: {}, baseLayers: {}, basemap: 'street', selected: null, loaded: false, loading: false, sort: 'acres', filter: '' };
+const PARCEL_STATE = { map: null, layer: null, data: null, byId: {}, baseLayers: {}, basemap: 'street', selected: null, loaded: false, loading: false, sort: 'acres', filter: '', wells: null, wellsData: null, wellsShown: true };
+
+// Dark dot with a white halo — reads as a point well over the red/teal parcels.
+const WELL_MARKER_STYLE = { radius: 5, color: '#fff', weight: 1.5, fillColor: '#1B1B1B', fillOpacity: 1 };
 
 // Parcels are colored by ownership umbrella — Krizman entities vs the related
 // Wilkshire Hills Holdings (same owner-of-record address).
@@ -2450,7 +2453,7 @@ async function loadParcels() {
   const loadEl = document.getElementById('pmLoading');
   if (loadEl) loadEl.hidden = false;
   try {
-    const resp = await fetch('krizman_parcels.geojson?v=2026-06-02c');
+    const resp = await fetch('krizman_parcels.geojson?v=2026-06-02d');
     const gj = await resp.json();
     PARCEL_STATE.data = gj;
     PARCEL_STATE.byId = {};
@@ -2470,6 +2473,7 @@ async function loadParcels() {
     renderParcelStats(gj);
     renderParcelList();
     PARCEL_STATE.loaded = true;
+    loadWells();
   } catch (e) {
     console.error('Failed to load parcels:', e);
     const list = document.getElementById('pmList');
@@ -2478,6 +2482,43 @@ async function loadParcels() {
     PARCEL_STATE.loading = false;
     if (loadEl) loadEl.hidden = true;
   }
+}
+
+async function loadWells() {
+  if (PARCEL_STATE.wells) return;
+  try {
+    const resp = await fetch('krizman_wells.geojson?v=2026-06-02d');
+    const gj = await resp.json();
+    PARCEL_STATE.wellsData = gj;
+    const group = L.layerGroup();
+    (gj.features || []).forEach(f => {
+      const p = f.properties;
+      const c = f.geometry && f.geometry.coordinates;
+      if (!c) return;
+      const m = L.circleMarker([c[1], c[0]], WELL_MARKER_STYLE);
+      m.bindPopup(wellPopup(p), { maxWidth: 240 });
+      group.addLayer(m);
+    });
+    PARCEL_STATE.wells = group;
+    if (PARCEL_STATE.wellsShown && PARCEL_STATE.map) group.addTo(PARCEL_STATE.map);
+    const cntEl = document.querySelector('#pmWellsToggle .pm-wells-count');
+    if (cntEl) cntEl.textContent = (gj.features || []).length;
+  } catch (e) {
+    console.error('Failed to load wells:', e);
+  }
+}
+
+function wellPopup(p) {
+  const e = escapeHtmlSimple;
+  const slant = e(p.slant) === 'V' ? 'Vertical' : (e(p.slant) || '—');
+  return `<div class="well-popup">
+    <div class="well-popup-name">${e(p.name) || '—'}</div>
+    <div class="well-popup-row"><span>API</span><strong>${e(p.api)}</strong></div>
+    <div class="well-popup-row"><span>Status</span><strong>${e(p.status)}</strong></div>
+    <div class="well-popup-row"><span>Type</span><strong>${e(p.type)}</strong></div>
+    <div class="well-popup-row"><span>Slant</span><strong>${slant}</strong></div>
+    <div class="well-popup-row"><span>Operator</span><strong>${e(p.operator)}</strong></div>
+  </div>`;
 }
 
 function parcelPopup(p) {
@@ -2611,6 +2652,18 @@ function bindParcelControls() {
   if (search && search.dataset.bound !== '1') {
     search.addEventListener('input', e => { PARCEL_STATE.filter = e.target.value; renderParcelList(); });
     search.dataset.bound = '1';
+  }
+  const wt = document.getElementById('pmWellsToggle');
+  if (wt && wt.dataset.bound !== '1') {
+    wt.addEventListener('click', () => {
+      PARCEL_STATE.wellsShown = !PARCEL_STATE.wellsShown;
+      wt.classList.toggle('active', PARCEL_STATE.wellsShown);
+      wt.setAttribute('aria-pressed', String(PARCEL_STATE.wellsShown));
+      if (!PARCEL_STATE.wells || !PARCEL_STATE.map) return;
+      if (PARCEL_STATE.wellsShown) PARCEL_STATE.wells.addTo(PARCEL_STATE.map);
+      else PARCEL_STATE.map.removeLayer(PARCEL_STATE.wells);
+    });
+    wt.dataset.bound = '1';
   }
   document.querySelectorAll('.pm-sort-btn').forEach(btn => {
     if (btn.dataset.bound === '1') return;

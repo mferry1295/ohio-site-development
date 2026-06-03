@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<link rel="stylesheet" href="styles.css?v=2026-06-02c" />
+<link rel="stylesheet" href="styles.css?v=2026-06-02d" />
 </head>
 <body>
 
@@ -711,7 +711,7 @@
 <section id="parcelmap" class="page">
   <div class="content full">
     <h2 class="page-title">Parcel Map · Krizman &amp; Wilkshire Hills Holdings</h2>
-    <p class="page-lead">Every Tuscarawas County parcel of record under the Krizman name — plus the related <strong>Wilkshire Hills Holdings LLC</strong> parcels, which share the same owner-of-record address (310 Michigan St, Plymouth, IN) and so sit under the same ownership umbrella. Together the assemblage runs along State Route 212, Wilkshire Blvd and Kerns Dr in Lawrence Township (Bolivar / Wilkshire Hills) — the footprint behind Project Lantern. Parcels are colored by owner; click any parcel or list row for detail.</p>
+    <p class="page-lead">Every Tuscarawas County parcel of record under the Krizman name — plus the related <strong>Wilkshire Hills Holdings LLC</strong> parcels, which share the same owner-of-record address (310 Michigan St, Plymouth, IN) and so sit under the same ownership umbrella. Together the assemblage runs along State Route 212, Wilkshire Blvd and Kerns Dr in Lawrence Township (Bolivar / Wilkshire Hills) — the footprint behind Project Lantern. Parcels are colored by owner; black dots are Krizman’s current vertical (producing) oil &amp; gas wells from ODNR. Click any parcel, well, or list row for detail.</p>
 
     <div class="pm-stats" id="pmStats"></div>
 
@@ -720,6 +720,7 @@
         <button class="pm-base-btn active" data-base="street" type="button">Map</button>
         <button class="pm-base-btn" data-base="aerial" type="button">Aerial</button>
       </div>
+      <button class="pm-wells-toggle active" id="pmWellsToggle" type="button" aria-pressed="true"><span class="pm-well-dot"></span>Vertical wells (<span class="pm-wells-count">0</span>)</button>
       <div class="pm-owner-legend" id="pmOwnerLegend"></div>
       <div class="pm-loading" id="pmLoading" hidden>Loading parcels…</div>
     </div>
@@ -1127,10 +1128,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-06-02c"></script>
-<script src="counties.js?v=2026-06-02c"></script>
-<script src="operators.js?v=2026-06-02c"></script>
-<script src="model.js?v=2026-06-02c"></script>
-<script src="app.js?v=2026-06-02c"></script>
+<script src="supabase-config.js?v=2026-06-02d"></script>
+<script src="counties.js?v=2026-06-02d"></script>
+<script src="operators.js?v=2026-06-02d"></script>
+<script src="model.js?v=2026-06-02d"></script>
+<script src="app.js?v=2026-06-02d"></script>
 </body>
 </html>

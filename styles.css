@@ -3041,6 +3041,25 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .pm-base-btn:hover { border-color: var(--clay); color: var(--derrick); }
 .pm-base-btn.active { background: var(--derrick); border-color: var(--derrick); color: #fff; }
 .pm-loading { font-size: 11px; font-weight: 700; color: var(--derrick); }
+.pm-wells-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pm-wells-toggle:hover { border-color: var(--clay); color: var(--derrick); }
+.pm-wells-toggle.active { background: #1B1B1B; border-color: #1B1B1B; color: #fff; }
+.pm-well-dot { width: 9px; height: 9px; border-radius: 50%; background: #1B1B1B; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #1B1B1B; flex: none; }
+.pm-wells-toggle.active .pm-well-dot { background: #fff; box-shadow: 0 0 0 1px #fff; }
 .pm-owner-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-left: auto; }
 .pm-owner-leg { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--iron); }
 .pm-owner-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; border: 1.5px solid var(--iron); }
