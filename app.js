@@ -3663,41 +3663,41 @@ const GTM_STATE = { size: 100, product: 'shell', power: 'btm-gas', phasing: 'sin
 // engages on; gas = tolerance for an on-site gas power island
 // (high = a selling point, low = carbon-sensitive). 2025–26 market read.
 const GTM_BUYERS = [
-  { name: 'Microsoft (Azure)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med',
+  { name: 'Microsoft (Azure)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med', domain: 'microsoft.com', loc: 'Redmond, WA', site: 'https://azure.microsoft.com',
     wants: 'Scale and expandability; pragmatic on gas with a carbon-offset or CCS path.' },
-  { name: 'Amazon (AWS)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med',
+  { name: 'Amazon (AWS)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med', domain: 'amazon.com', loc: 'Seattle, WA', site: 'https://aws.amazon.com',
     wants: 'Multi-hundred-MW phases; nuclear- and gas-pragmatic when speed demands it.' },
-  { name: 'Google Cloud', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'low',
+  { name: 'Google Cloud', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'low', domain: 'google.com', loc: 'Mountain View, CA', site: 'https://cloud.google.com',
     wants: '24/7 carbon-free-energy goal — gas is a hard sell without clean firming.' },
-  { name: 'Meta', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high',
+  { name: 'Meta', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high', domain: 'meta.com', loc: 'Menlo Park, CA', site: 'https://meta.com',
     wants: 'GW-scale AI buildout; has embraced on-site gas to move fast.' },
-  { name: 'Oracle (OCI / Stargate)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'high',
+  { name: 'Oracle (OCI / Stargate)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'high', domain: 'oracle.com', loc: 'Austin, TX', site: 'https://www.oracle.com/cloud',
     wants: 'Aggressive and speed-first; highly gas-tolerant for AI capacity.' },
-  { name: 'OpenAI / Stargate', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high',
+  { name: 'OpenAI / Stargate', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high', domain: 'openai.com', loc: 'San Francisco, CA', site: 'https://openai.com',
     wants: 'GW-scale and speed-obsessed; fuel-agnostic if it powers up fast.' },
-  { name: 'Crusoe', tier: 'Neocloud', min: 100, max: 500, gas: 'high',
+  { name: 'Crusoe', tier: 'Neocloud', min: 100, max: 500, gas: 'high', domain: 'crusoe.ai', loc: 'Denver, CO', site: 'https://crusoe.ai',
     wants: 'Built on behind-the-meter gas — your fuel story is their entire model.' },
-  { name: 'CoreWeave', tier: 'Neocloud', min: 50, max: 500, gas: 'high',
+  { name: 'CoreWeave', tier: 'Neocloud', min: 50, max: 500, gas: 'high', domain: 'coreweave.com', loc: 'Livingston, NJ', site: 'https://coreweave.com',
     wants: 'Speed-to-power above all; takes whatever energizes GPUs first.' },
-  { name: 'Nebius', tier: 'Neocloud', min: 50, max: 300, gas: 'high',
+  { name: 'Nebius', tier: 'Neocloud', min: 50, max: 300, gas: 'high', domain: 'nebius.com', loc: 'Amsterdam, NL', site: 'https://nebius.com',
     wants: 'Rapid GPU-cloud expansion; flexible on power source.' },
-  { name: 'Lambda', tier: 'Neocloud', min: 20, max: 150, gas: 'high',
+  { name: 'Lambda', tier: 'Neocloud', min: 20, max: 150, gas: 'high', domain: 'lambdalabs.com', loc: 'San Jose, CA', site: 'https://lambdalabs.com',
     wants: 'GPU cloud; smaller, fast deployments and gas-friendly.' },
-  { name: 'Nscale', tier: 'Neocloud', min: 50, max: 250, gas: 'high',
+  { name: 'Nscale', tier: 'Neocloud', min: 50, max: 250, gas: 'high', domain: 'nscale.com', loc: 'London, UK', site: 'https://nscale.com',
     wants: 'AI-native, power-hungry and speed-driven.' },
-  { name: 'QTS (Blackstone)', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med',
+  { name: 'QTS (Blackstone)', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med', domain: 'qtsdatacenters.com', loc: 'Overland Park, KS', site: 'https://www.qtsdatacenters.com',
     wants: 'Builds large shells and leases to the megacaps; power-led siting.' },
-  { name: 'Vantage', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med',
+  { name: 'Vantage', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med', domain: 'vantage-dc.com', loc: 'Denver, CO', site: 'https://vantage-dc.com',
     wants: 'Large campuses for hyperscale tenants; follows the power.' },
-  { name: 'Switch', tier: 'Hyperscale colo', min: 100, max: 300, gas: 'med',
+  { name: 'Switch', tier: 'Hyperscale colo', min: 100, max: 300, gas: 'med', domain: 'switch.com', loc: 'Las Vegas, NV', site: 'https://www.switch.com',
     wants: 'Big campuses; sustainability brand but pragmatic on firm power.' },
-  { name: 'Digital Realty', tier: 'Colocation', min: 50, max: 250, gas: 'med',
+  { name: 'Digital Realty', tier: 'Colocation', min: 50, max: 250, gas: 'med', domain: 'digitalrealty.com', loc: 'Austin, TX', site: 'https://www.digitalrealty.com',
     wants: 'Global colo platform; carbon goals but takes firm power.' },
-  { name: 'Equinix', tier: 'Colocation', min: 20, max: 150, gas: 'low',
+  { name: 'Equinix', tier: 'Colocation', min: 20, max: 150, gas: 'low', domain: 'equinix.com', loc: 'Redwood City, CA', site: 'https://www.equinix.com',
     wants: 'Interconnection-led with a strong sustainability posture.' },
-  { name: 'TeraWulf / IREN / Cipher', tier: 'Crypto → HPC', min: 50, max: 250, gas: 'high',
+  { name: 'TeraWulf / IREN / Cipher', tier: 'Crypto → HPC', min: 50, max: 250, gas: 'high', domain: 'terawulf.com', loc: 'Easton, MD', site: 'https://www.terawulf.com',
     wants: 'Power-first miners pivoting to AI hosting — love cheap on-site gas.' },
-  { name: 'Enterprise / regional cloud', tier: 'Enterprise', min: 10, max: 50, gas: 'med',
+  { name: 'Enterprise / regional cloud', tier: 'Enterprise', min: 10, max: 50, gas: 'med', domain: null, loc: 'Various', site: null,
     wants: 'Single-tenant enterprise AI or regional colo; smaller footprints.' },
 ];
 
@@ -3822,18 +3822,23 @@ function gtmRenderBuyers() {
     el.innerHTML = `<div class="gtm-buyer-empty">No clean buyer match at this configuration — widen the size or switch to a phased master plan to reach the larger players.</div>`;
     return;
   }
-  const star = n => '★'.repeat(n) + '☆'.repeat(3 - n);
+  const e = escapeHtmlSimple;
   el.innerHTML = scored.map(({ b, f }) => {
     const deal = gtmSizeLabel(b.min) + '–' + gtmSizeLabel(b.max);
-    const notes = f.notes.map(n => `<li>${escapeHtmlSimple(n)}</li>`).join('');
+    const notes = f.notes.map(n => `<li>${e(n)}</li>`).join('');
+    const logo = b.domain
+      ? `<img class="gtm-buyer-logo" src="https://icons.duckduckgo.com/ip3/${e(b.domain)}.ico" alt="" loading="lazy" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=${e(b.domain)}&sz=64'">`
+      : `<span class="gtm-buyer-logo gtm-buyer-logo--ph" aria-hidden="true"></span>`;
+    const link = b.site ? `<a class="gtm-buyer-link" href="${e(b.site)}" target="_blank" rel="noopener">Website ↗</a>` : '';
     return `
       <div class="gtm-buyer gtm-buyer--s${f.stars}">
         <div class="gtm-buyer-top">
-          <span class="gtm-buyer-name">${escapeHtmlSimple(b.name)}</span>
-          <span class="gtm-buyer-stars" title="${f.stars} of 3 fit">${star(f.stars)}</span>
+          ${logo}
+          <span class="gtm-buyer-name">${e(b.name)}</span>
         </div>
-        <div class="gtm-buyer-meta"><span class="gtm-buyer-tier">${escapeHtmlSimple(b.tier)}</span><span class="gtm-buyer-deal">${deal}</span></div>
-        <p class="gtm-buyer-wants">${escapeHtmlSimple(b.wants)}</p>
+        <div class="gtm-buyer-meta"><span class="gtm-buyer-tier">${e(b.tier)}</span><span class="gtm-buyer-deal">${deal}</span></div>
+        <div class="gtm-buyer-sub"><span class="gtm-buyer-loc">${e(b.loc || '—')}</span>${link}</div>
+        <p class="gtm-buyer-wants">${e(b.wants)}</p>
         ${notes ? `<ul class="gtm-buyer-notes">${notes}</ul>` : ''}
       </div>`;
   }).join('');
