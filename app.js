@@ -2669,7 +2669,7 @@ function onWellRowClick(tr) {
 // Parcel Map — Krizman land holdings (Tuscarawas County)
 // Polygons sourced from the county Auditor GIS, bundled as a local GeoJSON.
 // ===========================================================
-const PARCEL_STATE = { map: null, layer: null, data: null, byId: {}, baseLayers: {}, basemap: 'street', selected: null, loaded: false, loading: false, sort: 'acres', filter: '', wells: null, wellsData: null, wellsShown: true, eog: null, eogShown: true };
+const PARCEL_STATE = { map: null, layer: null, data: null, byId: {}, baseLayers: {}, basemap: 'street', selected: null, loaded: false, loading: false, sort: 'acres', filter: '', wells: null, wellsData: null, wellsShown: true, eog: null, eogShown: true, eogLoading: false };
 
 // Dark dot with a white halo — reads as a point well over the red/teal parcels.
 const WELL_MARKER_STYLE = { radius: 5, color: '#fff', weight: 1.5, fillColor: '#1B1B1B', fillOpacity: 1 };
@@ -2679,20 +2679,12 @@ const WELL_MARKER_STYLE = { radius: 5, color: '#fff', weight: 1.5, fillColor: '#
 const PARCEL_SITE = [40.6299, -81.4312];
 
 // EOG Resources' newly unitized Utica/Point Pleasant "TWR" (Warren Township)
-// drilling units along the Tuscarawas–Carroll line. Centroids for Shula TWR A,
-// Shula TWR B and Lambeau TWR A are from ODNR's Unitization/Drilling Units GIS
-// (Chief's Order unit polygons). Ditka TWR A (Order 2026-82, corrected Feb 2026)
-// is not yet in ODNR's GIS, so its point is located from the order's Exhibit B
-// plat — straddling the county line at Lambeau's latitude (approximate).
-// Acreage / well counts / townships are from each Chief's Order.
-const EOG_UNITS = [
-  { name: 'Shula TWR A',   lat: 40.47780, lon: -81.27288, order: '2025-123', date: 'Apr 10, 2025', acres: 1688, wells: 4, area: 'Union & Warren Twp (Tuscarawas) + Orange Twp (Carroll)', approx: false },
-  { name: 'Shula TWR B',   lat: 40.52231, lon: -81.30337, order: '2025-425', date: 'Oct 23, 2025', acres: 1241, wells: 3, area: 'Warren Twp (Tuscarawas)', approx: false },
-  { name: 'Lambeau TWR A', lat: 40.46294, lon: -81.27703, order: '2026-63',  date: 'Feb 2, 2026',  acres: 1205, wells: 3, area: 'Orange Twp (Carroll) + Union & Warren Twp (Tuscarawas)', approx: false },
-  { name: 'Ditka TWR A',   lat: 40.46350, lon: -81.25950, order: '2026-82',  date: 'Feb 25, 2026', acres: 1412, wells: 3, area: 'Warren Twp (Tuscarawas) + Orange Twp (Carroll)', approx: true },
-];
-const EOG_MARKER_STYLE = { radius: 7, color: '#7a3d00', weight: 1.6, fillColor: '#EE8A1E', fillOpacity: 0.95 };
-const EOG_APPROX_STYLE = { radius: 7, color: '#C77A1E', weight: 1.4, dashArray: '2,3', fillColor: '#F6C98A', fillOpacity: 0.6 };
+// drilling units along the Tuscarawas–Carroll line — highlighted footprints
+// loaded from eog_units.geojson. Shula TWR A/B and Lambeau TWR A are the ODNR
+// Unitization unit polygons; Ditka TWR A (not yet in ODNR GIS) is assembled
+// from its Chief's-Order parcels across the Tuscarawas and Carroll auditor GIS.
+const EOG_STYLE       = { color: '#B5631A', weight: 1.2, opacity: 0.95, fillColor: '#EE8A1E', fillOpacity: 0.22 };
+const EOG_STYLE_HOVER = { color: '#8a4a10', weight: 1.9, opacity: 1,    fillColor: '#EE8A1E', fillOpacity: 0.42 };
 
 // Great-circle miles from the Lantern site (for EOG unit popups).
 function pmMilesFromSite(lat, lon) {
@@ -2829,34 +2821,46 @@ function wellPopup(p) {
   </div>`;
 }
 
-// EOG TWR units — amber dots overlaying the parcels. Built once from EOG_UNITS.
-function buildEogUnits() {
-  if (PARCEL_STATE.eog || !PARCEL_STATE.map) return;
-  const group = L.layerGroup();
-  EOG_UNITS.forEach(u => {
-    const m = L.circleMarker([u.lat, u.lon], u.approx ? EOG_APPROX_STYLE : EOG_MARKER_STYLE);
-    m.bindPopup(eogPopup(u), { maxWidth: 250 });
-    m.bindTooltip('EOG · ' + u.name + (u.approx ? ' (approx.)' : ''), { direction: 'top', offset: [0, -7] });
-    group.addLayer(m);
-  });
-  PARCEL_STATE.eog = group;
-  if (PARCEL_STATE.eogShown) group.addTo(PARCEL_STATE.map);
-  const cntEl = document.querySelector('#pmEogToggle .pm-eog-count');
-  if (cntEl) cntEl.textContent = EOG_UNITS.length;
+// EOG TWR units — highlighted footprint polygons from eog_units.geojson.
+async function buildEogUnits() {
+  if (PARCEL_STATE.eog || PARCEL_STATE.eogLoading || !PARCEL_STATE.map) return;
+  PARCEL_STATE.eogLoading = true;
+  try {
+    const resp = await fetch('eog_units.geojson?v=2026-06-03m');
+    const gj = await resp.json();
+    const layer = L.geoJSON(gj, {
+      style: () => EOG_STYLE,
+      onEachFeature: (feat, lyr) => {
+        const p = feat.properties || {};
+        lyr.bindPopup(eogPopup(p), { maxWidth: 250 });
+        lyr.bindTooltip('EOG · ' + (p.name || ''), { sticky: true });
+        lyr.on('mouseover', () => lyr.setStyle(EOG_STYLE_HOVER));
+        lyr.on('mouseout', () => lyr.setStyle(EOG_STYLE));
+      },
+    });
+    PARCEL_STATE.eog = layer;
+    if (PARCEL_STATE.eogShown) layer.addTo(PARCEL_STATE.map);
+    const cntEl = document.querySelector('#pmEogToggle .pm-eog-count');
+    if (cntEl) cntEl.textContent = (gj.features || []).length;
+  } catch (e) {
+    console.error('Failed to load EOG units:', e);
+  } finally {
+    PARCEL_STATE.eogLoading = false;
+  }
 }
 
-function eogPopup(u) {
+function eogPopup(p) {
   const e = escapeHtmlSimple;
   return `<div class="well-popup">
-    <div class="well-popup-name">EOG · ${e(u.name)}</div>
-    <div class="well-popup-row"><span>Chief’s Order</span><strong>${e(u.order)}</strong></div>
-    <div class="well-popup-row"><span>Unitized</span><strong>${e(u.date)}</strong></div>
-    <div class="well-popup-row"><span>Area</span><strong>${e(u.area)}</strong></div>
-    ${u.acres ? `<div class="well-popup-row"><span>Unit size</span><strong>${u.acres.toLocaleString()} ac</strong></div>` : ''}
-    ${u.wells ? `<div class="well-popup-row"><span>Wells proposed</span><strong>${u.wells}</strong></div>` : ''}
-    <div class="well-popup-row"><span>From site</span><strong>~${pmMilesFromSite(u.lat, u.lon)} mi</strong></div>
+    <div class="well-popup-name">EOG · ${e(p.name)}</div>
+    <div class="well-popup-row"><span>Chief’s Order</span><strong>${e(p.order)}</strong></div>
+    <div class="well-popup-row"><span>Unitized</span><strong>${e(p.date)}</strong></div>
+    <div class="well-popup-row"><span>Area</span><strong>${e(p.area)}</strong></div>
+    ${p.acres ? `<div class="well-popup-row"><span>Unit size</span><strong>${Number(p.acres).toLocaleString()} ac</strong></div>` : ''}
+    ${p.wells ? `<div class="well-popup-row"><span>Wells proposed</span><strong>${p.wells}</strong></div>` : ''}
+    ${(p.clat != null && p.clon != null) ? `<div class="well-popup-row"><span>From site</span><strong>~${pmMilesFromSite(p.clat, p.clon)} mi</strong></div>` : ''}
     <div class="well-popup-row"><span>Operator</span><strong>EOG Resources</strong></div>
-    ${u.approx ? `<div class="well-popup-note">Approximate — located from the Chief’s Order Exhibit B plat; unit polygon not yet in ODNR GIS.</div>` : ''}
+    ${p.parcels ? `<div class="well-popup-note">Footprint assembled from ${p.parcels} order parcels (Tuscarawas + Carroll auditor GIS).</div>` : ''}
   </div>`;
 }
 
@@ -3020,10 +3024,9 @@ function bindParcelControls() {
   if (fb && fb.dataset.bound !== '1') {
     fb.addEventListener('click', () => {
       if (!PARCEL_STATE.map) return;
-      if (!PARCEL_STATE.eogShown) et?.click(); // make sure the EOG dots are visible
-      const pts = EOG_UNITS.map(u => [u.lat, u.lon]);
-      pts.push(PARCEL_SITE);
-      let b = L.latLngBounds(pts);
+      if (!PARCEL_STATE.eogShown) et?.click(); // make sure the EOG units are visible
+      let b = L.latLngBounds([PARCEL_SITE]);
+      try { if (PARCEL_STATE.eog) b = b.extend(PARCEL_STATE.eog.getBounds()); } catch (e) {}
       try { if (PARCEL_STATE.layer) b = b.extend(PARCEL_STATE.layer.getBounds()); } catch (e) {}
       PARCEL_STATE.map.fitBounds(b, { padding: [45, 45] });
     });
