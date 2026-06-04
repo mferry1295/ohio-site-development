@@ -3157,13 +3157,108 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .gtm-step-body p { font-size: 11px; line-height: 1.4; color: var(--iron); margin: 0; }
 .gtm-source { font-size: 10.5px; color: var(--muted); margin-top: 22px; font-style: italic; }
 
+/* Staged-plan strip (3 columns) */
+.gtm-steps--stages { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 26px; }
+.gtm-steps--stages .gtm-step-body p strong { color: var(--derrick); }
+
+/* Deal-structure cards */
+.gtm-structures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.gtm-struct {
+  position: relative;
+  text-align: left;
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 13px 14px 12px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  font: inherit;
+  transition: all 0.15s ease;
+}
+.gtm-struct:hover { border-color: var(--clay); transform: translateY(-1px); }
+.gtm-struct.is-active { border-color: var(--derrick); box-shadow: 0 0 0 2px rgba(139,26,26,0.15), var(--shadow); }
+.gtm-struct--kriz { border-color: #d8b48a; background: #fffaf3; }
+.gtm-struct-star { position: absolute; top: 9px; right: 10px; color: #E8902C; font-size: 13px; }
+.gtm-struct-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.gtm-struct-n { width: 20px; height: 20px; flex: none; border-radius: 50%; background: var(--derrick); color: #fff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.gtm-struct-fit { font-size: 8.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 3px; padding: 2px 6px; }
+.gtm-struct-fit--high { background: #e7f3ea; color: var(--pos); }
+.gtm-struct-fit--med { background: var(--blush); color: var(--derrick); }
+.gtm-struct-fit--exit { background: #eef2f6; color: #4F7799; }
+.gtm-struct-title { font-size: 13px; font-weight: 800; color: var(--ink); line-height: 1.25; margin-bottom: 5px; }
+.gtm-struct-what { font-size: 11px; line-height: 1.4; color: var(--iron); margin: 0 0 6px; }
+.gtm-struct-note { font-size: 10.5px; line-height: 1.4; color: var(--muted); margin: 0 0 8px; }
+.gtm-struct-who { font-size: 10px; font-weight: 600; color: var(--clay); border-top: 1px solid var(--line); padding-top: 6px; }
+.gtm-krizman-note {
+  background: #fffaf3;
+  border: 1px solid #e6cba3;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin-bottom: 26px;
+}
+.gtm-krizman-note strong { color: var(--derrick); }
+
+/* Buyer shortlist subhead + channel wrap */
+.gtm-subhead { font-size: 13px; font-weight: 800; color: var(--derrick); margin: 4px 0 12px; }
+.gtm-channel-wrap { margin-top: 12px; margin-bottom: 8px; }
+
+/* Comparable-plays filter chips */
+.gtm-compare-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.gtm-cfilter {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.gtm-cfilter:hover { border-color: var(--clay); color: var(--derrick); }
+.gtm-cfilter.active { background: var(--derrick); border-color: var(--derrick); color: #fff; }
+
+/* Comparable-plays gallery */
+.gtm-compare { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.gtm-play {
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+.gtm-play--high { border-left-color: var(--pos); }
+.gtm-play--med { border-left-color: var(--clay); }
+.gtm-play--ctx { border-left-color: #b9b9b9; }
+.gtm-play-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.gtm-play-name { font-size: 13px; font-weight: 800; color: var(--ink); }
+.gtm-play-rel { font-size: 8.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 3px; padding: 2px 6px; white-space: nowrap; }
+.gtm-play-rel--high { background: #e7f3ea; color: var(--pos); }
+.gtm-play-rel--med { background: var(--blush); color: var(--derrick); }
+.gtm-play-rel--ctx { background: #eee; color: var(--muted); }
+.gtm-play-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 5px 0 7px; }
+.gtm-play-loc { font-size: 10.5px; font-weight: 600; color: var(--iron); }
+.gtm-play-scale { font-size: 10.5px; font-weight: 700; color: var(--derrick); font-variant-numeric: tabular-nums; }
+.gtm-play-note { font-size: 11px; line-height: 1.45; color: var(--iron); margin: 0; }
+.gtm-play-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; }
+.gtm-play-tag { font-size: 9.5px; font-weight: 800; color: var(--derrick); background: var(--blush); border-radius: 3px; padding: 1px 6px; }
+.gtm-play-region { font-size: 9.5px; color: var(--muted); margin-left: auto; }
+
 @media (max-width: 1100px) {
   .gtm-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .gtm-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gtm-steps--stages { grid-template-columns: 1fr; }
+  .gtm-structures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 680px) {
   .gtm-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gtm-steps { grid-template-columns: 1fr; }
+  .gtm-structures { grid-template-columns: 1fr; }
 }
 
 /* ===== Parcel Map (Krizman holdings) ===== */

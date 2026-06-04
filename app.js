@@ -3657,7 +3657,7 @@ function bindChecklistControls() {
 // everything downstream: the pitch, the headline metrics, the ranked
 // buyer shortlist, and the channel call.
 // ===========================================================
-const GTM_STATE = { size: 100, product: 'shell', power: 'btm-gas', phasing: 'single', built: false };
+const GTM_STATE = { size: 100, product: 'shell', power: 'btm-gas', phasing: 'single', compareFilter: 'all', built: false };
 
 // Buyer universe. min/max = the single-deal MW range a buyer realistically
 // engages on; gas = tolerance for an on-site gas power island
@@ -3741,7 +3741,13 @@ function gtmFit(b, s) {
 
 function renderGtm() {
   if (!document.getElementById('gtmControls')) return;
-  if (!GTM_STATE.built) { bindGtmControls(); GTM_STATE.built = true; }
+  if (!GTM_STATE.built) {
+    bindGtmControls();
+    gtmRenderStructures();      // static-ish: the four deal-structure cards
+    gtmRenderCompareFilters();  // filter chips for the comparables gallery
+    gtmRenderComparables();     // precedent gallery (filtered)
+    GTM_STATE.built = true;
+  }
   gtmRender();
 }
 
@@ -3762,7 +3768,7 @@ function gtmRender() {
   gtmRenderPitch();
   gtmRenderMetrics();
   gtmRenderBuyers();
-  gtmRenderApproach();
+  gtmRenderChannel();
 }
 
 function gtmMatches(s) {
@@ -3833,11 +3839,11 @@ function gtmRenderBuyers() {
   }).join('');
 }
 
-function gtmRenderApproach() {
-  const el = document.getElementById('gtmApproach');
+// Dynamic "who to call" line under the buyer shortlist.
+function gtmRenderChannel() {
+  const el = document.getElementById('gtmChannel');
   if (!el) return;
-  const s = GTM_STATE;
-  const tiers = new Set(gtmMatches(s).map(m => m.b.tier));
+  const tiers = new Set(gtmMatches(GTM_STATE).map(m => m.b.tier));
   let channel;
   if (tiers.has('Hyperscaler') || tiers.has('Hyperscale colo')) {
     channel = 'Data-center site-selection advisors (JLL, CBRE, Cushman, Newmark) plus hyperscaler land + energy teams direct.';
@@ -3846,27 +3852,109 @@ function gtmRenderApproach() {
   } else {
     channel = 'Regional brokers, JobsOhio / Team NEO, and direct enterprise outreach.';
   }
-  const pillars = [
-    { h: 'Speed to power', p: `Behind-the-meter gas skips the multi-year interconnection queue — energized in ~${GTM_POWER[s.power].speed}, the scarcest commodity in the AI buildout.` },
-    { h: 'Shovel-ready & de-risked', p: 'The Land Readiness Checklist and data room show clean control, a buildable footprint and entitlements already in motion.' },
-    { h: 'Fuel-secure', p: 'A captive Utica position plus the adjacent Nexus pipeline back the gas thesis with both on-site wells and firm transport.' },
-    { h: 'Scalable', p: 'A ~3,000-acre assemblage supports phasing from a first 100 MW to a ~1 GW master plan without re-siting.' },
-    { h: 'Incentive-rich', p: 'Ohio’s data-center sales-tax exemption plus local abatements and JobsOhio support sharpen the all-in cost.' },
-  ];
-  const steps = [
-    { n: '01', h: 'Package', p: 'Finish the site book, data room and this model into one underwriteable story (ties to the Land Checklist).' },
-    { n: '02', h: 'Tease', p: 'Anonymous one-page teaser to the advisor channel and target tenants — power, speed, acreage, fuel.' },
-    { n: '03', h: 'Target', p: 'Matched outreach to the shortlist above, sequenced by fit and the active power model.' },
-    { n: '04', h: 'Convert', p: 'LOI → diligence against the data room → lease, ground lease or JV with a power partner.' },
-  ];
-  el.innerHTML = `
-    <div class="gtm-pillars">
-      ${pillars.map(p => `<div class="gtm-pillar"><div class="gtm-pillar-h">${escapeHtmlSimple(p.h)}</div><p>${escapeHtmlSimple(p.p)}</p></div>`).join('')}
-    </div>
-    <div class="gtm-channel"><span class="gtm-channel-tag">Primary channel now</span><p>${escapeHtmlSimple(channel)}</p></div>
-    <div class="gtm-steps">
-      ${steps.map(st => `<div class="gtm-step"><span class="gtm-step-n">${st.n}</span><div class="gtm-step-body"><div class="gtm-step-h">${escapeHtmlSimple(st.h)}</div><p>${escapeHtmlSimple(st.p)}</p></div></div>`).join('')}
-    </div>`;
+  el.innerHTML = `<div class="gtm-channel"><span class="gtm-channel-tag">Primary channel now</span><p>${escapeHtmlSimple(channel)}</p></div>`;
+}
+
+// ===== Deal structures (the four buckets) =====
+const GTM_STRUCTURES = [
+  { key: 'supply',   n: '1', title: 'Sell gas / long-term supply', what: 'Commit firm gas or a fuel PPA to the power project.',        who: 'Ascent · Antero · EQT · Range · Encino',            fit: 'Floor',    fitClass: 'med',  note: 'Lowest risk and recurring revenue — but little of the power/compute upside.', krizman: false },
+  { key: 'jv',       n: '2', title: 'JV / retain equity in the power entity', what: 'Contribute gas + land into a power JV and keep equity.', who: 'Diamondback · Diversified Energy · New Era Helium', fit: 'High fit', fitClass: 'high', note: 'Keep upside in the power entity without having to become an IPP alone.', krizman: true },
+  { key: 'platform', n: '3', title: 'Sell the whole platform', what: 'Sell the integrated gas + land + power platform.',          who: 'Encino → EOG · Long Ridge → MARA',                  fit: 'Exit',     fitClass: 'exit', note: 'The exit if scale is insufficient — Long Ridge cleared ~10.6× EBITDA.', krizman: false },
+  { key: 'land',     n: '4', title: 'Monetize land via lease / option', what: 'Ground-lease or option the surface; keep recurring income.', who: 'LandBridge · Texas Pacific Land · CNX / Zediker',  fit: 'High fit', fitClass: 'high', note: 'Capture a ground-lease fee plus ongoing income with low capital outlay.', krizman: true },
+];
+
+// ===== Comparable plays (precedents) =====
+// rel: relevance to a single ~2,800-acre Tuscarawas operator. struct: which buckets the deal exemplifies.
+const GTM_COMPARABLES = [
+  { name: 'MARA / Long Ridge',                region: 'Appalachia · OH', loc: 'Hannibal, Monroe Co., OH',   scale: '505 MW + 1,600 ac', struct: ['platform'],     rel: 'High',
+    note: 'Bitcoin miner bought Long Ridge (~$1.5B) — a 505 MW gas plant with ~100 MMcf/d captive fuel on 1,600+ ac; a 200→600 MW data-center buildout. The closest mid-scale Ohio analog.' },
+  { name: 'Williams "Socrates" / Meta',       region: 'Appalachia · OH', loc: 'New Albany, Licking Co., OH', scale: '520 MW BTM · ~20-ac plant', struct: ['supply'], rel: 'High',
+    note: 'OPSB-approved behind-the-meter gas (not grid-connected) feeding a Meta campus — a few hundred MW on a tiny fraction of a 740-ac site. The small-acreage BTM precedent.' },
+  { name: 'Diversified Energy + FuelCell',    region: 'Appalachia',      loc: 'VA / WV / KY',               scale: '360 MW JV', struct: ['jv'], rel: 'High',
+    note: 'An Appalachian gas operator contributes gas + coal-mine methane into a power-gen JV and keeps equity — the template for retaining upside instead of just selling molecules.' },
+  { name: 'New Era Helium / Sharon AI',       region: 'Permian · TX',    loc: 'Ector Co., TX',              scale: '250 MW → 1 GW · 438 ac', struct: ['jv', 'supply'], rel: 'High',
+    note: 'A sub-$100M E&P in a 50/50 JV: supplies gas on a 20-yr fixed price + holds equity while the partner builds the data center. Closest to Krizman’s profile.' },
+  { name: 'CNX / Zediker Station',            region: 'Appalachia · PA', loc: 'Washington Co., PA',          scale: '1,500 ac · 400 MW modeled', struct: ['land'], rel: 'High',
+    note: 'Appalachian producer markets a 1,500-ac site with JLL for data-center development (with a "remediated mine gas" angle). RFP stage — no binding offtake yet.' },
+  { name: 'LandBridge / PowerBridge',         region: 'Permian · TX',    loc: 'Reeves Co., TX',             scale: '~3,400-ac option · up to 2 GW', struct: ['land'], rel: 'High',
+    note: 'A surface owner options land to a power developer for an $8M ground-lease fee plus recurring income — the purest land-monetization analog.' },
+  { name: 'Diamondback Energy',               region: 'Permian · TX',    loc: 'Permian Basin, TX',          scale: 'BTM plant on owned land', struct: ['jv'], rel: 'High',
+    note: 'Operator contributes gas + surface into a behind-the-meter JV with a hyperscaler and takes an equity stake — the same structure at larger scale.' },
+  { name: 'EOG / Encino',                     region: 'Appalachia · OH', loc: 'Ohio Utica',                 scale: '$5.6B platform', struct: ['platform'], rel: 'High',
+    note: 'EOG bought Encino — Ohio Utica’s largest oil producer — for $5.6B, citing the data-center gas boom. The exit-multiple end for a private Utica operator. (EOG is the offset operator on your Parcel Map.)' },
+  { name: 'EQT Corporation',                  region: 'Appalachia · PA', loc: 'Pittsburgh, PA',             scale: '~800 MMcf/d → 4.4 GW campus', struct: ['supply'], rel: 'Med',
+    note: 'The largest U.S. gas producer signs in-basin supply deals (Homer City, Shippingport, Frontier). Supply, not ownership — the low-risk lane.' },
+  { name: 'Ascent Resources',                 region: 'Appalachia · OH', loc: 'Ohio Utica',                 scale: '+40% budget → ~$225M', struct: ['supply'], rel: 'Med',
+    note: 'Ohio’s largest gas producer is expanding drilling to supply Appalachian data centers and "looking to participate in gas deals for power generation."' },
+  { name: 'Crusoe Energy',                    region: 'Permian · TX',    loc: 'Abilene, TX (Stargate)',     scale: '1.2 GW · 15+ GW pipeline', struct: ['jv'], rel: 'Context',
+    note: 'Flared-gas-to-compute pioneer now building gigawatt AI campuses — the trajectory from stranded-gas monetization to AI infrastructure.' },
+  { name: 'Texas Pacific Land',               region: 'Permian · TX',    loc: 'Permian Basin, TX',          scale: '~873,000 ac', struct: ['land'], rel: 'Med',
+    note: 'A pure landowner monetizing via royalties, surface leases and easements; put $50M into "Bolt Data & Energy." The landowner-without-drilling model.' },
+  { name: 'Fermi America "Matador"',          region: 'Permian · TX',    loc: 'Amarillo, TX',               scale: 'up to 11 GW · 5,800 ac', struct: ['platform'], rel: 'Context',
+    note: 'O&G-finance founders (Rick Perry, Quantum’s Neugebauer) building a gas + nuclear megacampus and IPO’d — illustrative but far larger and high-execution-risk.' },
+  { name: 'SoftBank / SB Energy PORTS',       region: 'Appalachia · OH', loc: 'Piketon, Pike Co., OH',      scale: '10 GW · 3,700 ac', struct: ['platform'], rel: 'Context',
+    note: 'A ~$33B Ohio gas-to-data-center megaproject on a former enrichment site — the upper bound of the Ohio pivot; context, not a scale analog.' },
+];
+
+const GTM_REL_RANK = { High: 0, Med: 1, Context: 2 };
+
+function gtmRenderStructures() {
+  const el = document.getElementById('gtmStructures');
+  if (!el) return;
+  el.innerHTML = GTM_STRUCTURES.map(st => `
+    <button class="gtm-struct${st.krizman ? ' gtm-struct--kriz' : ''}" data-struct="${st.key}" type="button" aria-pressed="false">
+      ${st.krizman ? '<span class="gtm-struct-star" title="Krizman’s recommended path">★</span>' : ''}
+      <div class="gtm-struct-top"><span class="gtm-struct-n">${st.n}</span><span class="gtm-struct-fit gtm-struct-fit--${st.fitClass}">${escapeHtmlSimple(st.fit)}</span></div>
+      <div class="gtm-struct-title">${escapeHtmlSimple(st.title)}</div>
+      <p class="gtm-struct-what">${escapeHtmlSimple(st.what)}</p>
+      <p class="gtm-struct-note">${escapeHtmlSimple(st.note)}</p>
+      <div class="gtm-struct-who">${escapeHtmlSimple(st.who)}</div>
+    </button>`).join('');
+  el.querySelectorAll('.gtm-struct').forEach(card => {
+    card.addEventListener('click', () => {
+      const k = card.dataset.struct;
+      gtmSetCompareFilter(GTM_STATE.compareFilter === k ? 'all' : k);
+    });
+  });
+}
+
+function gtmSetCompareFilter(key) {
+  GTM_STATE.compareFilter = key;
+  document.querySelectorAll('#gtmStructures .gtm-struct').forEach(c => {
+    const on = c.dataset.struct === key;
+    c.classList.toggle('is-active', on);
+    c.setAttribute('aria-pressed', String(on));
+  });
+  document.querySelectorAll('#gtmCompareFilters .gtm-cfilter').forEach(c => c.classList.toggle('active', c.dataset.struct === key));
+  gtmRenderComparables();
+}
+
+const GTM_STRUCT_SHORT = { supply: 'Sell gas', jv: 'JV / equity', platform: 'Sell platform', land: 'Land lease' };
+function gtmRenderCompareFilters() {
+  const el = document.getElementById('gtmCompareFilters');
+  if (!el) return;
+  const chips = [{ key: 'all', label: 'All plays' }].concat(GTM_STRUCTURES.map(s => ({ key: s.key, label: '(' + s.n + ') ' + GTM_STRUCT_SHORT[s.key] })));
+  el.innerHTML = chips.map(c => `<button class="gtm-cfilter${c.key === GTM_STATE.compareFilter ? ' active' : ''}" data-struct="${c.key}" type="button">${escapeHtmlSimple(c.label)}</button>`).join('');
+  el.querySelectorAll('.gtm-cfilter').forEach(chip => chip.addEventListener('click', () => gtmSetCompareFilter(chip.dataset.struct)));
+}
+
+function gtmRenderComparables() {
+  const el = document.getElementById('gtmCompare');
+  if (!el) return;
+  const f = GTM_STATE.compareFilter;
+  const list = GTM_COMPARABLES.filter(c => f === 'all' || (c.struct || []).includes(f))
+    .slice().sort((a, b) => (GTM_REL_RANK[a.rel] - GTM_REL_RANK[b.rel]));
+  const relClass = { High: 'high', Med: 'med', Context: 'ctx' };
+  el.innerHTML = list.map(c => `
+    <div class="gtm-play gtm-play--${relClass[c.rel]}">
+      <div class="gtm-play-top">
+        <span class="gtm-play-name">${escapeHtmlSimple(c.name)}</span>
+        <span class="gtm-play-rel gtm-play-rel--${relClass[c.rel]}">${c.rel === 'High' ? 'High fit' : (c.rel === 'Med' ? 'Relevant' : 'Context')}</span>
+      </div>
+      <div class="gtm-play-meta"><span class="gtm-play-loc">${escapeHtmlSimple(c.loc)}</span><span class="gtm-play-scale">${escapeHtmlSimple(c.scale)}</span></div>
+      <p class="gtm-play-note">${escapeHtmlSimple(c.note)}</p>
+      <div class="gtm-play-tags">${(c.struct || []).map(k => { const s = GTM_STRUCTURES.find(x => x.key === k); return s ? `<span class="gtm-play-tag">(${s.n})</span>` : ''; }).join('')}<span class="gtm-play-region">${escapeHtmlSimple(c.region)}</span></div>
+    </div>`).join('');
 }
 
 // ===== Master render =====

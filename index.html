@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<link rel="stylesheet" href="styles.css?v=2026-06-03o" />
+<link rel="stylesheet" href="styles.css?v=2026-06-03p" />
 </head>
 <body>
 
@@ -915,8 +915,42 @@
 <!-- =========== GO TO MARKET =========== -->
 <section id="gtm" class="page">
   <div class="content full">
-    <h2 class="page-title">Go to Market · How We Sell the Site</h2>
-    <p class="page-lead">A live working canvas for the marketing strategy. Set the campus size and how we package and power it — the buyer shortlist, lease structure, fuel math and the pitch all re-rate in real time. Use it to pressure-test "who do we call, and what do we say" before we take the site to market.</p>
+    <h2 class="page-title">Go to Market · Monetizing the Gas &amp; Land</h2>
+    <p class="page-lead">How a landowner-operator turns ~2,800 owned (plus ~6,000 leased) Utica acres and firm gas into recurring income from the AI-power boom. This page lays out <strong>our approach</strong>, the <strong>deal structures</strong> to choose among, a live <strong>buyer-universe</strong> dashboard, and the <strong>comparable plays</strong> already proving the model in the basin.</p>
+
+    <!-- ===== OUR APPROACH ===== -->
+    <div class="gtm-section-head">
+      <h3>Our approach</h3>
+      <p>The "gas + land → behind-the-meter power → data center" pivot is now an established playbook. Krizman's scale (a few hundred MW to ~1 GW) is squarely within precedent — the binding constraints are a creditworthy anchor tenant, firm gas, interconnection (or deliberately avoiding it), and turbine lead times, <em>not</em> acreage.</p>
+    </div>
+
+    <div class="gtm-pillars">
+      <div class="gtm-pillar"><div class="gtm-pillar-h">Speed to power</div><p>Behind-the-meter gas skips the 5–7-year PJM interconnection queue — energized in ~18–24 months, the scarcest commodity in the AI buildout.</p></div>
+      <div class="gtm-pillar"><div class="gtm-pillar-h">Fuel-secure</div><p>A captive Utica position plus the adjacent Nexus pipeline back the plant with both on-site wells and firm transport.</p></div>
+      <div class="gtm-pillar"><div class="gtm-pillar-h">Shovel-ready</div><p>The Land Readiness Checklist and data room show clean control, a buildable footprint and entitlements already in motion.</p></div>
+      <div class="gtm-pillar"><div class="gtm-pillar-h">Scalable</div><p>A ~3,000-acre assemblage phases from a first 100 MW to a ~1 GW master plan without re-siting.</p></div>
+      <div class="gtm-pillar"><div class="gtm-pillar-h">Incentive-rich</div><p>Ohio's data-center sales-tax exemption plus local abatements and JobsOhio support sharpen the all-in cost.</p></div>
+    </div>
+
+    <div class="gtm-steps gtm-steps--stages">
+      <div class="gtm-step"><span class="gtm-step-n">01</span><div class="gtm-step-body"><div class="gtm-step-h">Package &amp; position · 0–6 mo</div><p>Build the data room: gas deliverability &amp; reserves, buildable acres + water/fiber, distance to PJM and pipeline laterals, clean title. Highest-value step — lock or model <strong>firm gas supply</strong>.</p></div></div>
+      <div class="gtm-step"><span class="gtm-step-n">02</span><div class="gtm-step-body"><div class="gtm-step-h">Structure &amp; partner · 6–18 mo</div><p>Partner with an IPP / turnkey-gas provider and <strong>retain equity</strong> in the power entity, while separately ground-leasing to a developer. Binding LOI with an investment-grade tenant → accelerate; if not, default to long-term gas supply.</p></div></div>
+      <div class="gtm-step"><span class="gtm-step-n">03</span><div class="gtm-step-body"><div class="gtm-step-h">Build behind-the-meter · 18–36 mo</div><p>Structure generation to <strong>avoid the grid queue</strong> (the Williams "Socrates" model). Order long-lead turbines early — 5–7-yr turbine lead times are now the binding national constraint.</p></div></div>
+    </div>
+
+    <!-- ===== STRUCTURE OPTIONS ===== -->
+    <div class="gtm-section-head">
+      <h3>Structure options</h3>
+      <p>Four ways to monetize the position. Click one to filter the comparable plays below to deals built that way.</p>
+    </div>
+    <div class="gtm-structures" id="gtmStructures"></div>
+    <div class="gtm-krizman-note">★ <strong>Krizman's play:</strong> run <strong>(2) JV / retain equity</strong> and <strong>(4) land lease / option</strong> together — keep upside in the power JV <em>and</em> a recurring ground-lease income, a combination a landowner-operator is uniquely able to capture.</div>
+
+    <!-- ===== BUYER UNIVERSE ===== -->
+    <div class="gtm-section-head">
+      <h3>Buyer universe</h3>
+      <p>A live dashboard of who buys this. Set the campus size and how we package and power it — the shortlist, lease structure, fuel math and pitch all re-rate in real time.</p>
+    </div>
 
     <div class="gtm-controls" id="gtmControls">
       <div class="gtm-ctrl">
@@ -959,19 +993,19 @@
 
     <div class="gtm-metrics" id="gtmMetrics"></div>
 
-    <div class="gtm-section-head">
-      <h3>Buyer shortlist <span class="gtm-buyer-count" id="gtmBuyerCount"></span></h3>
-      <p>Who to call at this configuration — ranked by fit. Toggle the controls above to watch the target list shift.</p>
-    </div>
+    <div class="gtm-subhead">Buyer shortlist <span class="gtm-buyer-count" id="gtmBuyerCount"></span></div>
     <div class="gtm-buyers" id="gtmBuyers"></div>
+    <div class="gtm-channel-wrap" id="gtmChannel"></div>
 
+    <!-- ===== COMPARABLE PLAYS ===== -->
     <div class="gtm-section-head">
-      <h3>Our approach</h3>
-      <p>The value proposition we lead with and how we run the process.</p>
+      <h3>Comparable plays</h3>
+      <p>Oil &amp; gas operators and landowners already pivoting to power + data centers. Filter by deal structure (or click a structure card above). Tagged by how relevant each is to a single-site Tuscarawas operator.</p>
     </div>
-    <div class="gtm-approach" id="gtmApproach"></div>
+    <div class="gtm-compare-filters" id="gtmCompareFilters"></div>
+    <div class="gtm-compare" id="gtmCompare"></div>
 
-    <div class="gtm-source">Buyer fit, lease terms and economics are directional planning aids for working sessions — not offers, forecasts, or commitments. Calibrate against live broker and tenant feedback before relying on any figure.</div>
+    <div class="gtm-source">Buyer fit, lease terms and economics are directional planning aids for working sessions — not offers, forecasts, or commitments. Comparable-play figures (MW, acres, deal values) are drawn from company releases, SEC filings, OPSB filings and trade press; many "GW/MW" figures are targets, LOIs or studies, not installed capacity. Calibrate against live broker, tenant and counsel input before relying on any figure.</div>
   </div>
 </section>
 
@@ -1170,10 +1204,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-06-03o"></script>
-<script src="counties.js?v=2026-06-03o"></script>
-<script src="operators.js?v=2026-06-03o"></script>
-<script src="model.js?v=2026-06-03o"></script>
-<script src="app.js?v=2026-06-03o"></script>
+<script src="supabase-config.js?v=2026-06-03p"></script>
+<script src="counties.js?v=2026-06-03p"></script>
+<script src="operators.js?v=2026-06-03p"></script>
+<script src="model.js?v=2026-06-03p"></script>
+<script src="app.js?v=2026-06-03p"></script>
 </body>
 </html>
