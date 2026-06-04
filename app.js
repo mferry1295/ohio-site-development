@@ -3662,43 +3662,63 @@ const GTM_STATE = { size: 100, product: 'shell', power: 'btm-gas', phasing: 'sin
 // Buyer universe. min/max = the single-deal MW range a buyer realistically
 // engages on; gas = tolerance for an on-site gas power island
 // (high = a selling point, low = carbon-sensitive). 2025–26 market read.
+// op / pipe / capex are reported or widely-cited figures as of ~mid-2026
+// (FY26 capex guidance, operating footprint, contracted/announced pipeline).
 const GTM_BUYERS = [
   { name: 'Microsoft (Azure)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med', domain: 'microsoft.com', loc: 'Redmond, WA', site: 'https://azure.microsoft.com',
-    wants: 'Scale and expandability; pragmatic on gas with a carbon-offset or CCS path.' },
+    op: '300+ DCs · 70+ regions', pipe: '$80B Azure order backlog', capex: '~$190B FY26',
+    wants: 'Power-constrained with an $80B Azure backlog it cannot fill; will take firm capacity fast, gas pragmatic with a CCS / offset path.' },
   { name: 'Amazon (AWS)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'med', domain: 'amazon.com', loc: 'Seattle, WA', site: 'https://aws.amazon.com',
-    wants: 'Multi-hundred-MW phases; nuclear- and gas-pragmatic when speed demands it.' },
+    op: '38 regions · 120+ AZs', pipe: 'multi-GW build-out', capex: '~$200B FY26',
+    wants: 'Largest single AI-infra spender; nuclear- and gas-pragmatic when speed demands it, in multi-hundred-MW phases.' },
   { name: 'Google Cloud', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'low', domain: 'google.com', loc: 'Mountain View, CA', site: 'https://cloud.google.com',
-    wants: '24/7 carbon-free-energy goal — gas is a hard sell without clean firming.' },
+    op: '40+ cloud regions', pipe: 'multi-GW build-out', capex: '~$190B FY26',
+    wants: '24/7 carbon-free-energy goal — gas is a hard sell without clean firming or a CCS story.' },
   { name: 'Meta', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high', domain: 'meta.com', loc: 'Menlo Park, CA', site: 'https://meta.com',
-    wants: 'GW-scale AI buildout; has embraced on-site gas to move fast.' },
+    op: '25+ data-center regions', pipe: '5 GW "Hyperion" cluster', capex: '~$135–145B FY26',
+    wants: 'Building multi-GW clusters and has openly embraced on-site gas (Entergy, Williams "Socrates") to move fast.' },
   { name: 'Oracle (OCI / Stargate)', tier: 'Hyperscaler', min: 250, max: 1000, gas: 'high', domain: 'oracle.com', loc: 'Austin, TX', site: 'https://www.oracle.com/cloud',
-    wants: 'Aggressive and speed-first; highly gas-tolerant for AI capacity.' },
+    op: '100+ cloud regions', pipe: '10 GW power secured · 4.5 GW Stargate', capex: '~$50B FY26',
+    wants: 'Has secured ~10 GW of power for a $523B backlog and is the lead Stargate builder — speed-first and highly gas-tolerant.' },
   { name: 'OpenAI / Stargate', tier: 'Hyperscaler', min: 500, max: 1000, gas: 'high', domain: 'openai.com', loc: 'San Francisco, CA', site: 'https://openai.com',
-    wants: 'GW-scale and speed-obsessed; fuel-agnostic if it powers up fast.' },
+    op: 'Abilene (Phase 1) live', pipe: '~7 GW planned → 10 GW', capex: '$500B program',
+    wants: 'A $500B / 10 GW build with Oracle, SoftBank, Crusoe and Vantage — fuel-agnostic if it powers up fast.' },
   { name: 'Crusoe', tier: 'Neocloud', min: 100, max: 500, gas: 'high', domain: 'crusoe.ai', loc: 'Denver, CO', site: 'https://crusoe.ai',
-    wants: 'Built on behind-the-meter gas — your fuel story is their entire model.' },
+    op: '~250 MW live', pipe: '1.2 GW Abilene · 15+ GW dev', capex: '~$12B through FY26',
+    wants: 'Literally founded on behind-the-meter / flared gas — your captive-fuel story is their entire operating model.' },
   { name: 'CoreWeave', tier: 'Neocloud', min: 50, max: 500, gas: 'high', domain: 'coreweave.com', loc: 'Livingston, NJ', site: 'https://coreweave.com',
-    wants: 'Speed-to-power above all; takes whatever energizes GPUs first.' },
+    op: '43 DCs · 1+ GW live', pipe: '3.5+ GW contracted', capex: '~$20B+ FY26',
+    wants: 'Doubling active power to ~1.7 GW in 2026; speed-to-power above all — takes whatever energizes GPUs first.' },
   { name: 'Nebius', tier: 'Neocloud', min: 50, max: 300, gas: 'high', domain: 'nebius.com', loc: 'Amsterdam, NL', site: 'https://nebius.com',
-    wants: 'Rapid GPU-cloud expansion; flexible on power source.' },
+    op: 'US / Finland / Israel sites', pipe: '$10B · 310 MW build', capex: '$27B Meta contract',
+    wants: 'Backed by a multi-year, multi-billion Meta compute contract; expanding fast and flexible on power source.' },
   { name: 'Lambda', tier: 'Neocloud', min: 20, max: 150, gas: 'high', domain: 'lambdalabs.com', loc: 'San Jose, CA', site: 'https://lambdalabs.com',
-    wants: 'GPU cloud; smaller, fast deployments and gas-friendly.' },
+    op: 'Multiple US DCs', pipe: 'Microsoft multi-year deal', capex: '$1.5B NVIDIA backstop',
+    wants: 'NVIDIA-backstopped GPU cloud doing smaller, fast deployments — a realistic anchor for a first 50–150 MW phase.' },
   { name: 'Nscale', tier: 'Neocloud', min: 50, max: 250, gas: 'high', domain: 'nscale.com', loc: 'London, UK', site: 'https://nscale.com',
-    wants: 'AI-native, power-hungry and speed-driven.' },
+    op: 'Norway / UK / US sites', pipe: '240 MW TX · Stargate Norway', capex: '$3.3B+ raised',
+    wants: 'Deploying ~200k GB300 GPUs under Microsoft agreements; AI-native, power-hungry and speed-driven.' },
   { name: 'QTS (Blackstone)', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med', domain: 'qtsdatacenters.com', loc: 'Overland Park, KS', site: 'https://www.qtsdatacenters.com',
-    wants: 'Builds large shells and leases to the megacaps; power-led siting.' },
+    op: '30+ mega-campuses', pipe: '$10B Van Wert, OH · $12B WI', capex: 'Blackstone-backed',
+    wants: 'Blackstone-owned hyperscale-colo already building a $10B campus in Van Wert, OH — an in-state precedent and power-led site-hunter.' },
   { name: 'Vantage', tier: 'Hyperscale colo', min: 100, max: 500, gas: 'med', domain: 'vantage-dc.com', loc: 'Denver, CO', site: 'https://vantage-dc.com',
-    wants: 'Large campuses for hyperscale tenants; follows the power.' },
+    op: '30+ campuses', pipe: '$25B · 1.4 GW Frontier (TX)', capex: 'Multi-GW pipeline',
+    wants: 'Building $25B+ Stargate campuses for OpenAI/Oracle; follows the power and builds big shells for hyperscale tenants.' },
   { name: 'Switch', tier: 'Hyperscale colo', min: 100, max: 300, gas: 'med', domain: 'switch.com', loc: 'Las Vegas, NV', site: 'https://www.switch.com',
-    wants: 'Big campuses; sustainability brand but pragmatic on firm power.' },
+    op: '7 prime campuses', pipe: 'New GA / TN campuses', capex: '~$0.8B new site',
+    wants: 'Large-campus operator with a sustainability brand but pragmatic on firm power for AI loads.' },
   { name: 'Digital Realty', tier: 'Colocation', min: 50, max: 250, gas: 'med', domain: 'digitalrealty.com', loc: 'Austin, TX', site: 'https://www.digitalrealty.com',
-    wants: 'Global colo platform; carbon goals but takes firm power.' },
+    op: '300+ DCs · 50+ metros', pipe: '769 MW under constr · 5 GW powered land', capex: '~$8–10B FY26',
+    wants: 'Global colo platform actively buying powered land in constrained markets; carbon goals but takes firm power.' },
   { name: 'Equinix', tier: 'Colocation', min: 20, max: 150, gas: 'low', domain: 'equinix.com', loc: 'Redwood City, CA', site: 'https://www.equinix.com',
-    wants: 'Interconnection-led with a strong sustainability posture.' },
+    op: '270+ IBX · 60+ metros', pipe: '~3 GW developable · 2× by 2029', capex: '~$4B+ FY26',
+    wants: 'Interconnection-led with a strong sustainability posture; better fit on a grid + renewables story than pure gas.' },
   { name: 'TeraWulf / IREN / Cipher', tier: 'Crypto → HPC', min: 50, max: 250, gas: 'high', domain: 'terawulf.com', loc: 'Easton, MD', site: 'https://www.terawulf.com',
-    wants: 'Power-first miners pivoting to AI hosting — love cheap on-site gas.' },
+    op: '1+ GW power across sites', pipe: '1.5+ GW contracted (AWS · NVIDIA · Google)', capex: '$25B+ combined backlog',
+    wants: 'Power-first miners pivoting to AI hosting (TeraWulf 522 MW, Cipher 544 MW, IREN 480 MW) — they love cheap on-site gas.' },
   { name: 'Enterprise / regional cloud', tier: 'Enterprise', min: 10, max: 50, gas: 'med', domain: null, loc: 'Various', site: null,
-    wants: 'Single-tenant enterprise AI or regional colo; smaller footprints.' },
+    op: 'Single-tenant', pipe: '10–50 MW footprints', capex: 'Varies',
+    wants: 'Single-tenant enterprise AI or regional colo taking smaller footprints — the floor of the buyer set.' },
 ];
 
 const GTM_PRODUCTS = {
@@ -3728,7 +3748,7 @@ function gtmFit(b, s) {
   const notes = [];
   if (phaseFit) notes.push('Engages via the phased master plan');
   if (s.power === 'btm-gas') {
-    if (b.gas === 'high') { score += 1; notes.push('On-site gas is a selling point'); }
+    if (b.gas === 'high') { score += 1; notes.push('Behind-the-meter gas is their unlock, not a hurdle'); }
     else if (b.gas === 'low') { score -= 1; notes.push('Carbon-sensitive — needs a CCS / offset story'); }
   } else if (s.power === 'grid-renew') {
     if (b.gas === 'low') { score += 1; notes.push('Clean-power posture fits their carbon goals'); }
@@ -3830,6 +3850,12 @@ function gtmRenderBuyers() {
       ? `<img class="gtm-buyer-logo" src="https://icons.duckduckgo.com/ip3/${e(b.domain)}.ico" alt="" loading="lazy" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=${e(b.domain)}&sz=64'">`
       : `<span class="gtm-buyer-logo gtm-buyer-logo--ph" aria-hidden="true"></span>`;
     const link = b.site ? `<a class="gtm-buyer-link" href="${e(b.site)}" target="_blank" rel="noopener">Website ↗</a>` : '';
+    const stats = (b.op || b.pipe || b.capex) ? `
+        <div class="gtm-buyer-stats">
+          <div class="gtm-bstat"><div class="gtm-bstat-v">${e(b.op || '—')}</div><div class="gtm-bstat-l">Operating</div></div>
+          <div class="gtm-bstat"><div class="gtm-bstat-v">${e(b.pipe || '—')}</div><div class="gtm-bstat-l">Pipeline</div></div>
+          <div class="gtm-bstat"><div class="gtm-bstat-v">${e(b.capex || '—')}</div><div class="gtm-bstat-l">Capex / capital</div></div>
+        </div>` : '';
     return `
       <div class="gtm-buyer gtm-buyer--s${f.stars}">
         <div class="gtm-buyer-top">
@@ -3838,6 +3864,7 @@ function gtmRenderBuyers() {
         </div>
         <div class="gtm-buyer-meta"><span class="gtm-buyer-tier">${e(b.tier)}</span><span class="gtm-buyer-deal">${deal}</span></div>
         <div class="gtm-buyer-sub"><span class="gtm-buyer-loc">${e(b.loc || '—')}</span>${link}</div>
+        ${stats}
         <p class="gtm-buyer-wants">${e(b.wants)}</p>
         ${notes ? `<ul class="gtm-buyer-notes">${notes}</ul>` : ''}
       </div>`;
