@@ -2404,7 +2404,7 @@ function renderFieldMap() {
 // Productivity Map — Utica well heatmap (ODNR 2025 production)
 // Reuses the Field Map's wells.json; weights a heat layer by per-well rate.
 // ===========================================================
-const PROD_STATE = { map: null, canvas: null, wellLayer: null, gridLayer: null, site: null, baseLayers: {}, basemap: 'street', metric: 'gas', view: 'wells', built: false, items: null, wellMarkers: null, selectedWell: null };
+const PROD_STATE = { map: null, canvas: null, wellLayer: null, gridLayer: null, site: null, baseLayers: {}, basemap: 'street', metric: 'gas', view: 'wells', built: false, items: null, wellMarkers: null, selectedWell: null, eogLayer: null, eogShown: false };
 const PROD_METRICS = {
   gas:  { label: 'Gas rate', unit: 'Mcf/d', short: 'gas', val: (oil, gas, days) => days > 0 ? gas / days : 0 },
   oil:  { label: 'Oil rate', unit: 'bbl/d', short: 'oil', val: (oil, gas, days) => days > 0 ? oil / days : 0 },
@@ -2492,6 +2492,24 @@ function buildProductivity() {
   vals.sort((a, b) => a - b);
   const legendMax = PROD_STATE.view === 'grid' ? renderGridView(items, m) : renderWellsView(items, m, vals);
   renderProdLegend(m, legendMax);
+  // Keep the EOG overlay above the freshly drawn well/grid layer.
+  if (PROD_STATE.eogLayer && PROD_STATE.eogShown) PROD_STATE.eogLayer.bringToFront();
+}
+
+// EOG units overlay toggle for the Productivity Map.
+async function toggleProdEog(show) {
+  PROD_STATE.eogShown = show;
+  if (!PROD_STATE.map) return;
+  if (show) {
+    if (!PROD_STATE.eogLayer) {
+      try { PROD_STATE.eogLayer = makeEogLayer(await ensureEogGeojson()); }
+      catch (e) { console.error('EOG overlay failed to load:', e); return; }
+    }
+    PROD_STATE.eogLayer.addTo(PROD_STATE.map);
+    PROD_STATE.eogLayer.bringToFront();
+  } else if (PROD_STATE.eogLayer) {
+    PROD_STATE.map.removeLayer(PROD_STATE.eogLayer);
+  }
 }
 
 // Graduated symbols: every well a dot, sized + colored by its own rate.
@@ -2569,6 +2587,16 @@ function renderProdLegend(m, max) {
 }
 
 function bindProdControls() {
+  const eogBtn = document.getElementById('prodEogToggle');
+  if (eogBtn && eogBtn.dataset.bound !== '1') {
+    eogBtn.addEventListener('click', () => {
+      const show = !PROD_STATE.eogShown;
+      eogBtn.classList.toggle('active', show);
+      eogBtn.setAttribute('aria-pressed', String(show));
+      toggleProdEog(show);
+    });
+    eogBtn.dataset.bound = '1';
+  }
   document.querySelectorAll('.prod-metric-btn').forEach(btn => {
     if (btn.dataset.bound === '1') return;
     btn.addEventListener('click', () => {
@@ -2685,6 +2713,29 @@ const PARCEL_SITE = [40.6299, -81.4312];
 // from its Chief's-Order parcels across the Tuscarawas and Carroll auditor GIS.
 const EOG_STYLE       = { color: '#B5631A', weight: 1.2, opacity: 0.95, fillColor: '#EE8A1E', fillOpacity: 0.22 };
 const EOG_STYLE_HOVER = { color: '#8a4a10', weight: 1.9, opacity: 1,    fillColor: '#EE8A1E', fillOpacity: 0.42 };
+
+// Shared loader — both the Parcel Map and the Productivity Map overlay the same
+// EOG unit footprints, so fetch and parse the geojson once.
+let EOG_GEOJSON = null;
+async function ensureEogGeojson() {
+  if (EOG_GEOJSON) return EOG_GEOJSON;
+  const resp = await fetch('eog_units.geojson?v=2026-06-03n');
+  EOG_GEOJSON = await resp.json();
+  return EOG_GEOJSON;
+}
+// Build an EOG-units overlay layer (amber footprints + popups) for any map.
+function makeEogLayer(gj) {
+  return L.geoJSON(gj, {
+    style: () => EOG_STYLE,
+    onEachFeature: (feat, lyr) => {
+      const p = feat.properties || {};
+      lyr.bindPopup(eogPopup(p), { maxWidth: 250 });
+      lyr.bindTooltip('EOG · ' + (p.name || ''), { sticky: true });
+      lyr.on('mouseover', () => lyr.setStyle(EOG_STYLE_HOVER));
+      lyr.on('mouseout', () => lyr.setStyle(EOG_STYLE));
+    },
+  });
+}
 
 // Great-circle miles from the Lantern site (for EOG unit popups).
 function pmMilesFromSite(lat, lon) {
@@ -2826,18 +2877,8 @@ async function buildEogUnits() {
   if (PARCEL_STATE.eog || PARCEL_STATE.eogLoading || !PARCEL_STATE.map) return;
   PARCEL_STATE.eogLoading = true;
   try {
-    const resp = await fetch('eog_units.geojson?v=2026-06-03n');
-    const gj = await resp.json();
-    const layer = L.geoJSON(gj, {
-      style: () => EOG_STYLE,
-      onEachFeature: (feat, lyr) => {
-        const p = feat.properties || {};
-        lyr.bindPopup(eogPopup(p), { maxWidth: 250 });
-        lyr.bindTooltip('EOG · ' + (p.name || ''), { sticky: true });
-        lyr.on('mouseover', () => lyr.setStyle(EOG_STYLE_HOVER));
-        lyr.on('mouseout', () => lyr.setStyle(EOG_STYLE));
-      },
-    });
+    const gj = await ensureEogGeojson();
+    const layer = makeEogLayer(gj);
     PARCEL_STATE.eog = layer;
     if (PARCEL_STATE.eogShown) layer.addTo(PARCEL_STATE.map);
     const cntEl = document.querySelector('#pmEogToggle .pm-eog-count');

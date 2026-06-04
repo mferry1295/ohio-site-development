@@ -3363,6 +3363,26 @@ footer .muted { color: rgba(255,255,255,0.55); }
 }
 .prod-metric-btn:hover, .prod-view-btn:hover, .prod-base-btn:hover { border-color: var(--clay); color: var(--derrick); }
 .prod-metric-btn.active, .prod-view-btn.active, .prod-base-btn.active { background: var(--derrick); border-color: var(--derrick); color: #fff; }
+/* EOG units overlay toggle — amber, mirrors the other prod control buttons */
+.prod-eog-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.prod-eog-btn:hover { border-color: #EE8A1E; color: #9a5400; }
+.prod-eog-btn.active { background: #EE8A1E; border-color: #C77A1E; color: #fff; }
+.prod-eog-dot { width: 9px; height: 9px; border-radius: 2px; background: #EE8A1E; border: 1.5px solid #C77A1E; flex: none; }
+.prod-eog-btn.active .prod-eog-dot { background: #fff; border-color: #fff; }
 .prod-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--iron); cursor: pointer; }
 .prod-toggle input { accent-color: var(--derrick); cursor: pointer; }
 .prod-loading { font-size: 11px; font-weight: 700; color: var(--derrick); }

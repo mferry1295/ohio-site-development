@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<link rel="stylesheet" href="styles.css?v=2026-06-03n" />
+<link rel="stylesheet" href="styles.css?v=2026-06-03o" />
 </head>
 <body>
 
@@ -597,7 +597,7 @@
 <section id="productivity" class="page">
   <div class="content full">
     <h2 class="page-title">Productivity Map · Where the Best Utica Wells Are</h2>
-    <p class="page-lead">All 3,798 horizontal Utica wells that filed 2025 production with ODNR — each dot <strong>sized and colored by the rate you choose</strong>, so the biggest producers pop instead of smearing into a blob. Filter by county, operator, first-production year, or rate thresholds — the map and the detail table below update live. Toggle <strong>gas</strong> vs <strong>oil</strong> to watch the play windows shift: the dry-gas core (Belmont / Monroe / Harrison) for gas, the oilier western edge for oil. Switch to <strong>Area grid</strong> to color ~2.5-mile cells by <em>average</em> well quality. The ★ marks the Project Lantern site near Bolivar.</p>
+    <p class="page-lead">All 3,798 horizontal Utica wells that filed 2025 production with ODNR — each dot <strong>sized and colored by the rate you choose</strong>, so the biggest producers pop instead of smearing into a blob. Filter by county, operator, first-production year, or rate thresholds — the map and the detail table below update live. Toggle <strong>gas</strong> vs <strong>oil</strong> to watch the play windows shift: the dry-gas core (Belmont / Monroe / Harrison) for gas, the oilier western edge for oil. Switch to <strong>Area grid</strong> to color ~2.5-mile cells by <em>average</em> well quality, or flip on <strong>EOG new units</strong> to overlay EOG’s newly unitized "TWR" drilling units. The ★ marks the Project Lantern site near Bolivar.</p>
 
     <div class="field-filters" id="fieldFilters">
       <div class="field-filter">
@@ -655,6 +655,7 @@
         <button class="prod-base-btn active" data-base="street" type="button">Map</button>
         <button class="prod-base-btn" data-base="aerial" type="button">Aerial</button>
       </div>
+      <button class="prod-eog-btn" id="prodEogToggle" type="button" aria-pressed="false" title="Overlay EOG’s newly unitized Utica drilling units"><span class="prod-eog-dot"></span>EOG new units</button>
       <div class="prod-loading" id="prodLoading" hidden>Loading wells…</div>
     </div>
 
@@ -1169,10 +1170,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=2026-06-03n"></script>
-<script src="counties.js?v=2026-06-03n"></script>
-<script src="operators.js?v=2026-06-03n"></script>
-<script src="model.js?v=2026-06-03n"></script>
-<script src="app.js?v=2026-06-03n"></script>
+<script src="supabase-config.js?v=2026-06-03o"></script>
+<script src="counties.js?v=2026-06-03o"></script>
+<script src="operators.js?v=2026-06-03o"></script>
+<script src="model.js?v=2026-06-03o"></script>
+<script src="app.js?v=2026-06-03o"></script>
 </body>
 </html>
