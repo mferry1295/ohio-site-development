@@ -3249,16 +3249,94 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .gtm-play-tag { font-size: 9.5px; font-weight: 800; color: var(--derrick); background: var(--blush); border-radius: 3px; padding: 1px 6px; }
 .gtm-play-region { font-size: 9.5px; color: var(--muted); margin-left: auto; }
 
+/* Market-context stat strip */
+.gtm-context { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 26px; }
+.gtm-ctx-card { background: var(--ink); color: #fff; border-radius: 8px; padding: 16px 16px 14px; box-shadow: var(--shadow); }
+.gtm-ctx-card--accent { background: var(--derrick); }
+.gtm-ctx-fig { font-family: 'Times New Roman', serif; font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -0.01em; }
+.gtm-ctx-fig span { font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; opacity: 0.8; }
+.gtm-ctx-lbl { font-size: 11px; line-height: 1.4; color: rgba(255,255,255,0.82); margin-top: 8px; }
+.gtm-ctx-lbl strong { color: #fff; }
+
+/* Process flow stepper */
+.gtm-flow { display: flex; align-items: stretch; gap: 8px; margin-bottom: 20px; }
+.gtm-flow-step { flex: 1; background: var(--pure); border: 1px solid var(--line); border-top: 3px solid var(--clay); border-radius: 7px; padding: 12px 14px; box-shadow: var(--shadow); }
+.gtm-flow-step--accent { border-top-color: var(--derrick); background: #fcf6f6; }
+.gtm-flow-n { font-family: 'Times New Roman', serif; font-size: 18px; font-weight: 800; color: var(--clay); }
+.gtm-flow-step--accent .gtm-flow-n { color: var(--derrick); }
+.gtm-flow-t { font-size: 14px; font-weight: 800; color: var(--ink); margin-top: 2px; }
+.gtm-flow-d { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 2px 0 4px; }
+.gtm-flow-s { font-size: 11.5px; line-height: 1.4; color: var(--iron); }
+.gtm-flow-cx { align-self: center; color: var(--clay); font-size: 20px; font-weight: 700; flex: none; }
+
+/* Phase detail panels */
+.gtm-phase { background: var(--pure); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.gtm-phase--accent { border-color: #e6cdcd; background: linear-gradient(180deg, #fdf7f7 0%, var(--pure) 60%); }
+.gtm-phase-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.gtm-phase-n { width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--derrick); color: #fff; font-family: 'Times New Roman', serif; font-size: 17px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.gtm-phase-t { font-size: 16px; font-weight: 800; color: var(--derrick); }
+.gtm-phase-goal { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.gtm-phase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.gtm-col-h { font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--clay); margin-bottom: 8px; }
+.gtm-col-p { font-size: 12px; line-height: 1.55; color: var(--iron); margin: 0 0 10px; }
+.gtm-list { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 6px; }
+.gtm-list li { font-size: 12px; line-height: 1.45; color: var(--ink); }
+.gtm-callout { font-size: 11.5px; line-height: 1.5; color: var(--ink); background: var(--blush); border-radius: 5px; padding: 9px 11px; margin-top: 10px; }
+.gtm-callout strong { color: var(--derrick); }
+
+/* "What the package leads with" chips */
+.gtm-chiprow { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.gtm-edge { font-size: 11px; font-weight: 600; color: var(--iron); background: var(--row-b); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; }
+
+/* Competitive-process funnel */
+.gtm-funnel { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.gtm-funnel-row { display: flex; }
+.gtm-funnel-bar {
+  display: inline-flex; align-items: center;
+  min-width: 0;
+  padding: 7px 11px;
+  border-radius: 4px;
+  font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap;
+  background: linear-gradient(90deg, var(--derrick), var(--signal));
+  box-shadow: var(--shadow);
+}
+.gtm-funnel-row:nth-child(2) .gtm-funnel-bar { background: linear-gradient(90deg, var(--signal), #d46a6a); }
+.gtm-funnel-row:nth-child(3) .gtm-funnel-bar { background: linear-gradient(90deg, #d46a6a, #dd8a6a); }
+.gtm-funnel-row:nth-child(4) .gtm-funnel-bar { background: linear-gradient(90deg, #dd8a6a, #E8902C); }
+
+/* Cost-of-capital ladder */
+.gtm-coc { display: flex; flex-direction: column; gap: 8px; }
+.gtm-coc-row { display: grid; grid-template-columns: 138px 1fr auto; align-items: center; gap: 9px; }
+.gtm-coc-lbl { font-size: 11px; font-weight: 700; color: var(--ink); }
+.gtm-coc-bar { height: 9px; border-radius: 999px; background: linear-gradient(90deg, var(--pos), #C99A4E 55%, var(--signal)); min-width: 14px; }
+.gtm-coc-tag { font-size: 9.5px; color: var(--muted); white-space: nowrap; }
+
+/* Structure spectrum */
+.gtm-spectrum { margin: 2px 0 16px; padding: 0 6px; }
+.gtm-spectrum-axis { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+.gtm-spectrum-track { position: relative; height: 4px; border-radius: 999px; background: linear-gradient(90deg, var(--pos), #C99A4E, var(--derrick)); margin: 0 4px 34px; }
+.gtm-spec-mark { position: absolute; top: -5px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 700; color: var(--iron); text-align: center; }
+.gtm-spec-dot { display: block; width: 13px; height: 13px; border-radius: 50%; background: var(--pure); border: 3px solid var(--clay); margin: 0 auto 6px; box-shadow: var(--shadow); }
+.gtm-spec-mark--kriz { color: var(--derrick); }
+.gtm-spec-mark--kriz .gtm-spec-dot { border-color: var(--derrick); background: #ffe9c9; box-shadow: 0 0 0 3px rgba(232,144,44,0.25), var(--shadow); }
+
 @media (max-width: 1100px) {
   .gtm-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .gtm-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gtm-steps--stages { grid-template-columns: 1fr; }
   .gtm-structures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gtm-context { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 680px) {
   .gtm-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gtm-steps { grid-template-columns: 1fr; }
   .gtm-structures { grid-template-columns: 1fr; }
+  .gtm-context { grid-template-columns: 1fr; }
+  .gtm-flow { flex-direction: column; }
+  .gtm-flow-cx { transform: rotate(90deg); }
+  .gtm-phase-grid { grid-template-columns: 1fr; gap: 16px; }
+  .gtm-coc-row { grid-template-columns: 110px 1fr; }
+  .gtm-coc-tag { display: none; }
 }
 
 /* ===== Parcel Map (Krizman holdings) ===== */
