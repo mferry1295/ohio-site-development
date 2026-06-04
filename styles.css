@@ -3246,6 +3246,29 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .pm-wells-toggle.active { background: #1B1B1B; border-color: #1B1B1B; color: #fff; }
 .pm-well-dot { width: 9px; height: 9px; border-radius: 50%; background: #1B1B1B; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #1B1B1B; flex: none; }
 .pm-wells-toggle.active .pm-well-dot { background: #fff; box-shadow: 0 0 0 1px #fff; }
+
+/* EOG new-units toggle — mirrors the wells toggle in amber */
+.pm-eog-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--pure);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--iron);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pm-eog-toggle:hover { border-color: #EE8A1E; color: #9a5400; }
+.pm-eog-toggle.active { background: #EE8A1E; border-color: #C77A1E; color: #fff; }
+.pm-eog-dot { width: 9px; height: 9px; border-radius: 50%; background: #EE8A1E; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #C77A1E; flex: none; }
+.pm-eog-toggle.active .pm-eog-dot { background: #fff; box-shadow: 0 0 0 1px #fff; }
+.pm-frame-btn { font-size: 11px; padding: 6px 12px; }
+.well-popup-note { font-size: 10.5px; line-height: 1.4; color: #9a5400; background: #fdf2e3; border-radius: 4px; padding: 5px 7px; margin-top: 7px; }
 .pm-owner-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-left: auto; }
 .pm-owner-leg { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--iron); }
 .pm-owner-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; border: 1.5px solid var(--iron); }
