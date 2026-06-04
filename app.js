@@ -3889,10 +3889,53 @@ function gtmRenderChannel() {
 
 // ===== Deal structures (the four buckets) =====
 const GTM_STRUCTURES = [
-  { key: 'supply',   n: '1', title: 'Sell gas / long-term supply', what: 'Commit firm gas or a fuel PPA to the power project.',        who: 'Ascent · Antero · EQT · Range · Encino',            fit: 'Floor',    fitClass: 'med',  note: 'Lowest risk and recurring revenue — but little of the power/compute upside.', krizman: false },
-  { key: 'jv',       n: '2', title: 'JV / retain equity in the power entity', what: 'Contribute gas + land into a power JV and keep equity.', who: 'Diamondback · Diversified Energy · New Era Helium', fit: 'High fit', fitClass: 'high', note: 'Keep upside in the power entity without having to become an IPP alone.', krizman: true },
-  { key: 'platform', n: '3', title: 'Sell the whole platform', what: 'Sell the integrated gas + land + power platform.',          who: 'Encino → EOG · Long Ridge → MARA',                  fit: 'Exit',     fitClass: 'exit', note: 'The exit if scale is insufficient — Long Ridge cleared ~10.6× EBITDA.', krizman: false },
-  { key: 'land',     n: '4', title: 'Monetize land via lease / option', what: 'Ground-lease or option the surface; keep recurring income.', who: 'LandBridge · Texas Pacific Land · CNX / Zediker',  fit: 'High fit', fitClass: 'high', note: 'Capture a ground-lease fee plus ongoing income with low capital outlay.', krizman: true },
+  { key: 'land',     n: '4', title: 'Monetize land via lease / option',
+    what: 'Ground-lease or option the surface to a power developer or hyperscaler; they build & own the plant.',
+    details: [
+      '30–50 yr ground lease with annual escalators + an option / signing fee paid up front',
+      'Surface only — you retain minerals, gas, royalties and water rights to monetize separately',
+      'Minimal capital outlay; recurring income begins at signing, before any plant comes online',
+      'Precedent: LandBridge took ~$8M option fee + recurring lease on a ~3,400-ac Permian site'
+    ],
+    who: 'LandBridge · Texas Pacific Land · CNX / Zediker',
+    fit: 'Low capital',  fitClass: 'high',
+    note: 'Capture a ground-lease fee plus ongoing income with low capital outlay.' },
+
+  { key: 'supply',   n: '1', title: 'Sell gas / long-term supply',
+    what: 'Commit firm gas or a fuel PPA to the on-site power project.',
+    details: [
+      '10–20 yr firm supply or fuel PPA at ~50–250 MMcf/d into the campus power plant',
+      'Either physical gas sales at fixed/indexed price, or a tolling-style fuel PPA where offtake bears commodity risk',
+      'Capex stays in upstream (drilling, gathering); no exposure to the power-plant cost stack',
+      'Precedent: EQT — Homer City / Shippingport / Frontier (~800 MMcf/d → 4.4 GW); New Era Helium 20-yr fixed-price supply'
+    ],
+    who: 'Ascent · Antero · EQT · Range · Encino',
+    fit: 'Floor',        fitClass: 'med',
+    note: 'Lowest risk and recurring revenue — but little of the power / compute upside.' },
+
+  { key: 'jv',       n: '2', title: 'JV / retain equity in the power entity',
+    what: 'Contribute gas + land into a power-gen JV and keep equity in the plant entity.',
+    details: [
+      'In-kind contribution of firm gas + acreage in exchange for 25–50% equity in the JV',
+      'Partner brings EPC, plant operator and a creditworthy offtake (hyperscaler or utility)',
+      'Cash calls possible during construction; upside follows the plant and any data-center buildout',
+      'Precedent: Diversified Energy + FuelCell ~360 MW JV; New Era Helium / Sharon AI 250 MW → 1 GW JV'
+    ],
+    who: 'Diamondback · Diversified Energy · New Era Helium',
+    fit: 'High upside',  fitClass: 'high',
+    note: 'Keep upside in the power entity without having to become an IPP alone.' },
+
+  { key: 'platform', n: '3', title: 'Sell the whole platform',
+    what: 'Run a full sell-side process on the integrated gas + land + power package.',
+    details: [
+      '12–18 mo sell-side: stalking-horse + best-and-finals against scaled E&Ps and infra platforms',
+      'Crystallizes value at an EBITDA multiple — one-time cash, no go-forward upside',
+      'The natural exit if scale is insufficient to build the power and DC stack alone',
+      'Precedent: Long Ridge → MARA at ~10.6× EBITDA (~$1.5B for 505 MW + 1,600 ac); EOG bought Encino for $5.6B'
+    ],
+    who: 'Encino → EOG · Long Ridge → MARA',
+    fit: 'Exit',         fitClass: 'exit',
+    note: 'Crystallize value at a multiple; the exit if scale is insufficient.' },
 ];
 
 // ===== Comparable plays (precedents) =====
@@ -3934,11 +3977,11 @@ function gtmRenderStructures() {
   const el = document.getElementById('gtmStructures');
   if (!el) return;
   el.innerHTML = GTM_STRUCTURES.map(st => `
-    <button class="gtm-struct${st.krizman ? ' gtm-struct--kriz' : ''}" data-struct="${st.key}" type="button" aria-pressed="false">
-      ${st.krizman ? '<span class="gtm-struct-star" title="Krizman’s recommended path">★</span>' : ''}
+    <button class="gtm-struct" data-struct="${st.key}" type="button" aria-pressed="false">
       <div class="gtm-struct-top"><span class="gtm-struct-n">${st.n}</span><span class="gtm-struct-fit gtm-struct-fit--${st.fitClass}">${escapeHtmlSimple(st.fit)}</span></div>
       <div class="gtm-struct-title">${escapeHtmlSimple(st.title)}</div>
       <p class="gtm-struct-what">${escapeHtmlSimple(st.what)}</p>
+      <ul class="gtm-struct-details">${(st.details || []).map(d => `<li>${escapeHtmlSimple(d)}</li>`).join('')}</ul>
       <p class="gtm-struct-note">${escapeHtmlSimple(st.note)}</p>
       <div class="gtm-struct-who">${escapeHtmlSimple(st.who)}</div>
     </button>`).join('');
