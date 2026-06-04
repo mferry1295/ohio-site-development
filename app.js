@@ -2826,7 +2826,7 @@ async function buildEogUnits() {
   if (PARCEL_STATE.eog || PARCEL_STATE.eogLoading || !PARCEL_STATE.map) return;
   PARCEL_STATE.eogLoading = true;
   try {
-    const resp = await fetch('eog_units.geojson?v=2026-06-03m');
+    const resp = await fetch('eog_units.geojson?v=2026-06-03n');
     const gj = await resp.json();
     const layer = L.geoJSON(gj, {
       style: () => EOG_STYLE,
@@ -2860,7 +2860,7 @@ function eogPopup(p) {
     ${p.wells ? `<div class="well-popup-row"><span>Wells proposed</span><strong>${p.wells}</strong></div>` : ''}
     ${(p.clat != null && p.clon != null) ? `<div class="well-popup-row"><span>From site</span><strong>~${pmMilesFromSite(p.clat, p.clon)} mi</strong></div>` : ''}
     <div class="well-popup-row"><span>Operator</span><strong>EOG Resources</strong></div>
-    ${p.parcels ? `<div class="well-popup-note">Footprint assembled from ${p.parcels} order parcels (Tuscarawas + Carroll auditor GIS).</div>` : ''}
+    ${p.parcels ? `<div class="well-popup-note">Unit outline dissolved from the order’s parcels (Tuscarawas + Carroll auditor GIS).</div>` : ''}
   </div>`;
 }
 
