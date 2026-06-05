@@ -4247,6 +4247,9 @@ function boot() {
     syncScenarioButtons();
     render();
     renderOverviewMap();
+    // Go to Market is the default landing page — build it on load (its init
+    // otherwise only runs on tab click).
+    renderGtm();
   } catch (e) {
     console.error('Boot failed:', e);
   }
