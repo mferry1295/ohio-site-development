@@ -3019,24 +3019,6 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .gtm-seg-btn:hover { border-color: var(--clay); color: var(--derrick); }
 .gtm-seg-btn.active { background: var(--derrick); border-color: var(--derrick); color: #fff; }
 
-/* Pitch banner */
-.gtm-pitch {
-  border-left: 4px solid var(--derrick);
-  background: #fcf6f6;
-  border-radius: 0 6px 6px 0;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-}
-.gtm-pitch-tag {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--clay);
-  margin-bottom: 4px;
-}
-.gtm-pitch-line { font-size: 15px; line-height: 1.5; color: var(--ink); margin: 0; }
-.gtm-pitch-line strong { color: var(--derrick); }
 
 /* Metric cards */
 .gtm-metrics {
@@ -3142,25 +3124,6 @@ footer .muted { color: rgba(255,255,255,0.55); }
 }
 .gtm-pillar-h { font-size: 12px; font-weight: 800; color: var(--derrick); margin-bottom: 5px; }
 .gtm-pillar p { font-size: 11px; line-height: 1.45; color: var(--iron); margin: 0; }
-.gtm-channel {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 12px;
-  background: #f3f7f4;
-  border: 1px solid #d7e7da;
-  border-radius: 6px;
-  padding: 11px 14px;
-  margin-bottom: 16px;
-}
-.gtm-channel-tag {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--pos);
-}
-.gtm-channel p { font-size: 12.5px; color: var(--ink); margin: 0; flex: 1; min-width: 220px; }
 .gtm-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .gtm-step { display: flex; gap: 10px; background: var(--pure); border: 1px solid var(--line); border-radius: 6px; padding: 12px; box-shadow: var(--shadow); }
 .gtm-step-n { font-family: 'Times New Roman', serif; font-size: 20px; font-weight: 800; color: var(--clay); line-height: 1; flex: none; }
@@ -3248,7 +3211,6 @@ footer .muted { color: rgba(255,255,255,0.55); }
 
 /* Buyer shortlist subhead + channel wrap */
 .gtm-subhead { font-size: 13px; font-weight: 800; color: var(--derrick); margin: 4px 0 12px; }
-.gtm-channel-wrap { margin-top: 12px; margin-bottom: 8px; }
 
 /* Comparable-plays filter chips */
 .gtm-compare-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
@@ -3293,26 +3255,6 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .gtm-play-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; }
 .gtm-play-tag { font-size: 9.5px; font-weight: 800; color: var(--derrick); background: var(--blush); border-radius: 3px; padding: 1px 6px; }
 .gtm-play-region { font-size: 9.5px; color: var(--muted); margin-left: auto; }
-
-/* Approach journey tracker */
-.gtm-journey { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); margin: 6px 0 22px; }
-.gtm-journey::before {
-  content: '';
-  position: absolute; top: 19px; left: 16.66%; right: 16.66%; height: 2px;
-  background: linear-gradient(90deg, var(--derrick), var(--clay));
-  z-index: 0;
-}
-.gtm-journey-step { position: relative; z-index: 1; text-align: center; padding: 0 16px; }
-.gtm-journey-dot {
-  width: 38px; height: 38px; margin: 0 auto 11px;
-  border-radius: 50%; background: var(--derrick); color: #fff;
-  font-family: 'Times New Roman', serif; font-size: 17px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 5px var(--pure), var(--shadow);
-}
-.gtm-journey-t { font-size: 13px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
-.gtm-journey-sub { font-size: 11px; line-height: 1.45; color: var(--muted); margin-bottom: 6px; }
-.gtm-journey-time { font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--derrick); }
 
 /* Phase detail panels */
 .gtm-phase { background: var(--pure); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 14px; }
@@ -3523,8 +3465,6 @@ footer .muted { color: rgba(255,255,255,0.55); }
   .gtm-econ-row { grid-template-columns: repeat(3, 1fr); gap: 7px 12px; padding: 13px 0; }
   .gtm-econ-c-name { grid-column: 1 / -1; }
   .gtm-econ-c-bar { grid-column: 1 / -1; margin-top: 2px; }
-  .gtm-journey { grid-template-columns: 1fr; gap: 16px; }
-  .gtm-journey::before { display: none; }
   .gtm-phase-meta { gap: 12px 0; }
   .gtm-meta-item { flex: 1 0 100%; padding: 0; border-right: none; }
   .gtm-doc-cover { flex-direction: column; }

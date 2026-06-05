@@ -3786,27 +3786,12 @@ function bindGtmControls() {
 }
 
 function gtmRender() {
-  gtmRenderPitch();
   gtmRenderMetrics();
   gtmRenderBuyers();
-  gtmRenderChannel();
 }
 
 function gtmMatches(s) {
   return GTM_BUYERS.map(b => ({ b, f: gtmFit(b, s) })).filter(x => x.f);
-}
-
-function gtmRenderPitch() {
-  const el = document.getElementById('gtmPitch');
-  if (!el) return;
-  const s = GTM_STATE, prod = GTM_PRODUCTS[s.product], pow = GTM_POWER[s.power];
-  const matches = gtmMatches(s);
-  const tierCount = {};
-  matches.forEach(m => { tierCount[m.b.tier] = (tierCount[m.b.tier] || 0) + 1; });
-  const topTiers = Object.entries(tierCount).sort((a, b) => b[1] - a[1]).slice(0, 2).map(t => t[0]);
-  el.innerHTML = `
-    <div class="gtm-pitch-tag">The pitch</div>
-    <p class="gtm-pitch-line">A <strong>${gtmSizeLabel(s.size)}</strong> ${escapeHtmlSimple(prod.short)} campus on the Bolivar site${s.phasing === 'phased' ? ', master-planned to ~1 GW,' : ''} powered by <strong>${escapeHtmlSimple(pow.label.toLowerCase())}</strong> and deliverable in <strong>~${pow.speed}</strong> — taken to ${topTiers.length ? escapeHtmlSimple(topTiers.join(' and ').toLowerCase()) + ' buyers' : 'the buyers'} who prize <strong>${escapeHtmlSimple(pow.value)}</strong>.</p>`;
 }
 
 function gtmRenderMetrics() {
@@ -3870,22 +3855,6 @@ function gtmRenderBuyers() {
         ${notes ? `<ul class="gtm-buyer-notes">${notes}</ul>` : ''}
       </div>`;
   }).join('');
-}
-
-// Dynamic "who to call" line under the buyer shortlist.
-function gtmRenderChannel() {
-  const el = document.getElementById('gtmChannel');
-  if (!el) return;
-  const tiers = new Set(gtmMatches(GTM_STATE).map(m => m.b.tier));
-  let channel;
-  if (tiers.has('Hyperscaler') || tiers.has('Hyperscale colo')) {
-    channel = 'Data-center site-selection advisors (JLL, CBRE, Cushman, Newmark) plus hyperscaler land + energy teams direct.';
-  } else if (tiers.has('Neocloud') || tiers.has('Crypto → HPC')) {
-    channel = 'Direct to neocloud and crypto-to-HPC real-estate teams, plus power-developer / IPP partners who can co-bid the gas plant.';
-  } else {
-    channel = 'Regional brokers, JobsOhio / Team NEO, and direct enterprise outreach.';
-  }
-  el.innerHTML = `<div class="gtm-channel"><span class="gtm-channel-tag">Primary channel now</span><p>${escapeHtmlSimple(channel)}</p></div>`;
 }
 
 // ===== Deal structures (the four buckets) =====
