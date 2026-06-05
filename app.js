@@ -3991,6 +3991,96 @@ const GTM_COMPARABLES = [
 
 const GTM_REL_RANK = { High: 0, Med: 1, Context: 2 };
 
+// ===== Real-geometry site maps for the sample documents =====
+const GTM_GEO = {};
+async function gtmLoadGeo(file) {
+  if (GTM_GEO[file]) return GTM_GEO[file];
+  const resp = await fetch(file);
+  const gj = await resp.json();
+  GTM_GEO[file] = gj;
+  return gj;
+}
+function gtmGeoEach(geom, cb) {
+  if (!geom) return;
+  const t = geom.type, c = geom.coordinates;
+  const ring = r => r.forEach(p => cb(p[0], p[1]));
+  if (t === 'Polygon') c.forEach(ring);
+  else if (t === 'MultiPolygon') c.forEach(poly => poly.forEach(ring));
+  else if (t === 'Point') cb(c[0], c[1]);
+  else if (t === 'LineString') ring(c);
+  else if (t === 'MultiLineString') c.forEach(ring);
+}
+function gtmProjector(features, W, H, pad) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  features.forEach(f => gtmGeoEach(f.geometry, (lon, lat) => {
+    if (lon < minX) minX = lon; if (lon > maxX) maxX = lon;
+    if (lat < minY) minY = lat; if (lat > maxY) maxY = lat;
+  }));
+  const midLat = (minY + maxY) / 2, k = Math.cos(midLat * Math.PI / 180);
+  const pw = (maxX - minX) * k || 1, ph = (maxY - minY) || 1;
+  const s = Math.min((W - 2 * pad) / pw, (H - 2 * pad) / ph);
+  const ox = (W - pw * s) / 2, oy = (H - ph * s) / 2;
+  return { proj: (lon, lat) => [ox + (lon - minX) * k * s, oy + (maxY - lat) * s], s };
+}
+function gtmGeoPath(geom, proj) {
+  const parts = [];
+  const ringPath = r => r.map((p, i) => { const xy = proj(p[0], p[1]); return (i ? 'L' : 'M') + xy[0].toFixed(1) + ',' + xy[1].toFixed(1); }).join('') + 'Z';
+  const t = geom.type, c = geom.coordinates;
+  if (t === 'Polygon') c.forEach(r => parts.push(ringPath(r)));
+  else if (t === 'MultiPolygon') c.forEach(poly => poly.forEach(r => parts.push(ringPath(r))));
+  return parts.join('');
+}
+async function gtmRenderSiteMap(el) {
+  try {
+    const [parcels, wells] = await Promise.all([
+      gtmLoadGeo('krizman_parcels.geojson?v=2026-06-02d'),
+      gtmLoadGeo('krizman_wells.geojson?v=2026-06-02d'),
+    ]);
+    const W = 620, H = 300, pad = 26;
+    const { proj, s } = gtmProjector(parcels.features, W, H, pad);
+    const parcelPaths = parcels.features.map(f => `<path d="${gtmGeoPath(f.geometry, proj)}" class="gsm-parcel"/>`).join('');
+    const wellDots = (wells.features || []).map(f => { const c = f.geometry.coordinates; const xy = proj(c[0], c[1]); return `<circle cx="${xy[0].toFixed(1)}" cy="${xy[1].toFixed(1)}" r="2.6" class="gsm-well"/>`; }).join('');
+    const milePx = 1609.34 * s / 111320;
+    const svg = `<svg viewBox="0 0 ${W} ${H}" class="gsm-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Site parcel map">
+      <rect x="0" y="0" width="${W}" height="${H}" class="gsm-bg"/>
+      <g>${parcelPaths}</g>
+      <g>${wellDots}</g>
+      <g class="gsm-scale" transform="translate(${pad},${H - pad + 2})">
+        <line x1="0" y1="0" x2="${milePx.toFixed(1)}" y2="0"/>
+        <line x1="0" y1="-4" x2="0" y2="2"/>
+        <line x1="${milePx.toFixed(1)}" y1="-4" x2="${milePx.toFixed(1)}" y2="2"/>
+        <text x="${(milePx / 2).toFixed(1)}" y="-6">1 mile</text>
+      </g>
+      <g class="gsm-north" transform="translate(${W - pad - 4},${pad + 4})">
+        <path d="M0,-8 L4,6 L0,2 L-4,6 Z"/><text x="0" y="-11">N</text>
+      </g>
+    </svg>`;
+    el.innerHTML = svg
+      + `<div class="gtm-loc-inset" data-locator></div>`
+      + `<span class="gtm-doc-map-tag">Krizman &amp; Wilkshire Hills holdings · Lawrence Twp, Tuscarawas Co., OH</span>`
+      + `<span class="gtm-map-legend"><i class="gml gml-p"></i>Owned parcels<i class="gml gml-w"></i>Wells</span>`;
+    const inset = el.querySelector('[data-locator]');
+    if (inset) gtmRenderLocator(inset);
+  } catch (e) { el.classList.add('is-failed'); }
+}
+async function gtmRenderLocator(el) {
+  try {
+    const ohio = await gtmLoadGeo('ohio_counties.geojson');
+    const W = 96, H = 104, pad = 7;
+    const { proj } = gtmProjector(ohio.features, W, H, pad);
+    const counties = ohio.features.map(f => `<path d="${gtmGeoPath(f.geometry, proj)}" class="gloc-cty"/>`).join('');
+    const pin = proj(-81.4312, 40.6299);
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="gloc-svg" role="img" aria-label="Ohio locator">
+      ${counties}
+      <circle cx="${pin[0].toFixed(1)}" cy="${pin[1].toFixed(1)}" r="7" class="gloc-ring"/>
+      <circle cx="${pin[0].toFixed(1)}" cy="${pin[1].toFixed(1)}" r="3.2" class="gloc-pin"/>
+    </svg><span class="gloc-tag">Ohio</span>`;
+  } catch (e) {}
+}
+function gtmRenderDocMaps(root) {
+  root.querySelectorAll('[data-sitemap]').forEach(gtmRenderSiteMap);
+}
+
 // Full-page "sample deliverable" document viewer (native <dialog>)
 function gtmInitDocModal() {
   const modal = document.getElementById('gtmDocModal');
@@ -4010,6 +4100,7 @@ function gtmInitDocModal() {
     stage.innerHTML = '';
     stage.appendChild(tpl.content.cloneNode(true));
     stage.scrollTop = 0;
+    gtmRenderDocMaps(stage);
     if (typeof modal.showModal === 'function') modal.showModal();
     else modal.setAttribute('open', '');
     document.body.style.overflow = 'hidden';
