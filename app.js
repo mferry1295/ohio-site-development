@@ -27,7 +27,7 @@ if (typeof Chart !== 'undefined') {
 }
 
 // ===== State =====
-const state = { ...M.DEFAULTS, scenario: 'B' };
+const state = { ...M.DEFAULTS, scenario: 'C' };
 
 // ===== Number formatters =====
 const fmt = {
@@ -589,7 +589,7 @@ function renderRevStackChart(model) {
   ];
   if (state.scenario === 'C' || state.scenario === 'D') {
     datasets.push({
-      label: state.scenario === 'C' ? 'Wholesale power' : 'Hyperscaler lease',
+      label: 'Hyperscaler lease',
       data: pwr, backgroundColor: COLORS.derrick, stack: 'rev',
     });
   }
@@ -1248,9 +1248,8 @@ function renderPnlTable(model) {
   const signed = v => v < 0 ? 'neg' : 'pos';
 
   const scenario = state.scenario;
-  const isLandSale = scenario === 'A';
-  const showPower = scenario === 'C';   // wholesale to PJM
-  const showLease = scenario === 'D';   // hyperscaler lease
+  const isLandLease = scenario === 'A';      // recurring ground-lease income
+  const showLease = scenario === 'C' || scenario === 'D'; // hyperscaler lease (integrated paths)
 
   // Build per-period bridge that reconciles to model.ebitda (now G&A-inclusive).
   // EBITDA = Revenue − COGS − OpEx; OpEx = G&A + dcOpex (both are cash).
@@ -1304,18 +1303,18 @@ function renderPnlTable(model) {
     { rowClass: 'pnl-parent', cellMod: 'bold' }
   ));
 
-  // Sub-streams (skip for Land Sale — single sale event, no breakdown)
-  if (!isLandSale) {
+  // Sub-streams. Land lease shows a single recurring "Ground lease" line; the
+  // operating paths break out oil / gas / NGLs (+ hyperscaler lease for the integrated paths).
+  if (isLandLease) {
+    html.push(row('Ground lease + option', p => p.totalRev,
+      { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
+  } else {
     html.push(row('Crude Oil', p => p.oilRev,
       { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
-    html.push(row('Natural Gas (pipeline)', p => p.gasRev,
+    html.push(row('Natural Gas', p => p.gasRev,
       { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
     html.push(row('NGLs', p => p.nglRev,
       { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
-    if (showPower) {
-      html.push(row('Power Sold to Grid', p => p.powerRev,
-        { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
-    }
     if (showLease) {
       html.push(row('Hyperscaler Lease', p => p.powerRev,
         { rowClass: 'pnl-rev-sub', cellMod: 'sub', extraAttr: subHidden }));
@@ -1368,11 +1367,10 @@ function renderDistribTable(model) {
   const fmtM = v => (v / 1e6).toFixed(1);
   const f = model.financing;
   const taxRate = (state.tax || 0) / 100;
-  // For Land Sale (no equity at risk), the waterfall uses 0% pref and 0% promote
-  // so the advisor isn't double-charged on top of the success fee.
-  const promotePct = model.isLandSale ? 0 : (state.promotePct || 0);
+  // For Land Lease (no equity at risk), the waterfall uses 0% pref and 0% promote.
+  const promotePct = model.isLandLease ? 0 : (state.promotePct || 0);
   const equityPct = 100 - promotePct;
-  const prefPct = model.isLandSale ? 0 : (state.promotePref || 0);
+  const prefPct = model.isLandLease ? 0 : (state.promotePref || 0);
   const sign = v => v < 0 ? 'neg' : '';
   const signed = v => v < 0 ? 'neg' : 'pos';
   const tier = f.tierSchedule || [];
@@ -1461,10 +1459,10 @@ function renderDistribTable(model) {
 // Runs all 4 scenarios through the model with current inputs and recommends one
 // based on owner economics, gated by a positive-NPV requirement.
 const SCEN_META = {
-  A: { label: 'Land Sale', desc: 'Sell the asset outright; no development, no operations.' },
-  B: { label: 'Wells Only', desc: 'Drill, produce, sell oil/gas/NGLs at market prices.' },
-  C: { label: 'Wells + Power Plant', desc: 'Burn gas on-site; sell electricity to PJM grid.' },
-  D: { label: 'Full Integration', desc: 'Wells + 150 MW CCGT + 100 MW data center on a hyperscaler lease.' },
+  A: { label: 'Land lease / option', desc: 'Lease the surface to a developer; collect an option fee + escalating ground rent. Keep minerals & gas.' },
+  B: { label: 'Sell gas / supply', desc: 'Drill and sell firm gas (plus oil & NGLs) to the on-site plant / market. Keep the land.' },
+  C: { label: 'JV / retain equity', desc: 'Contribute gas + land into an integrated power + data-center JV and retain an equity stake.' },
+  D: { label: 'Sell the platform', desc: 'Build the integrated gas + power + data-center platform, then exit at an EBITDA multiple.' },
 };
 
 function rankScenarios() {
@@ -1484,7 +1482,7 @@ function rankScenarios() {
       ownerMoic: m.financing.ownerMoic,
       ownerPayback: m.financing.ownerPayback,
       advisorTotal: m.advisor.total,
-      isLandSale: !!m.isLandSale,
+      isLandLease: !!m.isLandLease,
     };
   });
   // Recommendation: highest Owner NPV (works for Land Sale and operating scenarios alike).
@@ -1517,7 +1515,7 @@ function renderRecBanner(results, rec) {
     el.innerHTML = `
       <div class="rec-tag">No clear winner</div>
       <div class="rec-headline">No path clears a positive Owner NPV at current inputs.</div>
-      <div class="rec-why">Even Land Sale comes up short — try raising the land sale price, WTI, or lease rate, or lower WACC.</div>
+      <div class="rec-why">Even the land lease comes up short — try raising the ground rent, lease rate, or WTI, or lower WACC.</div>
     `;
     return;
   }
@@ -1532,8 +1530,8 @@ function renderRecBanner(results, rec) {
     const npvSpread = (rec.ownerNpv || 0) - (next.ownerNpv || 0);
     why = `Path ${rec.scenario} maximizes Owner NPV (${moneyM(rec.ownerNpv)}) — ` +
           `${moneyM(npvSpread)} above Path ${next.scenario} (${moneyM(next.ownerNpv)}). ` +
-          (rec.isLandSale
-            ? `Operating returns don't beat what you'd clear by selling outright at the current price.`
+          (rec.isLandLease
+            ? `Development returns don't beat the recurring lease income for near-zero capital at risk.`
             : `Owner check-write: ${moneyM(rec.ownerEquity)}; Owner IRR ${ownerIrrPct(rec.ownerIrr)}.`);
   }
   el.className = 'rec-banner';
@@ -1544,7 +1542,7 @@ function renderRecBanner(results, rec) {
     <div class="rec-why">${why}</div>
     <div class="rec-stats">
       <div class="rec-stat"><span class="rec-stat-label">Owner NPV</span><span class="rec-stat-value">${moneyM(rec.ownerNpv)}</span></div>
-      <div class="rec-stat"><span class="rec-stat-label">Owner IRR</span><span class="rec-stat-value">${rec.isLandSale ? 'N/A' : ownerIrrPct(rec.ownerIrr)}</span></div>
+      <div class="rec-stat"><span class="rec-stat-label">Owner IRR</span><span class="rec-stat-value">${rec.isLandLease ? 'N/A' : ownerIrrPct(rec.ownerIrr)}</span></div>
       <div class="rec-stat"><span class="rec-stat-label">Owner Cash Multiple</span><span class="rec-stat-value">${rec.ownerMoic == null ? '—' : rec.ownerMoic.toFixed(2) + 'x'}</span></div>
       <div class="rec-stat"><span class="rec-stat-label">Owner Payback</span><span class="rec-stat-value">${fmt.yrs(rec.ownerPayback)}</span></div>
     </div>
@@ -1591,25 +1589,25 @@ function renderScoreTable(results, rec) {
 }
 
 function renderDecisionGrid(results) {
-  // Quick-read framing cards covering land sale vs. each operating tier.
-  const [a, b, c, d] = results; // A=Land Sale, B=Wells Only, C=Wells+Plant, D=Full Integration
+  // Quick-read framing cards covering the four GTM monetization structures.
+  const [a, b, c, d] = results; // A=Land lease, B=Sell gas, C=JV, D=Sell platform
   const moneyM = v => '$' + (v / 1e6).toFixed(0) + 'M';
   const cards = [
     {
-      title: 'Sell or develop',
-      body: `Path A clears ${moneyM(a.ownerNpv)} for the owner at the current land sale price (${moneyM(a.npv)} NPV after tax + advisor fee). Drilling wells only (B) puts ${moneyM(b.ownerNpv)} of Owner NPV on the table for a ${moneyM(b.ownerEquity)} check-write — develop only if you believe in that spread holding up.`,
+      title: 'Keep or sell',
+      body: `Leasing the land (A) clears ${moneyM(a.ownerNpv)} of Owner NPV as recurring rent for near-zero capital. Selling the platform (D) crystallizes ${moneyM(d.ownerNpv)} now but ends the upside. The JV (C) keeps ${moneyM(c.ownerNpv)} and a retained stake — the route that pairs a large total with continued ownership.`,
     },
     {
       title: 'Capital intensity',
-      body: `Land Sale needs zero capital. Wells Only requires ${moneyM(b.capex)} of CapEx (~half debt). Full Integration takes total CapEx to ${moneyM(d.capex)} — roughly ${(d.capex / Math.max(b.capex, 1)).toFixed(1)}× the wells-only path. The owner check-write swings ${moneyM(a.ownerEquity)} → ${moneyM(d.ownerEquity)} across the four paths.`,
+      body: `Land lease needs ~zero capital. Selling gas requires ${moneyM(b.capex)} of drilling CapEx. The integrated platform (JV / sale) takes total CapEx to ${moneyM(d.capex)} — but in the JV the partner funds most, so your check is ${moneyM(c.ownerEquity)} vs. ${moneyM(d.ownerEquity)} building it to sell.`,
     },
     {
       title: 'Time to cash',
-      body: `Land Sale is immediate — proceeds in Y1. Wells Only starts producing in Y1 with payback ${fmt.yrs(b.payback)}. Paths C and D add a 36–60 month build before lease revenue clears; paybacks ${fmt.yrs(c.payback)} and ${fmt.yrs(d.payback)} respectively.`,
+      body: `Land lease pays from Y1 (option fee + rent). Selling gas produces in Y1 with payback ${fmt.yrs(b.payback)}. The JV and platform sale add an 18–30 month build before lease revenue clears; the platform sale then exits at an EBITDA multiple around Y${(state.exitYear || 5)}.`,
     },
     {
-      title: 'Operational complexity',
-      body: `A is one transaction and you're done. B is a pure E&P operation — known playbook, rigs, midstream gas takeaway. C layers in CCGT operations and a PJM interconnect. D adds a behind-the-meter data center and long-dated lease to a single hyperscaler — concentrated counterparty risk in exchange for the 4× pricing premium on methane.`,
+      title: 'What you keep',
+      body: `Land lease keeps the land, minerals and gas. Selling gas keeps the land and 100% of your equity. The JV keeps a ${(state.ownerEquityPct || 40)}% stake in the power entity plus its upside. Selling the platform keeps nothing — a clean, one-time exit.`,
     },
   ];
   document.getElementById('decisionGrid').innerHTML = cards.map(c => `

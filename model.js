@@ -36,12 +36,17 @@ const DEFAULTS = {
   // 43% reproduces the primer's $30.28 / $70.39 cost stack
   // (royalty 20% of rev + LOE $4 + GP&T $8 + severance $4.20 per boe).
   opCostPct: 43,
-  // Land Sale (Scenario A) — one-time sale of the asset; no ongoing operations
-  landSalePrice: 50,     // $M sale price (proxy: ~$10K/acre × 5K acres)
+  // Land Lease / option (Path A) — lease the surface to a developer who builds & owns the plant.
+  optionFee: 5,          // $M one-time option / signing fee (paid Y1)
+  groundRent: 12,        // $M/yr ground lease, escalating
+  groundRentEsc: 2.0,    // %/yr ground-rent escalation
+  // Platform sale (Path D) — build the integrated platform, then exit at a multiple.
+  exitMultiple: 10,      // × stabilized EBITDA at sale
+  exitYear: 5,           // project year of the platform sale
   // Plant
   plantMW: 150, heatRate: 7000, plantCapex: 175, plantOM: 15, avail: 95, powerPrice: 65,
-  // DC
-  facilityMW: 120, dcCapex: 1000, dcOpex: 30, leaseRate: 80, esc: 2.0,
+  // Powered shell + hyperscaler lease (owner/JV funds the shell; tenant funds the IT fit-out)
+  facilityMW: 120, dcCapex: 150, dcOpex: 8, leaseRate: 80, esc: 2.0,
   // Project
   years: 20, dda: 12, ga: 1.5,
   // Financing
@@ -49,7 +54,7 @@ const DEFAULTS = {
   debtPct: 50,           // share of Y1 capex raised as debt
   debtRate: 7.5,         // interest rate on debt (%)
   loanTerm: 20,          // amortization term (years)
-  ownerEquityPct: 30,    // landowner's share of equity (rest = external)
+  ownerEquityPct: 40,    // your retained equity share (JV stake / owner equity; rest = partner)
   // Advisor Fees — paid to the deal advisor (M&A / capital placement / promote / retainer)
   // Defaults reflect a Pure-O&G mandate; user can dial up for Multi-Capability or zero out for Land Sale.
   saleSuccessPct: 0,     // % of NPV (sale price proxy) — only applies if asset is sold
@@ -138,8 +143,12 @@ function paybackYear(cashflows) {
  *  scenario: 'A' land sale, 'B' wells only, 'C' wells+plant, 'D' wells+plant+DC
  * ============================================================= */
 function runModel(p, scenario = 'B') {
-  // Scenario A — Land Sale. Asset is sold outright; no production, no build.
-  if (scenario === 'A') return runLandSale(p);
+  // Path A — Land Lease / option. Owner leases the surface; no production, no build.
+  if (scenario === 'A') return runLandLease(p);
+
+  // Integrated paths (C JV, D platform sale) build the plant + data center and earn a
+  // hyperscaler lease. Path B (sell gas) drills wells only and sells molecules.
+  const integrated = (scenario === 'C' || scenario === 'D');
 
   const Y = p.years;
   const cohorts = buildWellCohorts(p.initWells, p.replWells, Y);
@@ -153,12 +162,12 @@ function runModel(p, scenario = 'B') {
 
   // Power-plant gas demand (constant): plantMW * avail * 24 * heatRate
   // = MW × 1000 kW × 24 h × Btu/kWh = Btu/day  → ÷ 1.024e6 = Mcf/day (since 1 Mcf ≈ 1.024 MMBtu)
-  const plantMW = (scenario === 'B') ? 0 : p.plantMW;
+  const plantMW = integrated ? p.plantMW : 0;
   const plantDailyMWh = plantMW * 24 * (p.avail / 100);             // MWh/day at availability
   const plantDailyGasMcf = plantDailyMWh * 1000 * p.heatRate / 1_024_000; // Mcf/day
 
-  // Hyperscaler revenue path (only Scenario D uses lease; Scenario C uses wholesale grid PPA)
-  const dcDailyMWh = (scenario === 'D') ? p.facilityMW * 24 : 0; // 120 MW total facility × 24h = 2880 MWh/d demand
+  // Integrated paths (C JV, D platform) feed an on-site data center on a hyperscaler lease.
+  const dcDailyMWh = integrated ? p.facilityMW * 24 : 0; // 120 MW total facility × 24h = 2880 MWh/d demand
 
   // Build year-by-year roll-up
   const rows = [];
@@ -192,10 +201,8 @@ function runModel(p, scenario = 'B') {
     const gasMarketRev = gasToMarketMcf * gasPriceMcf;
 
     let powerRev = 0;
-    if (scenario === 'C') {
-      powerRev = powerMWh * p.powerPrice;
-    } else if (scenario === 'D') {
-      // Hyperscaler pays for IT-load MWh leased; capped by what plant actually produced.
+    if (integrated) {
+      // Hyperscaler pays for IT-load MWh leased; capped by what the plant actually produced.
       const dcAnnualMWh = Math.min(powerMWh, dcDailyMWh * 365);
       const escMult = Math.pow(1 + p.esc / 100, y - 1);
       powerRev = dcAnnualMWh * p.leaseRate * escMult;
@@ -209,10 +216,10 @@ function runModel(p, scenario = 'B') {
     const upstreamRev = oilRev + nglRev + gasMarketRev;
     const fieldOpCost = upstreamRev * (p.opCostPct / 100);
 
-    // Plant non-fuel O&M
-    const plantOM = (scenario === 'B') ? 0 : powerMWh * p.plantOM;
-    // DC fixed opex (only in scenario D)
-    const dcOpex = (scenario === 'D') ? p.dcOpex * 1_000_000 : 0;
+    // Plant non-fuel O&M (integrated paths only)
+    const plantOM = integrated ? powerMWh * p.plantOM : 0;
+    // DC fixed opex (integrated paths only)
+    const dcOpex = integrated ? p.dcOpex * 1_000_000 : 0;
 
     // G&A — corporate overhead allocated per boe. Treated as a CASH expense
     // (executive salaries, accounting, legal, HQ, IT) — deducted from EBITDA.
@@ -225,10 +232,8 @@ function runModel(p, scenario = 'B') {
     // Drilling capex this year
     if (y === 1) capex += p.initWells * p.dnc * 1_000_000;
     if (y >= 2 && p.replWells > 0) capex += p.replWells * p.dnc * 1_000_000;
-    // Power plant (built year 1) — for scenarios C/D
-    if ((scenario === 'C' || scenario === 'D') && y === 1) capex += p.plantCapex * 1_000_000;
-    // Data center (built year 1) — scenario D
-    if (scenario === 'D' && y === 1) capex += p.dcCapex * 1_000_000;
+    // Power plant + data center (built year 1) — integrated paths (C JV, D platform sale)
+    if (integrated && y === 1) capex += (p.plantCapex + p.dcCapex) * 1_000_000;
 
     // DD&A — non-cash book charge spreading capitalized cost over produced barrels.
     const dda = boeAnnual * p.dda;
@@ -330,6 +335,27 @@ function runModel(p, scenario = 'B') {
     externalCF.push(equityShare * externalEquityPct);
   }
 
+  // ===== Platform sale (Path D): operate the integrated build, then exit at an EBITDA multiple.
+  // Owner takes operating distributions through the exit year, then their share of net sale
+  // proceeds; nothing after. Owner metrics below reflect the exit-inclusive stream.
+  let platformSale = null;
+  if (scenario === 'D') {
+    const xy = Math.max(1, Math.min(Y, Math.round(p.exitYear || Y)));
+    const ebitdaAtExit = rows[xy - 1].ebitda;
+    const saleEV = Math.max(0, (p.exitMultiple || 0) * ebitdaAtExit);
+    const remDebt = debtSchedule[xy - 1]?.principalRemaining || 0;
+    const successFee = saleEV * (p.saleSuccessPct || 0) / 100;
+    const netEquityProceeds = Math.max(0, saleEV - remDebt - successFee);
+    const gainTax = netEquityProceeds * (p.tax / 100);
+    const afterTaxProceeds = netEquityProceeds - gainTax;
+    const ownerProceeds = afterTaxProceeds * ownerEquityPct;
+    for (let y = 1; y <= Y; y++) {
+      if (y === xy) ownerCF[y] = ownerCF[y] + ownerProceeds;
+      else if (y > xy) ownerCF[y] = 0;
+    }
+    platformSale = { exitYear: xy, ebitdaAtExit, saleEV, remDebt, successFee, gainTax, afterTaxProceeds, ownerProceeds };
+  }
+
   const ownerIrr = irr(ownerCF);
   const ownerNpv = npv(p.wacc / 100, ownerCF);
   const ownerPayback = paybackYear(ownerCF);
@@ -355,8 +381,10 @@ function runModel(p, scenario = 'B') {
       externalIrr,
       ownerCF, leveredCF, externalCF,
       debtSchedule, tierSchedule,
+      platformSale,
     },
     advisor,
+    platformSale,
   };
 }
 
@@ -400,66 +428,61 @@ function computeTierWaterfall(totalEquity, leveredCF, prefRate, promotePct) {
 }
 
 /* =============================================================
- *  Land Sale runner (Scenario A)
- *  No production, no build. Owner sells the asset outright in Y1
- *  for landSalePrice and pays an advisor success fee on the gross
- *  proceeds. Returned shape mirrors runModel so dashboards still render.
+ *  Land Lease / option runner (Path A)
+ *  Owner leases the surface to a developer who funds and owns the plant.
+ *  No production, no build, near-zero capital. Revenue = a one-time option
+ *  fee (Y1) plus an escalating annual ground rent; owner keeps minerals & gas.
+ *  Returned shape mirrors runModel so the dashboard still renders.
  * ============================================================= */
-function runLandSale(p) {
+function runLandLease(p) {
   const Y = p.years;
-  const salePrice = (p.landSalePrice || 0) * 1_000_000;
-  const advisorFee = salePrice * (p.saleSuccessPct || 0) / 100;
-  const netBeforeTax = salePrice - advisorFee;
-  // Treat the sale as an asset disposition: capital-gains-equivalent tax on the net.
-  const tax = Math.max(0, netBeforeTax) * (p.tax / 100);
-  const netToOwner = netBeforeTax - tax;
+  const optionFee = (p.optionFee || 0) * 1_000_000;     // one-time, Y1
+  const baseRent = (p.groundRent || 0) * 1_000_000;     // per year, escalating
+  const esc = (p.groundRentEsc || 0) / 100;
+  const taxRate = p.tax / 100;
 
   const rows = [];
   for (let y = 1; y <= Y; y++) {
-    const isSaleYear = (y === 1);
+    const rent = baseRent * Math.pow(1 + esc, y - 1);
+    const rev = rent + (y === 1 ? optionFee : 0);
+    const taxes = Math.max(0, rev) * taxRate;
+    const net = rev - taxes;
     rows.push({
       year: y, wells: 0, oilDaily: 0, gasDaily: 0, nglDaily: 0, boeAnnual: 0,
       gasToPlantMcf: 0, gasToMarketMcf: 0, gasShortMcf: 0, powerMWh: 0,
       oilRev: 0, nglRev: 0, gasMarketRev: 0, powerRev: 0,
-      totalRev: isSaleYear ? salePrice : 0,
-      fieldOpCost: 0, plantOM: 0,
-      dcOpex: isSaleYear ? advisorFee : 0,    // park advisor fee here for table totals
-      totalCashCost: isSaleYear ? advisorFee : 0,
-      ebitda: isSaleYear ? netBeforeTax : 0,
-      dda: 0, ga: 0,
-      ebit: isSaleYear ? netBeforeTax : 0,
-      taxes: isSaleYear ? tax : 0,
-      netIncome: isSaleYear ? netToOwner : 0,
-      capex: 0,
-      fcf: isSaleYear ? netToOwner : 0,
+      totalRev: rev,
+      fieldOpCost: 0, plantOM: 0, dcOpex: 0, totalCashCost: 0,
+      ebitda: rev, dda: 0, ga: 0, ebit: rev,
+      taxes, netIncome: net,
+      capex: 0, fcf: net,
     });
   }
 
-  const totals = { totalRev: salePrice, totalEbitda: netBeforeTax, totalCapex: 0 };
+  const totalRev = rows.reduce((s, r) => s + r.totalRev, 0);
+  const totalEbitda = rows.reduce((s, r) => s + r.ebitda, 0);
+  const totals = { totalRev, totalEbitda, totalCapex: 0 };
   const fcfSeries = [0, ...rows.map(r => r.fcf)];
   const projNpv = npv(p.wacc / 100, fcfSeries);
   const projIrr = null;       // no investment leg → IRR undefined
-  const projPayback = netToOwner > 0 ? 0 : null; // immediate
+  const projPayback = 0;      // cash-positive from Y1
 
-  // No financing — owner receives 100% of net proceeds at Y1
-  const ownerCF = [0, netToOwner, ...Array(Y - 1).fill(0)];
+  // No capital at risk — owner receives 100% of after-tax lease income.
+  const ownerCF = [0, ...rows.map(r => r.fcf)];
   const externalCF = [0, ...Array(Y).fill(0)];
-  const leveredCF = [0, netToOwner, ...Array(Y - 1).fill(0)];
+  const leveredCF = [0, ...rows.map(r => r.fcf)];
   const debtSchedule = [];
   for (let y = 1; y <= Y; y++) {
-    debtSchedule.push({ year: y, interestPaid: 0, principalPaid: 0, debtService: 0, principalRemaining: 0, cashToAllEquity: y === 1 ? netToOwner : 0 });
+    debtSchedule.push({ year: y, interestPaid: 0, principalPaid: 0, debtService: 0, principalRemaining: 0, cashToAllEquity: rows[y - 1].fcf });
   }
 
   const advisor = {
     capitalRaised: 0, capitalPlacementFee: 0,
     siteAdvisoryFee: 0, siteAdvisoryMonths: 0,
     promote: 0, abovePref: 0,
-    saleSuccessFee: advisorFee,
-    total: advisorFee,
+    saleSuccessFee: 0,
+    total: 0,
   };
-
-  // No equity at risk → tier waterfall is degenerate: UC=0, PB=0, residual=CFE every year
-  // and no advisor promote (already taken via saleSuccessFee).
   const tierSchedule = computeTierWaterfall(0, leveredCF, 0, 0);
 
   return {
@@ -482,8 +505,8 @@ function runLandSale(p) {
       debtSchedule, tierSchedule,
     },
     advisor,
-    isLandSale: true,
-    landSale: { salePrice, advisorFee, tax, netToOwner },
+    isLandLease: true,
+    landLease: { optionFee, baseRent, esc, totalRev },
   };
 }
 
