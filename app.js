@@ -3858,7 +3858,7 @@ function gtmRenderBuyers() {
 // ===== Deal structures (the four buckets) =====
 // txn = the transaction equation: who injects what, what you hand over, what you keep, and how cash reaches you.
 const GTM_STRUCTURES = [
-  { key: 'land',     n: '4', title: 'Monetize land via lease / option',
+  { key: 'land',     n: '1', title: 'Monetize land via lease / option',
     what: 'Lease or option the surface; the counterparty funds and owns the plant. You stay a landlord.',
     txn: {
       bring: 'Funds & owns 100% of the plant',
@@ -3874,7 +3874,7 @@ const GTM_STRUCTURES = [
     fit: 'Low capital',  fitClass: 'high',
     note: 'LandBridge: ~$8M up-front option fee + ongoing rent on a ~3,400-ac option.' },
 
-  { key: 'supply',   n: '1', title: 'Sell gas / long-term supply',
+  { key: 'supply',   n: '2', title: 'Sell gas / long-term supply',
     what: 'Sell molecules into the on-site plant under contract — no asset changes hands.',
     txn: {
       bring: 'Builds & owns the plant; buys your gas',
@@ -3890,7 +3890,7 @@ const GTM_STRUCTURES = [
     fit: 'Floor',        fitClass: 'med',
     note: 'EQT signs ~800 MMcf/d in-basin supply; New Era Helium locked a 20-yr fixed price.' },
 
-  { key: 'jv',       n: '2', title: 'JV / retain equity in the power entity',
+  { key: 'jv',       n: '3', title: 'JV / retain equity in the power entity',
     what: 'Contribute gas + land into a power NewCo and hold equity — own a slice of the plant, don’t sell it.',
     txn: {
       bring: 'Injects the build capital, EPC & a creditworthy offtake',
@@ -3906,7 +3906,7 @@ const GTM_STRUCTURES = [
     fit: 'High upside',  fitClass: 'high',
     note: 'Diversified Energy + FuelCell ~360 MW JV; New Era Helium 50/50 with equity kept.' },
 
-  { key: 'platform', n: '3', title: 'Sell the whole platform',
+  { key: 'platform', n: '4', title: 'Sell the whole platform',
     what: 'Run a sell-side process on the integrated gas + land + power package and exit for cash.',
     txn: {
       bring: 'Pays a one-time purchase price for 100%',
