@@ -2905,14 +2905,12 @@ function eogPopup(p) {
 
 function parcelPopup(p) {
   const e = escapeHtmlSimple;
-  const val = (typeof p.appraised === 'number') ? fmt.money0(p.appraised) : '—';
   return `<div class="parcel-popup">
     <div class="parcel-popup-id">${e(p.PARCEL_ID)}</div>
     <div class="parcel-popup-owner">${e(p.owner || '')}</div>
     <div class="parcel-popup-row"><span>Address</span><strong>${e(p.address || '—')}</strong></div>
     <div class="parcel-popup-row"><span>Acres</span><strong>${(p.acres || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
     <div class="parcel-popup-row"><span>Land use</span><strong>${e(cleanLandUse(p.land_use))}</strong></div>
-    <div class="parcel-popup-row"><span>Appraised</span><strong>${val}</strong></div>
   </div>`;
 }
 
@@ -2936,13 +2934,12 @@ function selectParcel(id, fly) {
 
 function renderParcelStats(gj) {
   const feats = gj.features || [];
-  let totalAcres = 0, appraised = 0;
+  let totalAcres = 0;
   const buckets = { ag: 0, commercial: 0, residential: 0, other: 0 };
   const owners = {}; // group -> { count, acres }
   feats.forEach(f => {
     const p = f.properties;
     totalAcres += p.acres || 0;
-    if (typeof p.appraised === 'number') appraised += p.appraised;
     buckets[luBucket(p.land_use)] += p.acres || 0;
     const g = ownerGroup(p);
     (owners[g] = owners[g] || { count: 0, acres: 0 }).count++;
@@ -2967,7 +2964,6 @@ function renderParcelStats(gj) {
   el.innerHTML = `
     <div class="pm-stat"><div class="pm-stat-label">Parcels</div><div class="pm-stat-value">${feats.length}</div><div class="pm-stat-sub">Krizman + Wilkshire Hills</div></div>
     <div class="pm-stat"><div class="pm-stat-label">Total acres</div><div class="pm-stat-value">${totalAcres.toLocaleString(undefined, { maximumFractionDigits: 1 })}</div><div class="pm-stat-sub">combined assemblage</div></div>
-    <div class="pm-stat"><div class="pm-stat-label">Appraised value</div><div class="pm-stat-value">${fmt.money0(appraised)}</div><div class="pm-stat-sub">county auditor total</div></div>
     <div class="pm-stat pm-stat--wide">
       <div class="pm-stat-label">Land use by acreage</div>
       <div class="pm-lubar">${segs}</div>
