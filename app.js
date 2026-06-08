@@ -3717,8 +3717,8 @@ const GTM_BUYERS = [
 
 const GTM_PRODUCTS = {
   land:    { label: 'Powered land',  short: 'powered-land',           term: '20–50 yrs', leasePerMW: 0.18 },
-  shell:   { label: 'Powered shell', short: 'powered-shell',          term: '15–20 yrs', leasePerMW: 0.85 },
-  turnkey: { label: 'Turnkey lease', short: 'turnkey build-to-suit',  term: '15–20 yrs', leasePerMW: 1.45 },
+  shell:   { label: 'Powered shell', short: 'powered-shell',          term: '15–20 yrs', leasePerMW: 1.08 },
+  turnkey: { label: 'Turnkey lease', short: 'turnkey build-to-suit',  term: '15–20 yrs', leasePerMW: 1.80 },
   colo:    { label: 'Colocation',    short: 'colocation',             term: '3–10 yrs',  leasePerMW: 1.90 },
 };
 const GTM_POWER = {
@@ -3730,7 +3730,7 @@ const GTM_PHASED_CEILING = 1000; // master-plan scale the assemblage can carry
 
 function gtmSizeLabel(mw) { return mw >= 1000 ? (mw / 1000) + ' GW' : mw + ' MW'; }
 function gtmFacilityMW(mw) { return Math.round(mw * 1.25); }            // PUE ~1.25
-function gtmGasMMcfd(mw) { return mw * 1.25 * 0.1748; }                 // ~0.175 MMcf/d per facility-MW
+function gtmGasMMcfd(mw) { return mw * 0.90 * 24 * 7000 / 1_024_000; }  // 90% CF · 7000 Btu/kWh — matches Power Ramp plant gas burn
 function gtmWells(mw) { return Math.ceil(gtmGasMMcfd(mw) / 0.9); }      // ~0.9 MMcf/d/well near site
 
 // Fit for one buyer at the current state. Returns null if not a target.
@@ -3791,15 +3791,13 @@ function gtmMatches(s) {
 function gtmRenderMetrics() {
   const el = document.getElementById('gtmMetrics');
   if (!el) return;
-  const s = GTM_STATE, prod = GTM_PRODUCTS[s.product], pow = GTM_POWER[s.power];
+  const s = GTM_STATE, prod = GTM_PRODUCTS[s.product];
   const gas = gtmGasMMcfd(s.size);
   const leaseLo = s.size * prod.leasePerMW * 0.8, leaseHi = s.size * prod.leasePerMW * 1.25;
   const fmtM = v => v >= 1000 ? '$' + (v / 1000).toFixed(1) + 'B' : '$' + Math.round(v) + 'M';
   const cards = [
     { label: 'IT load', value: gtmSizeLabel(s.size), sub: `~${gtmFacilityMW(s.size)} MW total facility (PUE 1.25)` },
-    { label: 'On-site gas burn', value: gas.toFixed(0) + ' MMcf/d', sub: `~${(gas * 365 / 1000).toFixed(1)} Bcf/yr at full load` },
-    { label: 'Wells to sustain', value: '~' + gtmWells(s.size), sub: 'producing near site, before decline + infill' },
-    { label: 'Speed to power', value: pow.speed, sub: pow.label },
+    { label: 'On-site gas burn', value: gas.toFixed(0) + ' MMcf/d', sub: `~${(gas * 365 / 1000).toFixed(1)} Bcf/yr · 90% CF` },
     { label: 'Lease term', value: prod.term, sub: prod.label },
     { label: 'Indicative lease value', value: `${fmtM(leaseLo)}–${fmtM(leaseHi)}/yr`, sub: 'stabilized · illustrative only' },
     { label: 'Buyers in play', value: String(gtmMatches(s).length), sub: 'matching the current filters' },
@@ -3854,8 +3852,8 @@ function gtmRenderBuyers() {
 // ===== Deal structures (the four buckets) =====
 // txn = the transaction equation: who injects what, what you hand over, what you keep, and how cash reaches you.
 const GTM_STRUCTURES = [
-  { key: 'land',     n: '1', title: 'Monetize land via lease / option',
-    what: 'Lease or option the surface; the counterparty funds and owns the plant. You stay a landlord.',
+  { key: 'land',    n: '1', title: 'Option + lease (pure land)',
+    what: 'Lease or option the surface; the counterparty funds and owns the plant. You stay a landlord and keep everything underneath.',
     txn: {
       bring: 'Funds & owns 100% of the plant',
       give:  'A long-term surface lease (no sale of the land)',
@@ -3868,30 +3866,30 @@ const GTM_STRUCTURES = [
     ],
     who: 'LandBridge · Texas Pacific Land · CNX / Zediker',
     fit: 'Low capital',  fitClass: 'high',
-    note: 'LandBridge: ~$8M up-front option fee + ongoing rent on a ~3,400-ac option.' },
+    note: 'LandBridge: $2.6M one-year option fee + ongoing rent on a ~3,400-ac option.' },
 
-  { key: 'supply',   n: '2', title: 'Sell gas / long-term supply',
-    what: 'Sell molecules into the on-site plant under contract — no asset changes hands.',
+  { key: 'ppa',     n: '2', title: 'Ground lease + PPA',
+    what: 'Lease the land and sell the power or firm gas under a long-term contract — you provide the site and the fuel, the offtaker takes the electrons.',
     txn: {
-      bring: 'Builds & owns the plant; buys your gas',
-      give:  'Contracted firm gas (or a fuel PPA), 10–20 yr',
-      keep:  'The land and 100% of your equity',
-      cash:  'Per-Mcf revenue, recurring as gas flows — no lump sum',
+      bring: 'Funds & owns the plant; signs a long-term offtake',
+      give:  'A ground lease + contracted power / firm gas (10–20 yr)',
+      keep:  'The land, minerals & 100% of your equity',
+      cash:  'Ground rent + per-MWh / per-Mcf revenue, recurring',
     },
     details: [
-      '~50–250 MMcf/d; physical gas at a set price, or a fuel PPA where the offtaker carries commodity risk',
-      'Capex stays upstream (drilling, gathering) — no power-plant cost exposure',
+      'Two income streams — surface rent plus a fixed-price power or fuel offtake — with no plant capital on your side',
+      'Commodity risk sits with the offtaker under a fixed-price PPA',
     ],
-    who: 'Ascent · Antero · EQT · Range · Encino',
+    who: 'EQT · Ascent · New Era Helium',
     fit: 'Floor',        fitClass: 'med',
-    note: 'EQT signs ~800 MMcf/d in-basin supply; New Era Helium locked a 20-yr fixed price.' },
+    note: 'EQT signs ~665–800 MMcf/d in-basin supply; New Era Helium locked a 20-yr fixed price.' },
 
-  { key: 'jv',       n: '3', title: 'JV / retain equity in the power entity',
-    what: 'Contribute gas + land into a power NewCo and hold equity — own a slice of the plant, don’t sell it.',
+  { key: 'jv',      n: '3', title: 'Power JV · 40% kept',
+    what: 'Contribute gas + land into a power NewCo and hold ~40% equity — own a slice of the plant, don’t sell it.',
     txn: {
       bring: 'Injects the build capital, EPC & a creditworthy offtake',
       give:  'Gas + land contributed in-kind — that contribution is your equity',
-      keep:  '25–50% ownership of the power NewCo',
+      keep:  '~40% ownership of the power NewCo',
       cash:  'Ongoing distributions + your share of any future exit — not a sale',
     },
     details: [
@@ -3902,53 +3900,69 @@ const GTM_STRUCTURES = [
     fit: 'High upside',  fitClass: 'high',
     note: 'Diversified Energy + FuelCell ~360 MW JV; New Era Helium 50/50 with equity kept.' },
 
-  { key: 'platform', n: '4', title: 'Sell the whole platform',
-    what: 'Run a sell-side process on the integrated gas + land + power package and exit for cash.',
+  { key: 'shell',   n: '4', title: 'Powered-shell lease',
+    what: 'Build the shell and bring behind-the-meter power to the suite; the tenant installs their own servers. You become the powered-shell landlord.',
     txn: {
-      bring: 'Pays a one-time purchase price for 100%',
-      give:  'The entire asset — gas + land + power & permits',
-      keep:  'Nothing — a clean exit',
-      cash:  'Lump sum at close, priced at an EBITDA multiple',
+      bring: 'Capital to build the shell + on-site generation (alone or with a co-build partner)',
+      give:  'A move-in-ready powered shell on a long-term lease',
+      keep:  'Ownership of the shell, land & generation',
+      cash:  'Premium annual lease — a return on the power + building you deliver',
     },
     details: [
-      '12–18 mo sell-side: stalking-horse + best-and-finals against scaled E&Ps and infra platforms',
-      'The natural exit if scale to build the full stack alone is insufficient',
+      'You fund the shell + BTM power (~$8–10M/MW — about $2–2.5B at 250 MW); rent reflects delivered power, not just dirt',
+      'The Williams “Socrates” behind-the-meter model — power on the meter, no PJM queue',
     ],
-    who: 'Encino → EOG · Long Ridge → MARA',
-    fit: 'Exit',         fitClass: 'exit',
-    note: 'Long Ridge → MARA ~$1.5B (~10.6× EBITDA); Encino → EOG $5.6B.' },
+    who: 'Williams “Socrates” / Meta',
+    fit: 'Build & own', fitClass: 'high',
+    note: 'Williams’ Socrates: ~$1.6B to build ~500 MW BTM, 440 MW to Meta on a 10-yr PPA.' },
+
+  { key: 'turnkey', n: '5', title: 'Turnkey lease',
+    what: 'Build and own the entire campus — shell, power and fit-out — and lease it fully operational. The most capital, the most control, the most value captured.',
+    txn: {
+      bring: 'Capital for the full build (or a platform partner that funds it)',
+      give:  'A fully-built, operating campus on a long-term lease',
+      keep:  'The whole stack — gas, land, power & data center',
+      cash:  'Highest annual lease — full plant + real-estate economics',
+    },
+    details: [
+      'All-in build ~$15M/MW — about $3.75B at 250 MW; you own the full power + data-center stack',
+      'Highest capital and execution risk; the own-the-stack end of the ladder',
+    ],
+    who: 'MARA / Long Ridge · Crusoe · Fermi · SoftBank PORTS',
+    fit: 'Own the stack', fitClass: 'exit',
+    note: 'Crusoe’s 1.2 GW Abilene build: ~$11.6B (~$10M/MW) — the own-the-stack ceiling.' },
 ];
 
 // ===== Comparable plays (precedents) =====
 // rel: relevance to a single ~2,800-acre Tuscarawas operator. struct: which buckets the deal exemplifies.
 const GTM_COMPARABLES = [
-  { name: 'MARA / Long Ridge',                region: 'Appalachia · OH', loc: 'Hannibal, Monroe Co., OH',   scale: '505 MW + 1,600 ac', struct: ['platform'],     rel: 'High',
+  { name: 'MARA / Long Ridge',                region: 'Appalachia · OH', loc: 'Hannibal, Monroe Co., OH',   scale: '505 MW + 1,600 ac', value: '$1.5B acquisition', valueNote: '~$1.52B enterprise value to acquire 100% of Long Ridge from FTAI Infrastructure (incl. ~$785M assumed debt). Announced Apr 2026.', struct: ['turnkey'],     rel: 'High',
     note: 'Bitcoin miner bought Long Ridge (~$1.5B) — a 505 MW gas plant with ~100 MMcf/d captive fuel on 1,600+ ac; a 200→600 MW data-center buildout. The closest mid-scale Ohio analog.' },
-  { name: 'Williams "Socrates" / Meta',       region: 'Appalachia · OH', loc: 'New Albany, Licking Co., OH', scale: '520 MW BTM · ~20-ac plant', struct: ['supply'], rel: 'High',
-    note: 'OPSB-approved behind-the-meter gas (not grid-connected) feeding a Meta campus — a few hundred MW on a tiny fraction of a 740-ac site. The small-acreage BTM precedent.' },
-  { name: 'Diversified Energy + FuelCell',    region: 'Appalachia',      loc: 'VA / WV / KY',               scale: '360 MW JV', struct: ['jv'], rel: 'High',
+  { name: 'Williams "Socrates" / Meta',       region: 'Appalachia · OH', loc: 'New Albany, Licking Co., OH', scale: '~500 MW BTM · 440 MW to Meta', value: '$1.6B investment', valueNote: 'Williams’ capex in the Socrates behind-the-meter gas project — ~500 MW, with 440 MW sold to Meta on a 10-yr fixed-price PPA (~$320M/yr). Reaffirmed Q4 2025.', struct: ['shell'], rel: 'High',
+    note: 'OPSB-approved behind-the-meter gas (not grid-connected) feeding a Meta campus — ~500 MW (440 MW to Meta on a 10-yr PPA) on a fraction of the site. The small-acreage BTM precedent.' },
+  { name: 'Diversified Energy + FuelCell',    region: 'Appalachia',      loc: 'VA / WV / KY',               scale: '360 MW JV', value: '360 MW JV · undisclosed', valueNote: 'Off-grid power JV with FuelCell Energy and TESIAC; no transaction value disclosed — 360 MW is the only hard figure. Announced Mar 2025.', struct: ['jv'], rel: 'High',
     note: 'An Appalachian gas operator contributes gas + coal-mine methane into a power-gen JV and keeps equity — the template for retaining upside instead of just selling molecules.' },
-  { name: 'New Era Helium / Sharon AI',       region: 'Permian · TX',    loc: 'Ector Co., TX',              scale: '250 MW → 1 GW · 438 ac', struct: ['jv', 'supply'], rel: 'High',
+  { name: 'New Era Helium / Sharon AI',       region: 'Permian · TX',    loc: 'Ector Co., TX',              scale: '250 MW → 1 GW · 438 ac', value: '50/50 JV · 20-yr offtake', valueNote: 'Texas Critical Data Centers 50/50 JV with a 20-yr fixed-price gas supply (5-yr + three 5-yr renewals); contract value and capex not disclosed. JV finalized Jan 2025.', struct: ['jv', 'ppa'], rel: 'High',
     note: 'A sub-$100M E&P in a 50/50 JV: supplies gas on a 20-yr fixed price + holds equity while the partner builds the data center. Closest to Krizman’s profile.' },
-  { name: 'CNX / Zediker Station',            region: 'Appalachia · PA', loc: 'Washington Co., PA',          scale: '1,500 ac · 400 MW modeled', struct: ['land'], rel: 'High',
+  { name: 'CNX / Zediker Station',            region: 'Appalachia · PA', loc: 'Washington Co., PA',          scale: '1,500 ac · 400 MW modeled', value: 'RFP stage · no deal yet', valueNote: 'Site marketed with JLL — no tenant or transaction. A CNX-commissioned study models ~$408M of spend for a hypothetical 400 MW build. Marketing launched Oct 2025.', struct: ['land'], rel: 'High',
     note: 'Appalachian producer markets a 1,500-ac site with JLL for data-center development (with a "remediated mine gas" angle). RFP stage — no binding offtake yet.' },
-  { name: 'LandBridge / PowerBridge',         region: 'Permian · TX',    loc: 'Reeves Co., TX',             scale: '~3,400-ac option · up to 2 GW', struct: ['land'], rel: 'High',
-    note: 'A surface owner options land to a power developer for an $8M ground-lease fee plus recurring income — the purest land-monetization analog.' },
-  { name: 'Diamondback Energy',               region: 'Permian · TX',    loc: 'Permian Basin, TX',          scale: 'BTM plant on owned land', struct: ['jv'], rel: 'High',
+  { name: 'LandBridge / PowerBridge',         region: 'Permian · TX',    loc: 'Reeves Co., TX',             scale: '~3,400-ac option · up to 2 GW', value: '$2.6M option fee', valueNote: 'PowerBridge paid $2.6M for a 1-yr option on 3,400 ac (up to 2 GW); converts to a royalty-bearing surface lease, no capital from LandBridge. Announced Apr 2026.', struct: ['land'], rel: 'High',
+    note: 'A surface owner options land to a power developer for a $2.6M paid option (1-yr, 3,400 ac) plus recurring royalty income if exercised — the purest land-monetization analog.' },
+  { name: 'Diamondback Energy',               region: 'Permian · TX',    loc: 'Permian Basin, TX',          scale: 'BTM plant on owned land', value: '200 MW BTM build', valueNote: '200 MW of gas-fired generation via the Conduit Power JV (with Granite Ridge); capital terms undisclosed and the larger hyperscaler BTM JV remains confidential. 2025–26.', struct: ['jv'], rel: 'High',
     note: 'Operator contributes gas + surface into a behind-the-meter JV with a hyperscaler and takes an equity stake — the same structure at larger scale.' },
-  { name: 'EOG / Encino',                     region: 'Appalachia · OH', loc: 'Ohio Utica',                 scale: '$5.6B platform', struct: ['platform'], rel: 'High',
+  { name: 'EOG / Encino',                     region: 'Appalachia · OH', loc: 'Ohio Utica',                 scale: '$5.6B platform', value: '$5.6B acquisition', valueNote: 'EOG’s purchase of Encino Acquisition Partners, incl. net debt ($3.5B new debt + $2.1B cash). Announced May 2025, closed Aug 2025.', struct: ['turnkey'], rel: 'High',
     note: 'EOG bought Encino — Ohio Utica’s largest oil producer — for $5.6B, citing the data-center gas boom. The exit-multiple end for a private Utica operator. (EOG is the offset operator on your Parcel Map.)' },
-  { name: 'EQT Corporation',                  region: 'Appalachia · PA', loc: 'Pittsburgh, PA',             scale: '~800 MMcf/d → 4.4 GW campus', struct: ['supply'], rel: 'Med',
+  { name: 'EQT Corporation',                  region: 'Appalachia · PA', loc: 'Pittsburgh, PA',             scale: '~665k MMBtu/d → 4.4 GW campus', value: '$10B+ Homer City', valueNote: 'Total investment in the 4.4 GW Homer City gas + data-center campus EQT will supply (up to 665k MMBtu/d). EQT enterprise value ~$41B. Announced Jul 2025.', struct: ['ppa'], rel: 'Med',
     note: 'The largest U.S. gas producer signs in-basin supply deals (Homer City, Shippingport, Frontier). Supply, not ownership — the low-risk lane.' },
-  { name: 'Ascent Resources',                 region: 'Appalachia · OH', loc: 'Ohio Utica',                 scale: '+40% budget → ~$225M', struct: ['supply'], rel: 'Med',
+  { name: 'Ascent Resources',                 region: 'Appalachia · OH', loc: 'Ohio Utica',                 scale: '~2.0 Bcf/d · Ohio’s #1', value: '~$6B takeover bid', valueNote: 'Kimmeridge’s ~$6B cash bid; a separate EMG continuation-vehicle deal values Ascent ~$5.5B. 2026 land spend up ~40% to ~$225M. Dec 2025–Mar 2026.', struct: ['ppa'], rel: 'Med',
     note: 'Ohio’s largest gas producer is expanding drilling to supply Appalachian data centers and "looking to participate in gas deals for power generation."' },
-  { name: 'Crusoe Energy',                    region: 'Permian · TX',    loc: 'Abilene, TX (Stargate)',     scale: '1.2 GW · 15+ GW pipeline', struct: ['jv'], rel: 'Context',
+  { name: 'Crusoe Energy',                    region: 'Permian · TX',    loc: 'Abilene, TX (Stargate)',     scale: '1.2 GW · 15+ GW pipeline', value: '$1.375B round · $10B+ val', valueNote: 'Oct 2025 Series E at a >$10B valuation; ~$3.9B equity raised to date. Its Abilene Stargate campus is separately backed by ~$11.6B of project financing.', struct: ['turnkey'], rel: 'Context',
     note: 'Flared-gas-to-compute pioneer now building gigawatt AI campuses — the trajectory from stranded-gas monetization to AI infrastructure.' },
-  { name: 'Texas Pacific Land',               region: 'Permian · TX',    loc: 'Permian Basin, TX',          scale: '~873,000 ac', struct: ['land'], rel: 'Med',
-    note: 'A pure landowner monetizing via royalties, surface leases and easements; put $50M into "Bolt Data & Energy." The landowner-without-drilling model.' },
-  { name: 'Fermi America "Matador"',          region: 'Permian · TX',    loc: 'Amarillo, TX',               scale: 'up to 11 GW · 5,800 ac', struct: ['platform'], rel: 'Context',
+  { name: 'Texas Pacific Land',               region: 'Permian · TX',    loc: 'Permian Basin, TX',          scale: '~882,000 ac', value: '$50M JV stake', valueNote: '$50M into Bolt (part of a $150M raise) for data-center land plus a water-supply right; TPL market cap ~$29B. Announced Dec 2025.', struct: ['land'], rel: 'Med',
+    note: 'A pure landowner monetizing via royalties, surface leases and easements; put $50M into "Bolt" (Eric Schmidt-backed). The landowner-without-drilling model.' },
+  { name: 'Fermi America "Matador"',          region: 'Permian · TX',    loc: 'Amarillo, TX',               scale: 'up to 11 GW · 5,800 ac', value: '~$15B IPO valuation', valueNote: 'Nasdaq debut Oct 2025 — $682.5M raised, ~$15B first-day market cap. REIT targeting up to 11 GW of gas + nuclear + solar.', struct: ['turnkey'], rel: 'Context',
     note: 'O&G-finance founders (Rick Perry, Quantum’s Neugebauer) building a gas + nuclear megacampus and IPO’d — illustrative but far larger and high-execution-risk.' },
-  { name: 'SoftBank / SB Energy PORTS',       region: 'Appalachia · OH', loc: 'Piketon, Pike Co., OH',      scale: '10 GW · 3,700 ac', struct: ['platform'], rel: 'Context',
+  { name: 'SoftBank / SB Energy PORTS',       region: 'Appalachia · OH', loc: 'Piketon, Pike Co., OH',      scale: '10 GW · 3,700 ac', value: '$33B program', valueNote: 'Announced cost of the 10 GW PORTS gas-to-data-center campus (9.2 GW of new gas + ~$4.2B AEP transmission). Groundbreaking Mar 2026.', struct: ['turnkey'], rel: 'Context',
     note: 'A ~$33B Ohio gas-to-data-center megaproject on a former enrichment site — the upper bound of the Ohio pivot; context, not a scale analog.' },
 ];
 
@@ -4118,7 +4132,7 @@ function gtmSetCompareFilter(key) {
   gtmRenderComparables();
 }
 
-const GTM_STRUCT_SHORT = { supply: 'Sell gas', jv: 'JV / equity', platform: 'Sell platform', land: 'Land lease' };
+const GTM_STRUCT_SHORT = { land: 'Pure land', ppa: 'Ground + PPA', jv: 'Power JV', shell: 'Powered shell', turnkey: 'Turnkey' };
 function gtmRenderCompareFilters() {
   const el = document.getElementById('gtmCompareFilters');
   if (!el) return;
@@ -4142,7 +4156,7 @@ function gtmRenderComparables() {
       </div>
       <div class="gtm-play-meta"><span class="gtm-play-loc">${escapeHtmlSimple(c.loc)}</span><span class="gtm-play-scale">${escapeHtmlSimple(c.scale)}</span></div>
       <p class="gtm-play-note">${escapeHtmlSimple(c.note)}</p>
-      <div class="gtm-play-tags">${(c.struct || []).map(k => { const s = GTM_STRUCTURES.find(x => x.key === k); return s ? `<span class="gtm-play-tag">(${s.n})</span>` : ''; }).join('')}<span class="gtm-play-region">${escapeHtmlSimple(c.region)}</span></div>
+      <div class="gtm-play-tags">${(c.struct || []).map(k => { const s = GTM_STRUCTURES.find(x => x.key === k); return s ? `<span class="gtm-play-tag">(${s.n})</span>` : ''; }).join('')}<span class="gtm-play-region">${escapeHtmlSimple(c.region)}</span>${c.value ? `<span class="gtm-play-value" title="${escapeHtmlSimple(c.valueNote || 'Headline transaction / commitment value')}">${escapeHtmlSimple(c.value)}</span>` : ''}</div>
     </div>`).join('');
 }
 

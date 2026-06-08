@@ -3023,7 +3023,7 @@ footer .muted { color: rgba(255,255,255,0.55); }
 /* Metric cards */
 .gtm-metrics {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 26px;
 }
@@ -3136,7 +3136,7 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .gtm-steps--stages .gtm-step-body p strong { color: var(--derrick); }
 
 /* Deal-structure cards */
-.gtm-structures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.gtm-structures { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
 .gtm-struct {
   position: relative;
   text-align: left;
@@ -3255,6 +3255,7 @@ footer .muted { color: rgba(255,255,255,0.55); }
 .gtm-play-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; }
 .gtm-play-tag { font-size: 9.5px; font-weight: 800; color: var(--derrick); background: var(--blush); border-radius: 3px; padding: 1px 6px; }
 .gtm-play-region { font-size: 9.5px; color: var(--muted); margin-left: auto; }
+.gtm-play-value { font-size: 10px; font-weight: 800; color: var(--ink); background: #f1ece1; border: 1px solid #e3dac3; border-radius: 3px; padding: 1px 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Phase detail panels */
 .gtm-phase { background: var(--pure); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 14px; }
