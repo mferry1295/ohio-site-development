@@ -799,16 +799,6 @@
           <input type="number" data-ramp="plantMW" />
         </div>
         <div class="ramp-input">
-          <label><span class="ramp-input-name">Heat rate <button class="info" type="button" data-tip="Fuel efficiency of the generation technology — Btu of gas burned per kWh of electricity. Combined-cycle (CCGT) ≈ 7,000; simple-cycle turbines or recip engines ≈ 9,500. Lower heat rate = less gas burned = fewer wells. This input alone swings gas demand by ~35%.">i</button></span> <span class="unit">Btu/kWh</span></label>
-          <input type="range" min="6500" max="11000" step="50" data-ramp="heatRate" />
-          <input type="number" data-ramp="heatRate" />
-        </div>
-        <div class="ramp-input">
-          <label><span class="ramp-input-name">Capacity factor <button class="info" type="button" data-tip="Share of nameplate the plant actually runs at, averaged over the year. Data centers pull a high, flat 24/7 load, so 90%+ is typical. Fuel consumption — and therefore well count — tracks this number, not the nameplate MW above.">i</button></span> <span class="unit">%</span></label>
-          <input type="range" min="50" max="98" step="1" data-ramp="cf" />
-          <input type="number" data-ramp="cf" />
-        </div>
-        <div class="ramp-input">
           <label><span class="ramp-input-name">Project horizon <button class="info" type="button" data-tip="Length of the analysis in years, usually matched to the hyperscaler lease term. A longer horizon means more replacement wells drilled to hold the plateau — but the sustaining cadence settles to a steady rate after roughly year 8 as the aging fleet's tail accumulates.">i</button></span> <span class="unit">years</span></label>
           <input type="range" min="10" max="30" step="1" data-ramp="horizon" />
           <input type="number" data-ramp="horizon" />
@@ -819,19 +809,19 @@
           <input type="number" data-ramp="ip30" />
         </div>
         <div class="ramp-input">
-          <label><span class="ramp-input-name">Hyperbolic b <button class="info" type="button" data-tip="Arps decline exponent — sets the curvature of the decline curve. b ≈ 1.0–1.3 is typical for shale gas: production drops steeply early, then flattens into a long tail. A higher b means a fatter tail, so older wells carry more of the base load and you drill less to sustain.">i</button></span> <span class="unit">exponent</span></label>
-          <input type="range" min="0.5" max="1.5" step="0.05" data-ramp="bExp" />
-          <input type="number" data-ramp="bExp" />
-        </div>
-        <div class="ramp-input">
-          <label><span class="ramp-input-name">Initial decline Di <button class="info" type="button" data-tip="Nominal annual decline rate at the very start of a well's life (per year). Shale wells are steep — a well gives back 50–70% of its rate in year one. Combined with the b exponent, this defines how fast each well fades and therefore how hard you have to drill to replace it.">i</button></span> <span class="unit">/ yr</span></label>
-          <input type="range" min="0.5" max="3.0" step="0.05" data-ramp="diNominal" />
-          <input type="number" data-ramp="diNominal" />
-        </div>
-        <div class="ramp-input">
           <label><span class="ramp-input-name">D&amp;C cost / well <button class="info" type="button" data-tip="All-in drilling &amp; completion cost for one well — drill, case, cement, and frac. Utica wells run ~$11.4M for a 3-mile lateral. Multiplied by total wells over life, this is the perpetual sustaining capex required just to keep the turbines fed.">i</button></span> <span class="unit">$M</span></label>
           <input type="range" min="6" max="18" step="0.1" data-ramp="dnc" />
           <input type="number" data-ramp="dnc" />
+        </div>
+      </div>
+
+      <div style="margin-top:14px;padding:11px 14px;background:var(--blush);border:1px solid var(--line);border-radius:8px;">
+        <span style="display:block;font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;">Held fixed · Utica / Appalachia averages</span>
+        <div style="display:flex;flex-wrap:wrap;gap:7px 20px;font-size:12px;color:var(--iron);">
+          <span><b style="color:var(--ink);font-weight:700;">Heat rate</b> 7,000 Btu/kWh <span style="color:var(--muted);">· CCGT</span></span>
+          <span><b style="color:var(--ink);font-weight:700;">Capacity factor</b> 90% <span style="color:var(--muted);">· 24/7 baseload</span></span>
+          <span><b style="color:var(--ink);font-weight:700;">Hyperbolic b</b> 1.1 <span style="color:var(--muted);">· Utica shale</span></span>
+          <span><b style="color:var(--ink);font-weight:700;">Initial decline D<sub>i</sub></b> 1.5 / yr <span style="color:var(--muted);">· steep early decline</span></span>
         </div>
       </div>
 
@@ -1422,100 +1412,6 @@
     </div>
     <div class="gtm-structures" id="gtmStructures"></div>
 
-    <!-- 250 MW financial illustration -->
-    <div class="gtm-econ">
-      <div class="gtm-econ-head">
-        <div class="gtm-econ-title">How it plays out financially <span class="gtm-econ-chip">250 MW campus</span></div>
-        <div class="gtm-econ-sub">Illustrative value to a landowner-operator under each structure, for a ~250 MW campus. The land, ground-lease and JV routes sit on a ~$1.0B integrated gas-and-power platform (~62 MMcf/d, ~$150M/yr platform EBITDA); the build routes add the data center itself — a powered shell at ~$8–10M/MW (~$2–2.5B) or a turnkey campus at ~$15M/MW (~$3.75B). Directional planning figures — not a forecast or an offer.</div>
-      </div>
-
-      <div class="gtm-econ-table">
-        <div class="gtm-econ-row gtm-econ-row--head">
-          <div class="gtm-econ-c-name">Structure</div>
-          <div class="gtm-econ-c-num">Cash at close</div>
-          <div class="gtm-econ-c-num">Annual to you</div>
-          <div class="gtm-econ-c-keep">You keep</div>
-          <div class="gtm-econ-c-bar">Value to you · illustrative</div>
-        </div>
-
-        <div class="gtm-econ-row">
-          <div class="gtm-econ-c-name"><span class="gtm-econ-badge">1</span> Option + lease (pure land)</div>
-          <div class="gtm-econ-c-num">~$2.6M<span class="gtm-econ-sub2">option fee</span></div>
-          <div class="gtm-econ-c-num">~$14M<span class="gtm-econ-sub2">ground rent</span></div>
-          <div class="gtm-econ-c-keep">Land, minerals &amp; gas</div>
-          <div class="gtm-econ-c-bar">
-            <div class="gtm-econ-track">
-              <span class="gtm-econ-seg seg-close" style="width:0.1%"></span>
-              <span class="gtm-econ-seg seg-rec" style="width:4%"></span>
-            </div>
-            <span class="gtm-econ-total">~$155M</span>
-          </div>
-        </div>
-
-        <div class="gtm-econ-row">
-          <div class="gtm-econ-c-name"><span class="gtm-econ-badge">2</span> Ground lease + PPA</div>
-          <div class="gtm-econ-c-num">—<span class="gtm-econ-sub2">no sale</span></div>
-          <div class="gtm-econ-c-num">~$28M<span class="gtm-econ-sub2">rent + power</span></div>
-          <div class="gtm-econ-c-keep">Land + 100% equity</div>
-          <div class="gtm-econ-c-bar">
-            <div class="gtm-econ-track">
-              <span class="gtm-econ-seg seg-rec" style="width:8%"></span>
-            </div>
-            <span class="gtm-econ-total">~$300M</span>
-          </div>
-        </div>
-
-        <div class="gtm-econ-row">
-          <div class="gtm-econ-c-name"><span class="gtm-econ-badge">3</span> Power JV · 40% kept</div>
-          <div class="gtm-econ-c-num">—<span class="gtm-econ-sub2">equity, not cash</span></div>
-          <div class="gtm-econ-c-num">~$30M<span class="gtm-econ-sub2">distributions</span></div>
-          <div class="gtm-econ-c-keep">40% of the plant</div>
-          <div class="gtm-econ-c-bar">
-            <div class="gtm-econ-track">
-              <span class="gtm-econ-seg seg-rec" style="width:8%"></span>
-              <span class="gtm-econ-seg seg-eq" style="width:11%"></span>
-            </div>
-            <span class="gtm-econ-total">~$720M</span>
-          </div>
-        </div>
-
-        <div class="gtm-econ-row">
-          <div class="gtm-econ-c-name"><span class="gtm-econ-badge">4</span> Powered-shell lease</div>
-          <div class="gtm-econ-c-num">—<span class="gtm-econ-sub2">fund ~$2–2.5B</span></div>
-          <div class="gtm-econ-c-num">~$270M<span class="gtm-econ-sub2">shell lease</span></div>
-          <div class="gtm-econ-c-keep">Shell, land &amp; generation</div>
-          <div class="gtm-econ-c-bar">
-            <div class="gtm-econ-track">
-              <span class="gtm-econ-seg seg-eq" style="width:60%"></span>
-            </div>
-            <span class="gtm-econ-total">$2–2.5B</span>
-          </div>
-        </div>
-
-        <div class="gtm-econ-row">
-          <div class="gtm-econ-c-name"><span class="gtm-econ-badge">5</span> Turnkey lease</div>
-          <div class="gtm-econ-c-num">—<span class="gtm-econ-sub2">fund ~$3.75B</span></div>
-          <div class="gtm-econ-c-num">~$450M<span class="gtm-econ-sub2">turnkey lease</span></div>
-          <div class="gtm-econ-c-keep">The whole stack</div>
-          <div class="gtm-econ-c-bar">
-            <div class="gtm-econ-track">
-              <span class="gtm-econ-seg seg-eq" style="width:100%"></span>
-            </div>
-            <span class="gtm-econ-total">~$3.75B</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="gtm-econ-foot">
-        <div class="gtm-econ-legend">
-          <span><i class="lg lg-close"></i> Cash at close</span>
-          <span><i class="lg lg-rec"></i> Recurring (10-yr cumulative)</span>
-          <span><i class="lg lg-eq"></i> Retained equity / owned asset</span>
-        </div>
-        <div class="gtm-econ-note">Bars show value to you: 10-year realized cash for the lease and ground-lease routes; for the JV, the value of your retained 40% stake (~40% of the ~$1.0B power platform); and for the build routes, the data-center asset you own outright — you fund the ~$2–3.75B build, then collect lease (~$270–450M/yr) on top. The land and gas routes <em>also</em> keep the underlying asset, not valued in the bar. Building and owning the data center captures by far the most value — but demands the most capital and execution.</div>
-      </div>
-    </div>
-
     <!-- ===== BUYER UNIVERSE ===== -->
     <div class="gtm-section-head">
       <h3>Buyer universe</h3>
@@ -1531,30 +1427,6 @@
           <button class="gtm-seg-btn" data-val="250" type="button">250 MW</button>
           <button class="gtm-seg-btn" data-val="500" type="button">500 MW</button>
           <button class="gtm-seg-btn" data-val="1000" type="button">1 GW</button>
-        </div>
-      </div>
-      <div class="gtm-ctrl">
-        <span class="gtm-ctrl-label">What we sell</span>
-        <div class="gtm-seg" data-group="product">
-          <button class="gtm-seg-btn" data-val="land" type="button">Powered land</button>
-          <button class="gtm-seg-btn active" data-val="shell" type="button">Powered shell</button>
-          <button class="gtm-seg-btn" data-val="turnkey" type="button">Turnkey lease</button>
-          <button class="gtm-seg-btn" data-val="colo" type="button">Colocation</button>
-        </div>
-      </div>
-      <div class="gtm-ctrl">
-        <span class="gtm-ctrl-label">Power model</span>
-        <div class="gtm-seg" data-group="power">
-          <button class="gtm-seg-btn active" data-val="btm-gas" type="button">Behind-the-meter gas</button>
-          <button class="gtm-seg-btn" data-val="hybrid" type="button">Grid + gas hybrid</button>
-          <button class="gtm-seg-btn" data-val="grid-renew" type="button">Grid + renewables</button>
-        </div>
-      </div>
-      <div class="gtm-ctrl">
-        <span class="gtm-ctrl-label">Build plan</span>
-        <div class="gtm-seg" data-group="phasing">
-          <button class="gtm-seg-btn active" data-val="single" type="button">Single phase</button>
-          <button class="gtm-seg-btn" data-val="phased" type="button">Phased master plan</button>
         </div>
       </div>
     </div>
